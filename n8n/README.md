@@ -60,3 +60,20 @@ Tests use Node.js built-ins, no dependency installation, payment method or Groq 
 - The other `wayfarer-journey-ai` Vercel site is a separate deployment and is **not automatically connected** by this PR.
 
 References: [n8n Groq credentials](https://docs.n8n.io/integrations/builtin/credentials/groq/), [Groq chat API](https://console.groq.com/docs/api-reference), [Groq rate limits](https://console.groq.com/docs/rate-limits), [n8n licensing](https://support.n8n.io/article/can-i-use-your-license-for-my-use-case).
+
+## Troubleshooting: agent ran but Assemble AI Reports fails
+
+If the canvas shows green Groq HTTP request nodes but the **Assemble AI Reports** Code node reports `Groq agent reply missing: Journey Composer Agent`, the webhook and Groq HTTP requests were accepted; this does **not** mean Groq produced usable answer text. Inspect the Journey Composer Agent's **OUTPUT → JSON** and check `choices[0].message.content`, `choices[0].finish_reason`, and `usage.completion_tokens`. In particular, `finish_reason: "length"` with empty content typically indicates the response exhausted its token budget before generating a final answer. Don't copy private tokens or verbose reasoning traces into support screenshots.
+
+**Fix an already imported n8n workflow in place:** open each Groq HTTP Request node, scroll to **Send Body → JSON**, and change the `JSON.stringify({...})` expression's request fields to include:
+
+```js
+model: "openai/gpt-oss-20b",
+reasoning_effort: "low",
+include_reasoning: false,
+max_completion_tokens: 1200,
+```
+
+Retain the existing `temperature` and `messages` expressions, credentials, URL, and JSON.stringify wrapper. Groq's GPT-OSS defaults to medium reasoning effort. `low` reduces reasoning-token demand, and the larger completion budget allows more room for final user-facing text. This remains bounded and may increase token usage per test. Change and save **all three** Groq nodes. Do **not** re-import an updated JSON file on top of your credentialed workflow without backing it up first, because imported nodes can lose local credential selections. Run a **new** single-event test by choosing Execute Workflow, waiting for its test webhook listener, then POSTing the sample trip again. Check all three final text fields before publishing.
+
+Groq references: https://console.groq.com/docs/model/openai/gpt-oss-20b and https://console.groq.com/docs/reasoning .
