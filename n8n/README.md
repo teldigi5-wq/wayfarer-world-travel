@@ -1,5 +1,8 @@
 # Wayfarer real AI beta — n8n + Groq
 
+> As of October 2026, the Amadeus Self-Service API described in earlier drafts has been discontinued. The legacy `/api/travel-offers` adapter is disabled pending migration to an available provider. n8n/Groq AI suggestions are **not** live seat, fare, hotel or restaurant inventory.
+
+
 This **optional, disabled-by-default** beta adds actual Groq model calls orchestrated by an importable n8n workflow to the original deterministic Wayfarer planner. It does not replace the separate `wayfarer-journey-ai` Vercel deployment. Main and both production sites remain unchanged until this PR is reviewed, configured and deployed.
 
 ## Important: live supplier data is separate from Groq
