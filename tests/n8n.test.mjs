@@ -31,3 +31,17 @@ test('n8n graph leads from webhook through all three agents to response',()=>{
   assert.equal(names[0],'Incoming Trip');
   assert.equal(names.at(-1),'Return Plan');
 });
+
+test('travel agents explicitly preserve the ground-budget and source-truth boundaries',()=>{
+  const destination=workflow.nodes.find(n=>n.name==='Destination Agent')?.parameters?.jsonBody;
+  const flights=workflow.nodes.find(n=>n.name==='Flight & Stay Agent')?.parameters?.jsonBody;
+  const composer=workflow.nodes.find(n=>n.name==='Journey Composer Agent')?.parameters?.jsonBody;
+  assert.match(destination,/unverified suggestions/);
+  for(const prompt of [flights,composer]) {
+    assert.match(prompt,/GROUND BUDGET IN USD ONLY/);
+    assert.match(prompt,/EXCLUDES flights, visas, travel insurance and international transfers/);
+    assert.match(prompt,/Do not|Never/);
+    assert.match(prompt,/exchange.rate|FX/);
+  }
+  assert.match(composer,/day 1 reserved for arrival/);
+});
