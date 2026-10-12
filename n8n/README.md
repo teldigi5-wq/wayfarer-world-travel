@@ -2,6 +2,12 @@
 
 This **optional, disabled-by-default** beta adds actual Groq model calls orchestrated by an importable n8n workflow to the original deterministic Wayfarer planner. It does not replace the separate `wayfarer-journey-ai` Vercel deployment. Main and both production sites remain unchanged until this PR is reviewed, configured and deployed.
 
+## Important: live supplier data is separate from Groq
+
+The three Groq agents produce helpful itinerary *ideas*, not authoritative live airline seats, hotel inventory, restaurant menus or local transit fares. A separate feature-branch, password-gated `/api/travel-offers` route can query actual Amadeus flight and hotel offer endpoints if the owner supplies valid credentials. Test-account quotes are limited/cached, not real-time; production credentials and cost approval are required before public claims of live availability. Food and transport price feeds are **not yet connected**. Do not add prices as facts to Groq prompts.
+
+See the top-level [README](../README.md#supplier-backed-travel-prices--availability--gated-beta) for configuration, costs, truth status, data limitations and safe testing.
+
 ## What is implemented
 
 `index.html` and `ai-panel.mjs` present an opt-in AI Journey Research panel after a trip is built. `api/ai-plan.mjs` is a Vercel Node.js Function that validates the trip, checks a private beta access code, and forwards requests to an **HTTPS** n8n production webhook using separate server-only header authentication. n8n workflow `wayfarer-groq-agents.json` has eight nodes:
