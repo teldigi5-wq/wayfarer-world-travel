@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Plan a worldwide journey with free, transparent travel assistants. Explore destinations, build itineraries and compare flights and stays."><meta name="theme-color" content="#070C1A"><meta property="og:title" content="Wayfarer — A world of possibilities"><meta property="og:description" content="Free worldwide travel planning with transparent local assistants."><meta property="og:type" content="website"><link rel="canonical" href="https://wayfarer-world-travel.vercel.app/"><title>Wayfarer — A world of possibilities</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="ai.css"><script type="module" src="app.mjs"></script><script type="module" src="motion.mjs"></script><script type="module" src="ai-panel.mjs"></script></head>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Plan a worldwide journey with free, transparent travel assistants. Explore destinations, build itineraries and compare flights and stays."><meta name="theme-color" content="#070C1A"><meta property="og:title" content="Wayfarer — A world of possibilities"><meta property="og:description" content="Free worldwide travel planning with transparent local assistants."><meta property="og:type" content="website"><link rel="canonical" href="https://wayfarer-world-travel.vercel.app/"><title>Wayfarer — A world of possibilities</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="ai.css"><script type="module" src="app.mjs"></script><script type="module" src="motion.mjs"></script><script type="module" src="ai-panel.mjs"></script><script type="module" src="travel-offers-panel.mjs"></script></head>
 <body><a class="skip" href="#planner">Skip to trip planner</a><header><a class="brand" href="#"><b><i>✳</i> wayfarer</b><span>GO SOMEWHERE GOOD</span></a><nav aria-label="Main navigation"><a href="#discover">Discover</a><a href="#planner">Plan a trip</a><a href="#saved">Saved trips</a><a href="#sources">Our approach</a></nav></header>
 
 <main><section class="hero"><div class="hero-copy"><p class="eyebrow">Free, private, runs in your browser</p><h1>Less planning.<br>More <em>possibility.</em></h1><p class="intro">From the first flight to the little café around the corner. Bring your next adventure together, one thoughtful plan at a time.</p><a class="button" href="#planner">Plan your trip <span>↗</span></a><div class="hero-note">No account. No paid APIs. No tracking.</div></div>
@@ -27,6 +27,14 @@
 </div>
 <p id="ai-status" role="status" aria-live="polite">Optional research. Your existing trip plan remains available.</p>
 <div id="ai-output" aria-label="AI research results"></div>
+</section>
+<section class="travel-offers" aria-labelledby="travel-offers-heading">
+<h3 id="travel-offers-heading">Travel prices &amp; availability · Private beta</h3>
+<p>Provider-backed searches can show flight offers and hotel prices only when an authorized Amadeus account is connected. Search offers are not guaranteed seats, rooms, confirmed bookings or final checkout prices. Test data is never labeled live.</p>
+<p>Restaurant menu prices and real-time transit fares require separate official or licensed data feeds; without them, Wayfarer provides research links and shows “Not connected.” International flights are outside your ground budget.</p>
+<button id="travel-offers-check" type="button" class="button">Check provider offers ↗</button>
+<p id="travel-offers-status" role="status" aria-live="polite">Private beta · use the access code above. No booking or payment on Wayfarer.</p>
+<div id="travel-offers-results" class="travel-offers-grid" aria-live="polite"></div>
 </section></div></section>
 
 <section id="saved" class="section" data-reveal><p class="eyebrow">Saved on this device</p><h2>Your saved journeys.</h2><p class="muted">Stored only in this browser. Shared devices can see saved trips.</p><div id="saved-list"></div></section>
