@@ -1,1 +1,13 @@
-{"name":"wayfarer-free-travel","private":true,"type":"module","scripts":{"test":"node --test tests/*.test.mjs","check":"node --check app.mjs && node --check planner.mjs","start":"node server.mjs"},"engines":{"node":">=20"}}
+{
+  "name": "wayfarer-free-travel",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check": "node --check app.mjs && node --check planner.mjs && node --check ai-panel.mjs && node --check api/ai-plan.mjs",
+    "start": "node server.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
