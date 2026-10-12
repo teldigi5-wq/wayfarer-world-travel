@@ -39,7 +39,7 @@ test('travel agents explicitly preserve the ground-budget and source-truth bound
   assert.match(destination,/unverified suggestions/);
   for(const prompt of [flights,composer]) {
     assert.match(prompt,/GROUND BUDGET IN USD ONLY/);
-    assert.match(prompt,/EXCLUDES flights, visas, travel insurance and international transfers/);
+    assert.match(prompt,/EXCLUDES (?:all )?flights, visas, travel insurance and international transfers/);
     assert.match(prompt,/Do not|Never/);
     assert.match(prompt,/exchange.rate|FX/);
   }
