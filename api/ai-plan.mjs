@@ -33,9 +33,9 @@ function cleanResult(value) {
   if (value?.ok !== true || agents.length !== 3) return null;
   const normalized = agents.map(a => ({
     name: cleanText(a?.name, 60),
-    findings: cleanText(a?.findings, 1600)
+    findings: typeof a?.findings === 'string' ? a.findings.trim() : ''
   }));
-  if (normalized.some(a => !a.name || !a.findings)) return null;
+  if (normalized.some(a => !a.name || !a.findings || a.findings.length > 6500)) return null;
   const candidate = cleanText(value.sourceUrl, 600);
   let sourceUrl = null;
   try {
