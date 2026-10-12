@@ -27,16 +27,24 @@ function currency(price, code) {
     ? code + ' ' + price
     : 'Price unavailable';
 }
+function priceBudget(item) {
+  const cap=item.budgetLimitUsd;
+  if(item.budgetFit==='within_budget')return ' · Within your USD '+cap+' allocated budget';
+  if(item.budgetFit==='over_budget')return ' · Over your USD '+cap+' allocated budget';
+  if(item.budgetFit==='currency_not_comparable')return ' · Cannot compare currencies without a verified FX rate';
+  if(item.budgetFit==='budget_not_set')return ' · Set a separate flight budget to compare';
+  return '';
+}
 function flightSummary(item) {
   const segments = (item.itineraries || []).map(it => (it.segments || []).map(seg =>
     [seg.airline, seg.flightNumber, seg.from, '→', seg.to, seg.departureAt, '→', seg.arrivalAt].filter(Boolean).join(' ')
   ).join(' / ')).join(' · ');
   return (segments || 'Flight details unavailable') + ' — total offer ' + currency(item.price, item.currency) +
-    (item.seatsReported ? ' · Provider reported up to ' + item.seatsReported + ' bookable seats when checked' : '');
+    (item.seatsReported ? ' · Provider reported up to ' + item.seatsReported + ' bookable seats when checked' : '') + priceBudget(item);
 }
 function hotelSummary(item) {
   return String(item.name || 'Hotel') + ' — total supplier offer ' + currency(item.price,item.currency) +
-    ' · ' + [item.checkIn,item.checkOut].filter(Boolean).join(' to ');
+    ' · ' + [item.checkIn,item.checkOut].filter(Boolean).join(' to ') + priceBudget(item);
 }
 function card(title, payload, render) {
   const section = text('article', '', 'travel-offer-card');
