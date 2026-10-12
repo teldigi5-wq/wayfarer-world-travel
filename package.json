@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "check": "node --check app.mjs && node --check planner.mjs && node --check ai-panel.mjs && node --check api/ai-plan.mjs && node --check api/travel-offers.mjs && node --check travel-offers-panel.mjs",
+    "check": "node --check app.mjs && node --check planner.mjs && node --check ai-panel.mjs && node --check api/ai-plan.mjs && node --check api/travel-offers.mjs && node --check travel-offers-panel.mjs && node --check airports.mjs && node --check travel-discovery.mjs && node --check scripts/refresh-airports.mjs",
     "start": "node server.mjs"
   },
   "engines": {
