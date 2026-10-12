@@ -1,0 +1,43 @@
+name: Daily public airport reference refresh
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 2 * * *'
+permissions:
+  contents: write
+  pull-requests: write
+concurrency:
+  group: airport-directory-refresh
+  cancel-in-progress: false
+jobs:
+  refresh-airports:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Download and validate public airport directory
+        run: node scripts/refresh-airports.mjs
+      - name: Check updated directory source
+        run: npm run check && npm test
+      - name: Open review-only update PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if git diff --quiet -- airports-index.json && git ls-files --error-unmatch airports-index.json >/dev/null 2>&1; then
+            echo "No airport reference changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C automation/daily-airport-index
+          git add airports-index.json
+          git commit -m "data: refresh public airport reference"
+          git push --force-with-lease origin HEAD:automation/daily-airport-index
+          if ! gh pr list --head automation/daily-airport-index --json number --jq '.[0].number' | grep -Eq '^[0-9]+$'; then
+            gh pr create --base main --head automation/daily-airport-index --title "data: update public worldwide airport reference" --body "Automated daily check of the OurAirports public-domain directory. Review source, size, coverage and tests before merging. **This is reference data, not live flight schedules or ticket availability.**"
+          fi
