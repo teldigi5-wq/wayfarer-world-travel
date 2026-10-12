@@ -199,6 +199,14 @@ export default async function handler(req, res) {
       'Flights are outside the group USD ground budget; optional flight budget is separate. Budget comparisons apply only to matching USD offers.'
     ]
   };
+  // Amadeus Self-Service was discontinued July 17, 2026. Keep legacy adapter inert.
+  // Do not accept previous self-service credentials or report its output as live.
+  data.provider = 'No currently connected live supplier';
+  data.mode = 'retired_provider';
+  data.flights = category('not_connected', 'Amadeus Self-Service was discontinued in July 2026. A supported flight provider must be integrated before real-time fares or seat availability can be shown.');
+  data.hotels = category('not_connected', 'The legacy Amadeus Self-Service hotel integration is discontinued. A supported accommodation supplier must be integrated to show live offers.');
+  return response(res, 200, data);
+
   const enabled = process.env.WAYFARER_TRAVEL_ENABLED === 'true';
   const client = process.env.AMADEUS_CLIENT_ID || '';
   const secret = process.env.AMADEUS_CLIENT_SECRET || '';
