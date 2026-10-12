@@ -22,6 +22,16 @@ function finiteMoney(value) {
   const number = Number(value);
   return Number.isFinite(number) && number >= 0 && number < 1e9 ? number.toFixed(2) : null;
 }
+function budgetFit(price, currency, limit) {
+  if (!Number.isFinite(limit) || limit <= 0) return 'budget_not_set';
+  if (currency !== 'USD') return 'currency_not_comparable';
+  return Number(price) <= limit ? 'within_budget' : 'over_budget';
+}
+function prioritized(offers) {
+  const order = { within_budget:0, budget_not_set:1, currency_not_comparable:2, over_budget:3 };
+  return offers.sort((a,b)=>(order[a.budgetFit]??4)-(order[b.budgetFit]??4) ||
+    (a.currency===b.currency?Number(a.price)-Number(b.price):0));
+}
 function safeCurrency(value) { return /^[A-Z]{3}$/.test(value || '') ? value : null; }
 function isoDate(value) { return /^\d{4}-\d{2}-\d{2}$/.test(value || '') ? value : null; }
 async function fetchJson(url, init = {}) {
@@ -97,7 +107,12 @@ async function flightOffers(base, token, origin, destination, trip, searchedAt) 
   const json = await fetchJson(base + '/v2/shopping/flight-offers?' + qs, {
     headers: { Authorization: 'Bearer ' + token }
   });
-  const offers = (json.data || []).map(entry => normalizeFlight(entry, searchedAt)).filter(Boolean);
+  const offers = prioritized((json.data || []).map(entry => normalizeFlight(entry, searchedAt))
+    .filter(Boolean).map(offer=>({
+      ...offer,
+      budgetFit: budgetFit(offer.price, offer.currency, trip.flightBudget),
+      budgetLimitUsd: trip.flightBudget || null
+    })));
   return category(offers.length ? 'offers_found' : 'no_offers',
     offers.length ? 'Provider returned priced flight offers. Ticket availability is NOT guaranteed until repricing and checkout.' :
     'This provider returned no flight offers for the search. This does not mean all tickets are sold out.', offers);
@@ -116,7 +131,13 @@ async function hotelOffers(base, token, city, trip, searchedAt) {
     checkInDate: trip.startDate, checkOutDate: trip.endDate, roomQuantity: '1'
   });
   const offersJson = await fetchJson(base + '/v3/shopping/hotel-offers?' + qs, { headers });
-  const offers = (offersJson.data || []).map(entry => normalizeHotel(entry, searchedAt)).filter(Boolean).slice(0, 6);
+  const lodgingAllocation = Math.round(trip.budget * 0.4 * 100)/100;
+  const offers = prioritized((offersJson.data || []).map(entry=>normalizeHotel(entry, searchedAt))
+    .filter(Boolean).map(offer=>({
+      ...offer,
+      budgetFit: budgetFit(offer.price,offer.currency,lodgingAllocation),
+      budgetLimitUsd: lodgingAllocation
+    }))).slice(0, 6);
   return category(offers.length ? 'offers_found' : 'no_offers',
     offers.length ? 'Provider returned accommodation offers for one shared room. Verify final conditions before reserving.' :
     'Provider returned no priced hotel offers in this small sample; many other accommodations may exist.', offers);
@@ -149,10 +170,19 @@ export default async function handler(req, res) {
     const raw = body?.trip || {};
     trip = { country: cut(raw.country, 120), city: cut(raw.city, 120), origin: cut(raw.origin, 120),
       startDate: cut(raw.startDate, 10), endDate: cut(raw.endDate, 10), travelers: Number(raw.travelers),
-      budget: Number(raw.budget), style: raw.style === 'slow' ? 'slow' : 'balanced' };
+      budget: Number(raw.budget), style: raw.style === 'slow' ? 'slow' : 'balanced',
+      flightBudget: raw.flightBudget === '' || raw.flightBudget == null ? 0 : Number(raw.flightBudget),
+      originAirport: cut(raw.originAirport, 3).toUpperCase(),
+      destinationAirport: cut(raw.destinationAirport, 3).toUpperCase()
+    };
   } catch { return response(res, 400, { ok: false, error: 'Invalid JSON trip payload.' }); }
   const valid = validateTrip(trip);
   if (!valid.valid) return response(res, 400, { ok: false, error: valid.errors.join(' ') });
+  if (!Number.isFinite(trip.flightBudget) || trip.flightBudget < 0 || trip.flightBudget > 1000000 ||
+    (trip.originAirport && !/^[A-Z]{3}$/.test(trip.originAirport)) ||
+    (trip.destinationAirport && !/^[A-Z]{3}$/.test(trip.destinationAirport))) {
+    return response(res, 400, { ok:false, error:'Invalid flight budget or airport code.' });
+  }
 
   const refs = links(trip);
   const data = {
@@ -166,7 +196,7 @@ export default async function handler(req, res) {
       'No flight tickets or hotel rooms have been booked.',
       'An offer found by a supplier is not a guarantee of seats or a final checkout price.',
       'Food and local transportation prices are unavailable until licensed live provider integrations exist.',
-      'Flights are outside the group USD ground budget.'
+      'Flights are outside the group USD ground budget; optional flight budget is separate. Budget comparisons apply only to matching USD offers.'
     ]
   };
   const enabled = process.env.WAYFARER_TRAVEL_ENABLED === 'true';
@@ -187,21 +217,22 @@ export default async function handler(req, res) {
     if (typeof auth.access_token !== 'string' || !auth.access_token) throw Error('OAuth returned no access token');
     const token = auth.access_token;
     const [origin, city] = await Promise.allSettled([
-      locationCode(base, token, trip.origin), locationCode(base, token, trip.city)
+      trip.originAirport ? Promise.resolve(trip.originAirport) : locationCode(base, token, trip.origin),
+      locationCode(base, token, trip.city)
     ]);
     const sourceCode = origin.status === 'fulfilled' ? origin.value : null;
-    const destinationCode = city.status === 'fulfilled' ? city.value : null;
-    if (!sourceCode || !destinationCode) {
-      data.flights = category('needs_details', 'Could not uniquely resolve origin and destination to IATA city codes. Enter valid IATA codes or clearer city names.');
-      data.hotels = category('needs_details', 'Could not uniquely resolve destination city code for hotel search.');
-    } else {
-      const [flights, hotels] = await Promise.allSettled([
-        trip.travelers <= 9 ? flightOffers(base, token, sourceCode, destinationCode, trip, data.checkedAt) : Promise.resolve(category('needs_details', 'Flight API query supports at most 9 adults; split group searches.')),
-        hotelOffers(base, token, destinationCode, trip, data.checkedAt)
-      ]);
-      data.flights = flights.status === 'fulfilled' ? flights.value : unavailable('Flight');
-      data.hotels = hotels.status === 'fulfilled' ? hotels.value : unavailable('Hotel');
-    }
+    const destinationCityCode = city.status === 'fulfilled' ? city.value : null;
+    const flightDestinationCode = trip.destinationAirport || destinationCityCode;
+    if (sourceCode && flightDestinationCode) {
+      if (trip.travelers <= 9) {
+        try { data.flights = await flightOffers(base, token, sourceCode, flightDestinationCode, trip, data.checkedAt); }
+        catch { data.flights = unavailable('Flight'); }
+      } else data.flights = category('needs_details','Flight API supports up to nine adults per search.');
+    } else data.flights = category('needs_details','Choose origin and destination airport codes, or enter resolvable city names.');
+    if (destinationCityCode) {
+      try { data.hotels = await hotelOffers(base, token, destinationCityCode, trip, data.checkedAt); }
+      catch { data.hotels = unavailable('Hotel'); }
+    } else data.hotels = category('needs_details','Could not resolve the hotel search city. Enter a clearer city name.');
   } catch {
     data.flights = unavailable('Flight provider');
     data.hotels = unavailable('Hotel provider');
