@@ -1,5 +1,7 @@
 # Wayfarer
 
+> **Optional n8n + Groq AI beta (disabled by default).** A gated, server-side Groq agent integration has been proposed on a feature branch. Three distinct model-backed research agents and an encyclopedia source call are orchestrated in n8n, but the feature requires owner-provided n8n hosting and Groq credentials. It is **not live** or part of the $0 no-key deterministic baseline. Setup, tests, licensing and limitations: [n8n/README.md](n8n/README.md).
+
 A static, worldwide travel planner built to operate with a strict $0 development, hosting and API budget. Six local deterministic assistants coordinate destination data, flight handoff, nearby hotel discovery, itinerary scheduling, budget allocation and safety checklists. These are rule-based planning agents, not LLM inference. No checkout or booking integration is claimed.
 
 ## MVP scope
