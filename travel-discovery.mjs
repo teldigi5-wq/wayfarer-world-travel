@@ -76,7 +76,17 @@ if (!dataset) {
       list.append(button);
     }
   }
-  countriesInput.addEventListener('input',refreshCountries);
+  let previousCountryCode=countryCode();
+  countriesInput.addEventListener('input',()=>{
+    refreshCountries();
+    const code=countryCode();
+    if(code!==previousCountryCode){
+      previousCountryCode=code;
+      destSelect.value='';
+      destSearch.value='';
+      refreshDestination();
+    }
+  });
   countriesInput.addEventListener('keydown',event=>{
     if(event.key==='ArrowDown'&&list.firstElementChild){
       event.preventDefault();list.firstElementChild.focus();
@@ -91,13 +101,14 @@ if (!dataset) {
     }
   });
   countrySelect?.addEventListener('change',()=>{
+    previousCountryCode=countryCode();
     destSelect.value='';destSearch.value='';refreshDestination();
   });
   $('city')?.addEventListener('change',refreshDestination);
   $('city')?.addEventListener('input',refreshDestination);
   originSearch?.addEventListener('input',refreshOrigin);
   destSearch?.addEventListener('input',refreshDestination);
-  $('trip-form').elements.namedItem('origin')?.addEventListener('change',refreshOrigin);
+  $('trip-form').elements.namedItem('origin')?.addEventListener('input',refreshOrigin);
   originSelect?.addEventListener('change',()=>{
     const airport=airports.find(a=>a.iata===originSelect.value);
     const origin=$('trip-form').elements.namedItem('origin');
