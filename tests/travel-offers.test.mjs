@@ -27,7 +27,7 @@ async function send(body={trip},secret='not-real-secret-for-tests',method='POST'
   await handler({method,headers:{'x-wayfarer-beta-token':secret},body},value);
   return value;
 }
-function mockedFetch() {
+function mockedFetch(destination='TYO') {
   return async (url, init) => {
     const path = String(url);
     if (path.includes('oauth2/token')) {
@@ -45,7 +45,7 @@ function mockedFetch() {
     }
     if (path.includes('/v2/shopping/flight-offers?')) {
       assert.ok(path.includes('originLocationCode=CMB'));
-      assert.ok(path.includes('destinationLocationCode=TYO'));
+      assert.ok(path.includes('destinationLocationCode='+destination));
       return new Response(JSON.stringify({data:[{
         price:{grandTotal:'840.50',currency:'USD'},numberOfBookableSeats:3,
         itineraries:[{segments:[{
@@ -120,6 +120,26 @@ test('Amadeus test environment is never labeled live',async()=>{
     assert.equal(value.data.hotels.status,'test_data');
     assert.match(value.data.flights.message,/NOT LIVE/i);
   } finally {globalThis.fetch=previous;}
+});
+
+test('selected IATA airports override city code and fares are compared to separate airfare limit',async()=>{
+  configure('production');
+  const previous=globalThis.fetch;
+  try {
+    globalThis.fetch=mockedFetch('NRT');
+    const value=await send({trip:{...trip,originAirport:'CMB',destinationAirport:'NRT',flightBudget:800}});
+    assert.equal(value.statusCode,200);
+    assert.equal(value.data.flights.status,'offers_found');
+    assert.equal(value.data.flights.results[0].budgetFit,'over_budget');
+    assert.equal(value.data.flights.results[0].budgetLimitUsd,800);
+    assert.equal(value.data.hotels.results[0].budgetFit,'within_budget');
+    assert.equal(value.data.hotels.results[0].budgetLimitUsd,480);
+  } finally {globalThis.fetch=previous;}
+});
+test('invalid airport and negative separate flight budget are rejected',async()=>{
+  configure('production');
+  assert.equal((await send({trip:{...trip,destinationAirport:'A1'}})).statusCode,400);
+  assert.equal((await send({trip:{...trip,flightBudget:-100}})).statusCode,400);
 });
 test('three travelers require room layout, never inferred hotel availability',async()=>{
   configure('production');
