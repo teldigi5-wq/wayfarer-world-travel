@@ -15,6 +15,9 @@ test('importable n8n workflow contains real Groq requests and an authenticated w
     assert.equal(call.parameters.authentication,'genericCredentialType');
     assert.equal(call.parameters.genericAuthType,'httpHeaderAuth');
     assert.match(call.parameters.jsonBody,/openai\/gpt-oss-20b/);
+    assert.match(call.parameters.jsonBody,/max_completion_tokens:1200/);
+    assert.match(call.parameters.jsonBody,/reasoning_effort:"low"/);
+    assert.match(call.parameters.jsonBody,/include_reasoning:false/);
   }
   assert.equal(JSON.stringify(workflow).includes('gsk_'),false);
   assert.equal(JSON.stringify(workflow).includes('Bearer gsk_'),false);
