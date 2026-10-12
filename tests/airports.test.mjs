@@ -5,7 +5,7 @@ import {buildAirportCatalog} from '../scripts/refresh-airports.mjs';
 test('country suggestions accent-insensitive and deterministic',()=>{
   const all=[{code:'AX',name:'Åland Islands'},{code:'JP',name:'Japan'},{code:'JM',name:'Jamaica'}];
   assert.deepEqual(countrySuggestions(all,'ala').map(x=>x.code),['AX']);
-  assert.deepEqual(countrySuggestions(all,'ja').map(x=>x.code),['Jamaica','Japan']);
+  assert.deepEqual(countrySuggestions(all,'ja').map(x=>x.code),['JM','JP']);
 });
 test('airports are narrowed to chosen country and prioritized by matching municipality',()=>{
   const catalog=[
