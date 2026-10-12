@@ -62,7 +62,7 @@ export function bookingLinks(trip) {
   const destination = [trip.city,trip.country].filter(Boolean).join(', ');
   const query = (base, params) => `${base}?${new URLSearchParams(params)}`;
   return {
-    flights:query('https://www.google.com/search',{q:`Google Flights from ${trip.origin || 'your origin'} to ${destination} on ${trip.startDate || ''} returning ${trip.endDate || ''} for ${trip.travelers || 1} travelers`}),
+    flights:query('https://www.google.com/search',{q:`Google Flights from ${trip.originAirport || trip.origin || 'your origin'} to ${trip.destinationAirport || destination} on ${trip.startDate || ''} returning ${trip.endDate || ''} for ${trip.travelers || 1} travelers`}),
     hotels:query('https://www.booking.com/searchresults.html',{ss:destination,checkin:trip.startDate || '',checkout:trip.endDate || '',group_adults:String(trip.travelers || 1),no_rooms:String(Math.ceil(Number(trip.travelers || 1)/2))}),
     map:query('https://www.openstreetmap.org/search',{query:destination}),
     airportHotels:query('https://www.booking.com/searchresults.html',{ss:`${destination} airport`}),
