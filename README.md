@@ -1,5 +1,8 @@
 # Wayfarer
 
+> **Provider migration notice (12 October 2026).** Amadeus Self-Service was decommissioned on **17 July 2026**, as confirmed on the official [Amadeus developer portal](https://developers.amadeus.com/). The existing Amadeus adapter is **disabled** and is retained only as historical beta prototype code. Creating a new Self-Service API account is no longer possible. A supported replacement such as Duffel's developer test environment must be integrated, with separate authorization for live use; no live flight or hotel provider is currently connected. Do not set `AMADEUS_ENV=production` or expose deprecated credentials.
+
+
 > **Optional n8n + Groq AI beta (disabled by default).** A gated, server-side Groq agent integration has been proposed on a feature branch. Three distinct model-backed research agents and an encyclopedia source call are orchestrated in n8n, but the feature requires owner-provided n8n hosting and Groq credentials. It is **not live** or part of the $0 no-key deterministic baseline. Setup, tests, licensing and limitations: [n8n/README.md](n8n/README.md).
 
 > **Provider-backed flight and hotel offers (new draft beta).** The protected `/api/travel-offers` endpoint can request supplier-returned round-trip flights and hotel offers from Amadeus when the owner configures credentials. **No provider account is connected by this repository; live prices and bookability are not activated on the published website.** Amadeus TEST data are limited/cached, and the UI marks them **NOT LIVE**. Restaurant menu prices and realtime local transit fares require independent official/licensed providers and remain **Not connected**. A returned fare is not a booked or guaranteed ticket.
