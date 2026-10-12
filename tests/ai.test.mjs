@@ -82,3 +82,33 @@ test.after(() => {
     else process.env[key]=original[key];
   }
 });
+
+test('long itinerary remains intact instead of silently truncating at 1600 characters', async () => {
+  configure();
+  const originalFetch=globalThis.fetch;
+  const longReport='Day 1: arrival and rest. '+'Day 2 onward: research alternatives. '.repeat(100)+'End of ground budget guidance.';
+  try {
+    globalThis.fetch=async()=>new Response(JSON.stringify({ok:true,agents:[
+      {name:'Destination researcher',findings:'Verify places from official sources.'},
+      {name:'Flight & hotel researcher',findings:'Verify flight and hotel prices with providers.'},
+      {name:'Journey composer',findings:longReport}
+    ]}),{status:200});
+    const response=await call({trip:validTrip});
+    assert.equal(response.code,200);
+    assert.equal(response.body.agents[2].findings,longReport);
+    assert.ok(longReport.length>1600);
+  } finally { globalThis.fetch=originalFetch; }
+});
+test('oversized AI reports are rejected instead of returning incomplete text',async()=>{
+  configure();
+  const originalFetch=globalThis.fetch;
+  try {
+    globalThis.fetch=async()=>new Response(JSON.stringify({ok:true,agents:[
+      {name:'Destination researcher',findings:'Known facts.'},
+      {name:'Flight & hotel researcher',findings:'Check providers.'},
+      {name:'Journey composer',findings:'X'.repeat(6501)}
+    ]}),{status:200});
+    const result=await call({trip:validTrip});
+    assert.equal(result.code,502);
+  } finally {globalThis.fetch=originalFetch;}
+});
