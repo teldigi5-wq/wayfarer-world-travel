@@ -138,7 +138,7 @@ The collection includes Sri Lanka, Japan, Italy, Switzerland, France, Iceland, T
 Wayfarer now has a short, cinematic first-visit entrance with the existing mountain-lake photo, evergreen overlay and ivory/gold wordmark. The intro is **decorative**, not a pretend progress indicator: it does **not** await Groq, SerpApi, images or other provider APIs.
 
 - **First paint shows the splash, not the homepage.** It is the first visible element of the document, before the header and main content. Render-blocking first-party CSS makes the overlay visible even before deferred JavaScript executes, preventing homepage flashing. This is a branded *welcome*, not a simulated API progress indicator.
-- It dismisses automatically after **1,350 ms** from controller startup, can be skipped immediately by clicking **Skip introduction**, closes with Escape, and is bypassed for `prefers-reduced-motion` and the site's saved **Motion off** preference. It appears on each **full reload/navigation**, not when visitors switch internal application tabs.
+- It dismisses automatically after **1,350 ms** from controller startup, can be skipped immediately by clicking **Skip introduction**, closes with Escape, and is bypassed when the operating system requests **reduced motion**. It appears on each **full reload/navigation**, not when visitors switch internal application tabs.
 - With JavaScript blocked, CSS automatically clears the overlay after **3 seconds**, so it cannot permanently obscure the website. For reduced-motion users CSS hides it from first paint. Note that no-JavaScript visitors may briefly see the static branded welcome before the fallback.
 - The implementation has visible keyboard focus and transfers focus to the real page on dismissal. It has **no vendor libraries, paid API calls, external audio or autoplay video**.
 - The homepage now explains the customer workflow in three readable steps: Discover → Plan → Verify. It clarifies that checkout remains on external providers. The former “Watch the story” button is now honestly labeled “How Wayfarer works”.
@@ -146,6 +146,18 @@ Wayfarer now has a short, cinematic first-visit entrance with the existing mount
 - Regression tests cover first-paint ordering, automatic dismissal on reloads, immediate skip, Escape, reduced motion, safe no-JS fallback, honest homepage copy and navigation.
 
 This is a **draft stacked Preview release**, not an assertion that all browser issues have been eliminated. Run the full CI suite, visually review desktop/mobile in the protected Vercel Preview, then merge the dependent PR chain only after release approval. Production stays unchanged during review.
+
+### Premium product refinement — no decorative motion switch (October 2026)
+
+Wayfarer's six-view navigation now has one clear **Plan a journey** action in the desktop header instead of a public `Motion on/off` switch or a glowing `Source-led tools` status that could be mistaken for real-time provider health. The action uses the **existing Journey Studio router** and never initiates paid searches by itself.
+
+- **Automatic accessibility:** `premium-motion.js` now follows the operating system's `prefers-reduced-motion` state and reacts to changes without local-storage preferences or a client switch. It disables hero parallax in reduced-motion mode, while all CSS fallback motion controls continue to work. Removed the old toggle markup, styles, and persisted-setting code. The first-paint splash now checks the OS setting only.
+- **Calm cinematic composition:** Photographic hero remains rich, but its perpetual scale animation is disabled. Small, purposeful scroll response remains on desktop; transitions use lightweight CSS and avoid external animation libraries.
+- **Premium but practical visual system:** High-contrast evergreen/ivory/gold palette, clearer editorial typography, more legible flight/hotel caveats, larger control targets, consistent nav focus states, and refined mobile navigation. The site still labels sample estimates, verification steps and external-provider checkout accurately.
+- **Accessible modal splash:** While the short first-paint welcome is visible, Tab remains on **Skip introduction** rather than moving behind its `aria-modal` dialog. Skip/Escape or automatic dismissal transfers focus into the page.
+- **Security and product truthfulness:** This polish does not switch on paid AI, alter provider keys, add checkout payments or guarantee supplier inventory. Browser visual QA and performance profiling remain release gates before merging to `main`.
+
+This work is intentionally delivered as a stacked **draft review PR**, preserving the current Production site until the tested branch is reviewed.
 
 ### Design system and accessibility
 
