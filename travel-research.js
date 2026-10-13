@@ -46,6 +46,37 @@
     for(const offer of (obj.offers||[])) article.append(render(offer));
     return article;
   }
+  // Search handoff only: never suggest Google Flights will preselect this
+  // exact itinerary, guarantee a price, or preserve a seller quote.
+  function addExternalHandoff(card,details) {
+    const panel=word('div','', 'wf-external-flight-handoff');
+    const link=document.createElement('a');
+    link.href='https://www.google.com/travel/flights';
+    link.target='_blank';
+    link.rel='noopener noreferrer';
+    link.className='wf-flight-compare-link';
+    link.textContent='Compare tickets on Google Flights ↗';
+    const info=word('p',
+      'Opens a separate tab. Re-select the same dates and flights there; verify seats, baggage, and the final payable fare before purchasing.',
+      'wf-flight-handoff-note');
+    panel.append(link);
+    if(details) {
+      const copy=word('button','Copy flight details','wf-flight-copy');
+      copy.type='button';
+      copy.addEventListener('click',async()=>{
+        try {
+          if(!navigator.clipboard?.writeText)throw Error('Clipboard unavailable');
+          await navigator.clipboard.writeText(details);
+          copy.textContent='Flight details copied ✓';
+        }catch{
+          copy.textContent='Copy unavailable — refer to the details above';
+        }
+      });
+      panel.append(copy);
+    }
+    panel.append(info);
+    card.append(panel);
+  }
   function addSelection(card,selection){
     if(!selection || !['return','booking'].includes(selection.stage)||!selection.token)return;
     const button=word('button',selection.stage==='return'?
@@ -84,16 +115,27 @@
               segments+' · estimated group '+money(choice.estimatedGroup,choice.currency),
               'Search itinerary only · Seats NOT VERIFIED');
             addSelection(result,choice.selection);
+            addExternalHandoff(result,
+              'Return option: '+segments+' | '+money(choice.pricePerAdult,choice.currency)+
+              ' per adult | '+get('travel-origin')+' to '+get('travel-arrival')+
+              ' | dates: '+get('check-in')+' to '+get('check-out')+
+              ' | indicative only; verify directly with the seller');
             area.append(result);
           }
         }else if(data.stage==='booking_options'){
           for(const opt of (data.options||[])){
-            area.append(itemCard(
+            const sellerCard=itemCard(
               opt.seller+' · '+money(opt.price,opt.currency),
               opt.separateTickets?'Separate-ticket arrangement · confirm connection risks':
                 'Seller option listed by supplier at '+localeTime(data.checkedAt),
               (opt.priceBasis||'Supplier search quote; final fare not confirmed')+' · SELLER LISTED · Seat inventory NOT VERIFIED · No ticket reserved'
-            ));
+            );
+            addExternalHandoff(sellerCard,
+              'Seller: '+opt.seller+' | quoted price: '+money(opt.price,opt.currency)+
+              ' | origin: '+get('travel-origin')+' | destination: '+get('travel-arrival')+
+              ' | dates: '+get('check-in')+' to '+get('check-out')+
+              ' | quote not guaranteed; re-select and verify on the provider website');
+            area.append(sellerCard);
           }
           const handoff=document.createElement('a');
           handoff.href='https://www.google.com/travel/flights';
@@ -129,6 +171,12 @@
           budget(offer.budgetFit)+' · Ticket availability: NOT VERIFIED · Seats: unknown · Return selection: unconfirmed · Schedule/price indicative at search, not live operational status'
         );
         addSelection(card,offer.selection);
+        addExternalHandoff(card,
+          'Outbound: '+times+
+          ' | '+money(offer.perAdult,offer.currency)+' per adult (indicative)'+
+          ' | origin '+get('travel-origin')+' | arrival '+get('travel-arrival')+
+          ' | outbound '+get('check-in')+' | return '+get('check-out')+
+          ' | group: '+get('stay-adults')+' travelers | NOT a confirmed booking');
         return card;
       }),
       panel('Accommodation · hotel search',res.hotels,offer=>itemCard(
