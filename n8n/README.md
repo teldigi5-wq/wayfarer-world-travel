@@ -1,15 +1,14 @@
 # Wayfarer real AI beta — n8n + Groq
 
-> As of October 2026, the Amadeus Self-Service API described in earlier drafts has been discontinued. The legacy `/api/travel-offers` adapter is disabled pending migration to an available provider. n8n/Groq AI suggestions are **not** live seat, fare, hotel or restaurant inventory.
-
+> **Supplier integration update (October 2026):** The retired Amadeus adapter was replaced with a separate protected server-only **SerpApi Google Flights / Hotels** search endpoint on this unmerged feature branch. Search prices are **not** verified seat/room inventory and may be cached. The existing Groq n8n agents are research assistants, not the source of these prices.
 
 This **optional, disabled-by-default** beta adds actual Groq model calls orchestrated by an importable n8n workflow to the original deterministic Wayfarer planner. It does not replace the separate `wayfarer-journey-ai` Vercel deployment. Main and both production sites remain unchanged until this PR is reviewed, configured and deployed.
 
 ## Important: live supplier data is separate from Groq
 
-The three Groq agents produce helpful itinerary *ideas*, not authoritative live airline seats, hotel inventory, restaurant menus or local transit fares. A separate feature-branch, password-gated `/api/travel-offers` route can query actual Amadeus flight and hotel offer endpoints if the owner supplies valid credentials. Test-account quotes are limited/cached, not real-time; production credentials and cost approval are required before public claims of live availability. Food and transport price feeds are **not yet connected**. Do not add prices as facts to Groq prompts.
+The three Groq agents produce helpful itinerary ideas, not current airline seats, hotel availability, restaurant menus or local transit fares. The feature-branch `POST /api/travel-offers` is a **separate**, beta-code-gated Vercel server function calling SerpApi's Google Flights/Hotels search engines when `SERPAPI_API_KEY`, `WAYFARER_AI_BETA_TOKEN` and `WAYFARER_TRAVEL_ENABLED=true` are configured on **Preview**. Flight/hotel prices can be provider-derived search indications; unverified booking availability is not inferred. Food/transport price feeds are **not yet connected**.
 
-See the top-level [README](../README.md#supplier-backed-travel-prices--availability--gated-beta) for configuration, costs, truth status, data limitations and safe testing.
+**Important:** The returned provider search results are displayed beside the AI reports; this version does **not yet feed the supplier offers back into the n8n reasoning loop or persist AI itinerary revisions**. Do not claim the Groq agents automatically fetched or verified specific priced offers. See [SerpApi configuration and validation](../README.md#serpapi-google-travel-search--private-gated-beta).
 
 ## What is implemented
 
