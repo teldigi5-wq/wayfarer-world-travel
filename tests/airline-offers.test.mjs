@@ -134,6 +134,26 @@ test('live mode cannot accidentally activate from a test credential or a live to
     assert.equal(result.body.status,'not_connected');
   }finally{globalThis.fetch=originalFetch;}
 });
+test('even an explicitly approved live supplier quote is NEVER a confirmed ticket',async()=>{
+  setEnv(true);
+  process.env.DUFFEL_MODE='live';
+  process.env.DUFFEL_ACCESS_TOKEN='duffel_live_fixture-not-real';
+  process.env.WAYFARER_DUFFEL_LIVE_APPROVED='true';
+  const previous=globalThis.fetch;
+  globalThis.fetch=async()=>new Response(JSON.stringify({data:{
+    offers:[{...sampleOffer,live_mode:true}]} }),{status:200});
+  try{
+    const response=await req({action:'search',trip},{suffix:'approved-live-quote'});
+    assert.equal(response.statusCode,200);
+    assert.equal(response.body.mode,'live');
+    assert.equal(response.body.status,'supplier_offers');
+    assert.equal(response.body.offers.length,1);
+    assert.equal(response.body.offers[0].availabilityStatus,'supplier_offer_unbooked');
+    assert.equal(response.body.offers[0].seatCountVerified,false);
+    assert.equal(response.body.offers[0].bookingConfirmed,false);
+    assert.match(response.body.offers[0].label,/NOT RESERVED/);
+  }finally{globalThis.fetch=previous;}
+});
 test('unverified, expired and wrong-mode offers cannot be listed as available',async()=>{
   setEnv(true);
   const oldFetch=globalThis.fetch;
