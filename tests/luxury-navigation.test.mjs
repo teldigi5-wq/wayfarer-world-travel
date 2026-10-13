@@ -33,7 +33,7 @@ test('OS preference changes live and disables animated parallax',()=>{
   const view={id:'discover',scrollHeight:1600,querySelector:()=>null};
   const nav={classList:{toggle(){}}};
   const root={classList:{toggle(key,state){if(state)classes.add(key);else classes.delete(key);}}};
-  const doc={documentElement:root,
+  const doc={documentElement:root,getElementById:()=>null,
     body:{scrollHeight:1600},
     querySelector(selector){
       if(selector==='.reading-progress')return null;
