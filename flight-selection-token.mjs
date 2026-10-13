@@ -17,6 +17,7 @@ function valid(o){
   return o && typeof o==='object' && rounds.includes(o.stage) &&
     typeof o.providerToken==='string' && o.providerToken.length>0 &&
     o.providerToken.length<=MAX_TOKEN && !/[\x00-\x1f]/.test(o.providerToken) &&
+    !/^https?:\/\//i.test(o.providerToken) &&
     iata(o.from)&&iata(o.to)&&dateRx.test(o.outbound)&&dateRx.test(o.returnDate) &&
     Number.isInteger(o.adults)&&o.adults>=1&&o.adults<=9;
 }
