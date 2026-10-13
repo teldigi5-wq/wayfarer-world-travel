@@ -87,7 +87,7 @@ test('source agents operate without metered AI access and preserve partial failu
     assert.equal(visits.weather,2,'one bounded network retry');
     assert.equal(visits.wiki,2,'one bounded 503 retry');
     assert.equal(visits.country,1);
-    assert.ok(response.body.verification.flags.some(s=>s.includes('not the weather')));
+    assert.ok(response.body.verification.flags.some(s=>s.includes('weather could not be retrieved')));
   }finally{globalThis.fetch=realFetch}
 });
 test('authenticated orchestration gathers all sources then composes a grounded AI draft',async()=>{
