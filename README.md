@@ -17,6 +17,20 @@
 - **Service price concepts:** Explorer is **$0/month** and represents presently accessible functionality. Journey Plus is **proposed $9/month** (not on sale), and Wayfarer Partners is a future custom-quote concept. **No checkout, subscriptions, payment processing, entitlements or paid accounts are activated.** Do not use them for advertising as launched paid services.
 - **Motion system:** subtle editorial destination surfaces, refined card feedback, contrast-aware typography, accessible country-search controls, keyboard focus and reduced-motion support. It adds no WebGL or expensive motion libraries.
 
+#### Optional flight selection and booking-seller research
+
+A traveler can now explicitly select a Google Flights search result to investigate the next round-trip stage:
+
+1. **Search flights:** `POST /api/travel-search` returns search schedules/prices. Each eligible outbound option includes a server-signed, short-lived `selection` token only when the provider supplies a `departure_token`.
+2. **Select a return:** `POST /api/flight-selection` with the signed selection and private beta passcode performs a separate SerpApi Google Flights `departure_token` request. Returned return choices may include signed `booking` selections.
+3. **Check booking sellers:** A **second explicit click** uses the signed `booking_token` to retrieve a supplier's `booking_options` seller and indicative price, with the response labeled `availability: seller_option_listed` and `seatInventoryVerified:false`. No booking forms or payments are submitted.
+
+Each lookup may consume an additional search credit. The signed selection expires after **8 minutes** and binds stage, origin, destination, dates and traveler count. Signature tampering or expiration is rejected without a supplier request. The extra stage uses a **best-effort, in-memory per-IP throttle**, not a cross-region durable quota or abuse-proof authentication service. No additional API searches run automatically when the page loads. Browser UI uses safe text nodes for supplier content.
+
+**Do not claim actual seats are confirmed:** A displayed booking seller is not an airline reservation, an issued ticket, or guaranteed inventory. The user must inspect actual fare rules and checkout on an authorized provider site. No seller-specific checkout deep links are constructed or submitted. Search results and provider information may be cached or change before purchase.
+
+Provider reference: [SerpApi Google Flights Booking Options API](https://serpapi.com/google-flights-booking-options). A public commercial release still requires a suitable authorized booking/inventory provider, durable usage controls, explicit account/billing rules, monitoring and supplier terms review.
+
 #### Production readiness
 
 This feature is in a draft PR. Do **not** enable supplier credentials publicly by copying Preview secrets into Production without cost/quota protection, consent and booked-inventory verification. Automated tests use fixture data and consume **no** real SerpApi credits. Launch gates: Preview browser testing, security and accessibility checks, durable server-side per-user rate limiting, explicit provider quotas, privacy policy and source/provider terms. See the [SerpApi Google Flights API](https://serpapi.com/google-flights-api) and [Booking Options documentation](https://serpapi.com/google-flights-booking-options).
