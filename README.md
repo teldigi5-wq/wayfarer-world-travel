@@ -1,5 +1,20 @@
 # Wayfarer
 
+**Website:** https://wayfarer-world-travel.vercel.app/  
+**GitHub repository:** https://github.com/teldigi5-wq/wayfarer-world-travel  
+**Latest integration review:** https://github.com/teldigi5-wq/wayfarer-world-travel/pull/5
+
+> Wayfarer brings **Discover → AI Journey Studio → Arrival Companion → My Journeys** into one premium, accessible travel-planning experience. The main domain points to Production; feature-branch changes are released only after Preview verification. Airline/hotel searches are indicative provider research, not guaranteed booking inventory.
+
+### Design system and accessibility
+
+- **Legibility before decoration:** dark evergreen interactive cards (`#12362D`, `#194237`), warm ivory text (`#FAF6EB`), calm green secondary text (`#C4D5CA`), and restrained brass accents (`#E8C992`). The functional panel pairs pass WCAG AA contrast checks.
+- Serif typography is reserved for major editorial headings. Real itinerary, fares, checklists, search controls and verification caveats use comfortably sized sans-serif text.
+- The Arrival and My Journeys screens load `legibility-system.css` last. It replaces the earlier low-contrast white panels without changing application behavior, offers or stored trips.
+- Responsive cards, visible focus indicators, minimum-height interactive targets and reduced-motion preferences remain part of the release checklist.
+- **Data transparency:** local checklists and saved journeys are browser-only; real-time flight tickets, hotel availability, visa clearance, menus and transit schedules are never invented.
+
+
 > **Premium Wayfarer integration (review branch; not production).** This branch adopts the recovered cinematic `wayfarer-journey-ai` homepage, Journey Studio and optional SerpApi travel research as the default frontend. All previous backend files, `n8n/` workflows and tests remain. The old static homepage is archived at `legacy/world-travel-original-home.html`, and the original live site remains unchanged. Please see [PREMIUM_INTEGRATION.md](PREMIUM_INTEGRATION.md) for compatibility checks, security/CSP decisions, and provider-key requirements. **Do not claim live confirmed seats, bookable hotels, or live menu/transit fares.**
 
 
