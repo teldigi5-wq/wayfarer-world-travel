@@ -6,6 +6,21 @@
 
 > Wayfarer brings **Discover → AI Journey Studio → Arrival Companion → My Journeys** into one premium, accessible travel-planning experience. The main domain points to Production; feature-branch changes are released only after Preview verification. Airline/hotel searches are indicative provider research, not guaranteed booking inventory.
 
+### Worldwide search, flight times and service plans (draft beta)
+
+**Public website:** https://wayfarer-world-travel.vercel.app/  
+**Source and release review:** https://github.com/teldigi5-wq/wayfarer-world-travel/pull/8
+
+- **Country atlas:** the Discover screen uses the existing searchable country/territory reference directory; selecting a country opens Journey Studio with its filter applied. The user still chooses a city and airports. All listed countries are discoverable; this **does not** imply every airport offers flights, that every city has complete attractions or that entry requirements have been verified.
+- **Supplier flight schedules:** with Preview-only `SERPAPI_API_KEY`, `WAYFARER_AI_BETA_TOKEN` and `WAYFARER_TRAVEL_ENABLED=true`, the server may retrieve Google Flights search fares, airline and flight numbers, provider-reported departure and arrival times, total duration and stop count. The UI explicitly displays **ticket availability: not verified**; `bookableSeats=null` and `operationalFlightStatus=not_connected`. These are not live flight movement/real-time delay, guaranteed seats or final bookable prices. A return itinerary and booking options require a separate authorized provider interaction. Search results may be cached.
+- **Hotel research:** where a provider returns an explicit total, the UI shows indicative total-rate search prices. Occupancy, room inventory, taxes, cancellation terms, payment and booking confirmation are not verified. Restaurant menu prices and worldwide transit fares are not connected.
+- **Service price concepts:** Explorer is **$0/month** and represents presently accessible functionality. Journey Plus is **proposed $9/month** (not on sale), and Wayfarer Partners is a future custom-quote concept. **No checkout, subscriptions, payment processing, entitlements or paid accounts are activated.** Do not use them for advertising as launched paid services.
+- **Motion system:** subtle editorial destination surfaces, refined card feedback, contrast-aware typography, accessible country-search controls, keyboard focus and reduced-motion support. It adds no WebGL or expensive motion libraries.
+
+#### Production readiness
+
+This feature is in a draft PR. Do **not** enable supplier credentials publicly by copying Preview secrets into Production without cost/quota protection, consent and booked-inventory verification. Automated tests use fixture data and consume **no** real SerpApi credits. Launch gates: Preview browser testing, security and accessibility checks, durable server-side per-user rate limiting, explicit provider quotas, privacy policy and source/provider terms. See the [SerpApi Google Flights API](https://serpapi.com/google-flights-api) and [Booking Options documentation](https://serpapi.com/google-flights-booking-options).
+
 ### Design system and accessibility
 
 - **Legibility before decoration:** dark evergreen interactive cards (`#12362D`, `#194237`), warm ivory text (`#FAF6EB`), calm green secondary text (`#C4D5CA`), and restrained brass accents (`#E8C992`). The functional panel pairs pass WCAG AA contrast checks.
