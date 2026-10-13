@@ -13,7 +13,7 @@ test('site header removes the old Motion on control and fake glowing status',()=
   assert.match(html,/class="nav-plan" data-view="studio"/);
   assert.match(html,/aria-label="Start planning your journey"/);
   assert.match(app,/querySelectorAll\(s\)/);
-  assert.match(app,/\\$\\$\\('\\[data-view\\]'\\)/);
+  assert.ok(app.includes("$('[data-view]')"));
   assert.match(heroCss,/\.nav \.nav-plan\{/);
   assert.doesNotMatch(baseCss,/\.motion-toggle\{|\.motion-toggle-dot/);
   assert.doesNotMatch(editorialCss,/\.nav \.motion-toggle/);
