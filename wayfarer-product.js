@@ -70,6 +70,7 @@
     detail.textContent='Future-service concepts only. Current access includes worldwide discovery, local journey drafts, and arrival preparation. Shared accounts, payments, provider booking inventory, and expanded AI usage are not currently on sale.';
     plans.append(detail);detail.focus();
   }));
+  document.documentElement.classList.add('wf-premium-animated');
   if('IntersectionObserver' in window){
     const observer=new IntersectionObserver(entries=>{
       for(const e of entries)if(e.isIntersecting){e.target.classList.add('wf-visible');observer.unobserve(e.target);}
