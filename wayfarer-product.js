@@ -33,6 +33,7 @@
       b.addEventListener('click',()=>{
         select.value=c.code;select.dispatchEvent(new Event('change',{bubbles:true}));
         document.querySelector('.nav-links [data-view="studio"]')?.click();
+        $('wf-tab-explore')?.click();
         requestAnimationFrame(()=>{
           $('world-explorer')?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
           $('world-query')?.focus({preventScroll:true});
@@ -62,6 +63,7 @@
   plans.querySelectorAll('[data-wf-plan]').forEach(b=>b.addEventListener('click',()=>{
     if(b.dataset.wfPlan==='start'){
       document.querySelector('.nav-links [data-view="studio"]')?.click();
+      $('wf-tab-explore')?.click();
       requestAnimationFrame(()=>$('world-query')?.focus());return;
     }
     let detail=plans.querySelector('.wf-roadmap-note');
