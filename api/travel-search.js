@@ -20,7 +20,7 @@ function parseTrip(req){
   const t=body.trip||{};
   const route={
     from:clean(t.from,12).toUpperCase(),to:clean(t.to,12).toUpperCase(),
-    checkIn:clean(t.checkIn,10),checkOut:clean(t.checkOut,10),
+    checkIn:clean(t.checkIn,16),checkOut:clean(t.checkOut,16),
     destination:clean(t.destination,90),adults:Number(t.adults),
     flightBudget:t.flightBudget==null||t.flightBudget===''?0:Number(t.flightBudget),
     groundBudget:t.groundBudget==null||t.groundBudget===''?0:Number(t.groundBudget)
@@ -33,7 +33,8 @@ function parseTrip(req){
     !Number.isFinite(route.flightBudget)||route.flightBudget<0||route.flightBudget>1e6||
     !Number.isFinite(route.groundBudget)||route.groundBudget<0||route.groundBudget>1e6||
     !route.destination||route.destination.length<2||
-    (route.from&&!airport(route.from))||(route.to&&!airport(route.to))){throw Error('Invalid route, date, group or budget');}
+    (route.from&&!airport(route.from))||(route.to&&!airport(route.to))||
+    (route.from&&route.to&&route.from===route.to)){throw Error('Invalid route, date, group or budget');}
   return route;
 }
 async function search(provider,key,parameters){
