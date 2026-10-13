@@ -106,3 +106,32 @@ color:#f7e2b6;text-decoration:underline;text-underline-offset:4px}
 .wf-supplier-options>a:focus-visible{outline:3px solid #f4db9a;outline-offset:3px}
 @media(max-width:680px){.wf-supplier-options{padding-left:10px}.wf-supplier-select{font-size:.83rem}}
 @media(prefers-reduced-motion:reduce){.wf-supplier-select{transition:none!important}}
+
+
+/* Verified-supplier research component: quiet hierarchy, readable factual states. */
+#wf-airline-offers{margin:30px 0 0;padding:clamp(22px,3vw,38px);background:linear-gradient(150deg,#0d2d27,#123b31);border:1px solid #e0cd9e55;border-radius:17px;color:#f6f2e7;box-shadow:0 18px 42px #001c1430}
+#wf-airline-offers *{box-sizing:border-box}
+.wf-airline-heading h3{font:500 clamp(2.05rem,3.6vw,3rem)/1.07 'Cormorant Garamond',Georgia,serif;color:#fff9e9;margin:16px 0}
+.wf-airline-heading p,.wf-airline-toolbar p{font:400 .94rem/1.7 'DM Sans',sans-serif;color:#d2e2d6;max-width:65ch}
+.wf-airline-status{display:inline-block;margin:17px 0 6px;padding:10px 14px;border:1px solid #e1d9b75b;border-radius:100px;color:#f2d6a2;font:700 .78rem/1.45 'DM Sans',sans-serif;letter-spacing:.025em}
+.wf-airline-toolbar{margin:24px 0;display:flex;flex-wrap:wrap;gap:16px;align-items:center}
+.wf-airline-toolbar p{margin:0;flex:1;min-width:220px;font-size:.85rem}
+.wf-airline-btn,.wf-airline-refresh{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:12px 20px;max-width:100%;background:#f1d8a8;color:#15382e;border:1px solid #e9d6a8;border-radius:9px;font:700 .89rem/1.4 'DM Sans',sans-serif;cursor:pointer}
+.wf-airline-btn:hover,.wf-airline-refresh:hover{background:#fce8c5}
+.wf-airline-btn:focus-visible,.wf-airline-refresh:focus-visible{outline:3px solid #f3dcb4;outline-offset:4px}
+.wf-airline-btn[disabled],.wf-airline-refresh[disabled]{opacity:.7;cursor:progress}
+#wf-airline-status{color:#e3dfc9;font:500 .91rem/1.65 'DM Sans',sans-serif}
+.wf-airline-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:18px}
+.wf-airline-offer{min-width:0;padding:22px;background:#1a4337;border:1px solid #e0e5cf3d;border-radius:12px}
+.wf-airline-pill{display:inline-block;padding:5px 8px;background:#f2d5a017;color:#f2d49a;border:1px solid #e8d4a26e;border-radius:6px;font:700 .71rem/1.4 'DM Sans',sans-serif;letter-spacing:.07em}
+.wf-airline-pill.sandbox{color:#f3d5aa;background:#fff5d50c;border-style:dashed}
+.wf-airline-offer h4{font:500 clamp(1.5rem,2.4vw,2.1rem)/1.1 'Cormorant Garamond',Georgia,serif;color:#fff7e8;margin:16px 0}
+.wf-airline-offer p,.wf-airline-route p,.wf-airline-trust{font:400 .9rem/1.7 'DM Sans',sans-serif;color:#d5e3d8;overflow-wrap:anywhere}
+.wf-airline-route{margin-top:15px;padding:12px 0;border-top:1px solid #d9e7d238}
+.wf-airline-route strong{font:700 .78rem/1.4 'DM Sans',sans-serif;letter-spacing:.07em;color:#f0d39d}
+.wf-airline-trust{padding:13px;background:#0a2923;border-left:2px solid #e3c390;color:#f8ecd2!important}
+.wf-airline-empty{color:#d5e3d8;font:.94rem/1.65 'DM Sans',sans-serif}
+.wf-airline-refresh{margin-top:14px}
+@media(max-width:820px){.wf-airline-results{grid-template-columns:1fr}}
+@media(max-width:600px){#wf-airline-offers{margin:22px 0;padding:18px}.wf-airline-toolbar{display:block}.wf-airline-toolbar p{margin-top:12px;min-width:0}.wf-airline-btn,.wf-airline-refresh{width:100%}.wf-airline-offer{padding:17px}}
+@media(prefers-reduced-motion:reduce){.wf-airline-btn,.wf-airline-refresh,.wf-airline-offer{animation:none!important;transition:none!important}}
