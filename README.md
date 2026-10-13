@@ -31,6 +31,31 @@ Each lookup may consume an additional search credit. The signed selection expire
 
 Provider reference: [SerpApi Google Flights Booking Options API](https://serpapi.com/google-flights-booking-options). A public commercial release still requires a suitable authorized booking/inventory provider, durable usage controls, explicit account/billing rules, monitoring and supplier terms review.
 
+#### Optional airline-authorized offers — Duffel test mode (new)
+
+Wayfarer now includes an isolated `POST /api/airline-offers` supplier adapter and a Journey Studio airline-offer panel. **It is disabled by default** and is not connected to any actual airline account yet. The existing SerpApi Google Travel research remains separate.
+
+To test with **zero actual ticket purchases**, create a Duffel Developer **test** account/token through [Duffel's test mode documentation](https://duffel.com/docs/api/overview/test-mode), then configure the following as **Sensitive, Preview-only Vercel environment variables** in `wayfarer-world-travel`:
+
+```env
+DUFFEL_ACCESS_TOKEN=<private Duffel developer TEST token>
+DUFFEL_MODE=test
+WAYFARER_DUFFEL_ENABLED=true
+# WAYFARER_AI_BETA_TOKEN=<existing private beta code>
+```
+
+Do **not** put any Duffel or SerpApi keys in the website, GitHub, README, frontend code, or client-side storage. The existing private Wayfarer beta code authorizes requests from the browser; provider tokens stay server-side. Vercel env updates require a fresh Preview deployment. This adapter makes **one authorized offer search on explicit user request** and optionally **one refresh per user click**.
+
+- **Sandbox offers**: marked `SANDBOX — NOT REAL TICKETS`; `availabilityStatus=sandbox_offer`, `seatCountVerified=false` and `bookingConfirmed=false`. Duffel warns that sandbox prices and schedules are not realistic.
+- **Live mode**: the adapter can only be activated with a live Duffel credential, `DUFFEL_MODE=live`, and an additional explicit `WAYFARER_DUFFEL_LIVE_APPROVED=true` gate. **Do not enable this without account approval, supplier commercial terms, global cost controls and compliance review.** Live offers show `supplier_offer_unbooked`, never `confirmed_ticket`.
+- **Recheck**: a selected supplier offer is fetched again by its server-encrypted, 12-minute token. Quotes can expire, change or disappear before checkout; recheck remains informational and **cannot reserve seats**. No order, payment, passenger identity or ticket issuance endpoints exist.
+- **Safety**: short-lived AES-256-GCM encrypted provider selections; strict IATA/date/group validation; bounded supplier responses and timeouts; no raw supplier tokens or API secrets in the browser response. Current in-memory per-IP limiting is best-effort and **not sufficient for a public live release**.
+- **Pricing**: Duffel supplier offers display their original quoted currency and a total for all searched adult travelers; there is no invented FX conversion into USD. The independent ground budget and SerpApi estimates remain separate.
+
+**Truthful ticket states:** `no_results` does not mean sold out; `sandbox_results` does not mean real inventory; `supplier_offers` and `offer_refreshed` mean a supplier returned an expiring offer, **not a booked ticket or guaranteed seat**. Genuine confirmed ticket status needs an authorized provider's successful order/ticket confirmation, which this zero-cost beta intentionally does not perform.
+
+Relevant official references: [Duffel Offer Requests](https://duffel.com/docs/api/v2/offer-requests), [Duffel Offers](https://duffel.com/docs/api/v2/offers), [Duffel test mode](https://duffel.com/docs/api/overview/test-mode).
+
 #### Production readiness
 
 This feature is in a draft PR. Do **not** enable supplier credentials publicly by copying Preview secrets into Production without cost/quota protection, consent and booked-inventory verification. Automated tests use fixture data and consume **no** real SerpApi credits. Launch gates: Preview browser testing, security and accessibility checks, durable server-side per-user rate limiting, explicit provider quotas, privacy policy and source/provider terms. See the [SerpApi Google Flights API](https://serpapi.com/google-flights-api) and [Booking Options documentation](https://serpapi.com/google-flights-booking-options).
