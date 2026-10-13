@@ -38,7 +38,7 @@ test('flight search includes both schedule times but never presents speculative 
   assert.match(backend,/bookableSeats:null/);
   assert.match(backend,/operationalFlightStatus:'not_connected'/);
   assert.match(flightsUI,/Ticket availability: NOT VERIFIED/);
-  assert.match(flightsUI,/s\.arrivalAt/);
+  assert.match(flightsUI,/segment\.arrivalAt/);
   assert.match(flightsUI,/totalDurationMinutes/);
 });
 const before={...process.env};
