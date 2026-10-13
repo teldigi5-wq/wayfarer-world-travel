@@ -56,7 +56,9 @@
       'Request seller booking options; uses a provider search credit');
     const area=word('div','','wf-supplier-options');
     card.append(button,area);
+    let completed=false;
     button.addEventListener('click',async()=>{
+      if(completed)return;
       button.disabled=true;button.setAttribute('aria-busy','true');
       area.replaceChildren(word('p','Checking the selected itinerary with the supplier…'));
       const aborter=new AbortController();
@@ -90,7 +92,7 @@
               opt.seller+' · '+money(opt.price,opt.currency),
               opt.separateTickets?'Separate-ticket arrangement · confirm connection risks':
                 'Seller option listed by supplier at '+localeTime(data.checkedAt),
-              'SELLER LISTED · Seat inventory NOT VERIFIED · No ticket reserved'
+              (opt.priceBasis||'Supplier search quote; final fare not confirmed')+' · SELLER LISTED · Seat inventory NOT VERIFIED · No ticket reserved'
             ));
           }
           const handoff=document.createElement('a');
@@ -100,12 +102,14 @@
           area.append(handoff);
         }
         if(data.limitations?.length)area.append(word('p',data.limitations.join(' '),'wf-provider-caveat'));
+        completed=true;
+        button.textContent='Supplier lookup completed · choose a different itinerary to compare';
       }catch(error){
         area.replaceChildren(word('p',error?.name==='AbortError'?
           'Supplier request timed out. This is not evidence of sold-out tickets.':
           'Supplier lookup unavailable: '+(error?.message||'Try another time.'),'wf-provider-caveat'));
       }finally{
-        clearTimeout(timeout);button.disabled=false;button.removeAttribute('aria-busy');
+        clearTimeout(timeout);button.disabled=completed;button.removeAttribute('aria-busy');
       }
     });
   }
