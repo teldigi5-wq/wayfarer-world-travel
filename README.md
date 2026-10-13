@@ -1,12 +1,8 @@
 # Wayfarer
 
-> **Provider migration notice (12 October 2026).** Amadeus Self-Service was decommissioned on **17 July 2026**, as confirmed on the official [Amadeus developer portal](https://developers.amadeus.com/). The existing Amadeus adapter is **disabled** and is retained only as historical beta prototype code. Creating a new Self-Service API account is no longer possible. A supported replacement such as Duffel's developer test environment must be integrated, with separate authorization for live use; no live flight or hotel provider is currently connected. Do not set `AMADEUS_ENV=production` or expose deprecated credentials.
+> **Flight + hotel search in draft PR only (October 2026).** The retired Amadeus Self-Service implementation has been removed from the travel offers endpoint. The replacement uses **SerpApi Google Flights and Google Hotels searches**, gated by separate server-side credentials and a private beta passcode. The currently published site has **no live pricing service**; this PR must pass credentialed preview tests before deployment. Search prices are indicative, may be cached and **do not verify seats, room availability, bookings or final checkout prices**. Food and transport pricing are not connected.
 
-
-> **Optional n8n + Groq AI beta (disabled by default).** A gated, server-side Groq agent integration has been proposed on a feature branch. Three distinct model-backed research agents and an encyclopedia source call are orchestrated in n8n, but the feature requires owner-provided n8n hosting and Groq credentials. It is **not live** or part of the $0 no-key deterministic baseline. Setup, tests, licensing and limitations: [n8n/README.md](n8n/README.md).
-
-> **Provider-backed flight and hotel offers (new draft beta).** The protected `/api/travel-offers` endpoint can request supplier-returned round-trip flights and hotel offers from Amadeus when the owner configures credentials. **No provider account is connected by this repository; live prices and bookability are not activated on the published website.** Amadeus TEST data are limited/cached, and the UI marks them **NOT LIVE**. Restaurant menu prices and realtime local transit fares require independent official/licensed providers and remain **Not connected**. A returned fare is not a booked or guaranteed ticket.
-
+> **Optional Groq/n8n AI beta (disabled by default).** Three model-backed n8n agents can propose destination guidance, flights/stays research and itineraries. They do not generate authoritative provider prices. See [n8n/README.md](n8n/README.md) for connection instructions.
 
 A static, worldwide travel planner built to operate with a strict $0 development, hosting and API budget. Six local deterministic assistants coordinate destination data, flight handoff, nearby hotel discovery, itinerary scheduling, budget allocation and safety checklists. These are rule-based planning agents, not LLM inference. No checkout or booking integration is claimed.
 
@@ -30,35 +26,38 @@ Detailed local data is limited. Unknown cities receive flexible research slots a
 
 **Not yet complete:** destination-wide real-time food and public-transport pricing, guaranteed ticket inventory, verified daily flight timetable changes, multi-room hotel shopping and a unified AI plan recomputed from final repriced offers all require additional authenticated providers and tests. Never call the current beta a finished end-to-end booking product.
 
-## Supplier-backed travel prices & availability — gated beta
+## SerpApi Google Travel search — private gated beta
 
-The dedicated **Travel prices & availability** section, present on the feature branch only, makes a separate secure request to `POST /api/travel-offers`. Flight/hotel prices **do not come from Groq**. The browser never receives supplier API credentials.
+The optional **Travel prices & availability** panel calls `POST /api/travel-offers`, secured by `WAYFARER_AI_BETA_TOKEN`. A backend-only `SERPAPI_API_KEY` queries the documented Google Flights and Google Hotels APIs through SerpApi. **Neither API key is sent to the browser, README, logs or Groq.** An AI-generated suggestion is never converted into a supplier quote.
 
-| Category | Beta source | Truth boundary |
+| Category | Data retrieved | Important limitations |
 |---|---|---|
-| Flights | Amadeus Flight Offers Search: return flights, departure/arrival segments, total supplier currency/price, and any provider-reported bookable seats | A quote is **not** a booking, sold-out determination, or confirmed seat; reprice through provider before checkout. |
-| Hotels | Amadeus Hotel List by city → Hotel Offers V3: named properties, total supplier price and quoted dates | Limited sample; one shared room for 1–2 adults; check taxes, bed setup, accessibility, cancellation and final availability. |
-| Food | Restaurant/menu research link | No licensed global live food price feed; **no food price estimates** or fabricated menus. |
-| Transport | Transit-route research link | No worldwide live timetable/fare feed; **no invented prices, schedules or service availability**. |
+| Flight search | Selected origin/arrival IATA codes; outbound/return dates; adult count; economy; indicative USD fare and outbound flight segments | Google Flights round-trip search prices are **indicative per adult**; a return itinerary normally requires an additional `departure_token` request. The UI multiplies by adult count only as a **group budget estimate**. No live seat count or guaranteed checkout price. |
+| Hotel search | Google Hotels destination/date query, named properties with `total_rate.extracted_lowest` and search price in USD | Only results with explicit **total-rate** pricing are shown. One shared room with 1–2 adults is assumed; taxes, fees, bed configuration, cancellation and room availability require provider verification. |
+| Food | External restaurant/menu research link | Real-time worldwide menu pricing unavailable; **not connected**. |
+| Transportation | External transit research link | Real-time fares, schedules and operating status unavailable; **not connected**. |
 
-**Configuration is server-side only** (Vercel Preview first):
+### Set up on Vercel Preview only
 
 ```env
-WAYFARER_AI_BETA_TOKEN=<owner-generated private test passcode>
+SERPAPI_API_KEY=<copy into Vercel Sensitive environment variable>
+WAYFARER_AI_BETA_TOKEN=<unique random private beta access code>
 WAYFARER_TRAVEL_ENABLED=true
-# Optional group airfare ceiling is set by the user, not by server env.
-AMADEUS_CLIENT_ID=<owner Amadeus client ID>
-AMADEUS_CLIENT_SECRET=<owner Amadeus client secret>
-AMADEUS_ENV=test
 ```
 
-Use `AMADEUS_ENV=test` only for developing and validating UI; responses are **not live**. Live supplier data requires the authorized `production` Amadeus environment, agreement/billing eligibility, and explicit owner approval. Production can incur charges after free quotas: **do not switch to production, add a payment method, or allow public traffic without cost controls and the user's approval**. This beta has only a shared private passcode, not robust individual authentication or persistent abuse controls.
+Select **Preview** for each variable. The browser requests the private beta access code to call the route; **never** enter SerpApi or Groq provider keys in the browser. `WAYFARER_TRAVEL_ENABLED` defaults off, so merely saving `SERPAPI_API_KEY` does not activate API calls. Vercel env changes apply to new deployments, not old ones.
 
-The endpoint handles missing credentials by returning `not_connected`, upstream outages with `unavailable`, unsupported traveler room layouts with `needs_details`, no returned offers with `no_offers`, and dev quotes with `test_data`. **None** means tickets or rooms are definitively sold out. Data includes source/mode and a search timestamp. Food and local transport categories always remain explicitly unconnected until appropriate providers are implemented.
+The route makes **up to two SerpApi API calls per user click** (one flights, one hotels); it does not query every worldwide route automatically. **SerpApi charges/counts searches against its plan allowance**. The free plan and its quota may change, so check your dashboard, avoid public exposure and rotate compromised keys. This beta has no durable multi-instance rate limiter, per-user accounts or monthly hard cap beyond provider enforcement; the shared beta code alone is not sufficient for an open public launch.
 
-Travel dates are currently used both for outbound/return flights and accommodation check-in/check-out. A full booking UX would ask independently for dates, airport choice, cabin, passenger ages, bed/room layout, baggage, cancellation preferences, currency and traveller eligibility. The site does not process ticket payments, bookings or passport/identity information. No booking transaction should be attempted based solely on returned search results.
+States are explicit: `not_connected`, `needs_details`, `search_results`, `no_results`, `quota_exceeded` and `unavailable`. `no_results` **does not imply sold out**. Search time is recorded; SerpApi itself may return cached results. No server booking, payments, tickets or reservations are made. Never call a search price verified available inventory. Google Flights will normally need another search to choose the return and booking options; this first beta avoids that extra quota use.
 
-**Before enabling a public production integration:** establish provider commercial rights, per-user authentication, quotas/rate limiting, consent and privacy notice, destination/currency validation, fare refresh, full hotel occupancy support, accessibility checks, an operation budget, abuse prevention and legal/commercial hosting terms. Keep the deterministic planner working without any provider.
+The group **ground budget** covers lodging, meals, local transit, attractions and contingency. **International flights are excluded**, and the optional **group flight budget** is separate. Flight quote prices are multiplied by adult count only as an **indicative group sum** before comparing with flight budget. Hotel total search prices compare to the provisional 40% accommodation allocation. Group travelers are currently treated as adults for search; child ages, accessibility, multi-room occupancy, seat classes, baggage, local currency and late checkout require a later product flow.
+
+### Deployment and verification gates
+
+Run `npm run check && npm test`. Before deploying the PR to preview, configure all three Preview-only variables, verify exact branch targeting, ensure the Vercel integration can access the owner's scope, confirm source permissions and test the selected IATA route with **one limited live test**. Test budget labels, empty results, 429/quota errors and stale supplier results. **Production is not enabled or approved; main remains protected.**
+
+Official integration references: [SerpApi Google Flights API](https://serpapi.com/google-flights-api), [SerpApi Google Hotels API](https://serpapi.com/google-hotels-api), [SerpApi pricing](https://serpapi.com/pricing).
 
 ## Run and test
 
@@ -93,7 +92,7 @@ Import only this repository into a new Vercel project. Framework: Other; build a
 - City/landmark coordinate facts: Wikimedia REST page summaries; individual source URLs and Wikidata IDs are retained in `data.json`. Wikidata structured facts are CC0: https://www.wikidata.org/wiki/Wikidata:Licensing . No Wikipedia prose, photos or descriptions were copied. Coordinates are approximate and downloaded October 11, 2026. Source entries identify coverage gaps.
 - Airports: https://ourairports.com/data/ and official mirror https://github.com/davidmegginson/ourairports-data . OurAirports data is public domain, community-maintained, and has no accuracy warranty. The source's scheduled-service flag is historical data, not verified operating status.
 - Maps: outbound https://www.openstreetmap.org/ with https://www.openstreetmap.org/copyright attribution and official Google Maps URLs: https://developers.google.com/maps/documentation/urls/get-started . Map-provider terms apply externally. No geocoding API or tiles are hosted.
-- The deployed baseline uses Google Flights handoff and Booking.com search links; dates/party may not prepopulate correctly. The unmerged beta uses documented Amadeus server APIs only after owner configuration. Amadeus test responses are **not live**; production usage may be chargeable. Restaurant menus and transit fares are not integrated.
+- The deployed baseline uses Google Flights handoff and Booking.com links; dates/party may not prepopulate correctly. The unmerged SerpApi draft beta can query live Google Travel **search results** via a backend key, with possible cached results; it cannot establish actual seat/room availability. Restaurant menus and transit fares remain unconnected.
 - Practical requirements: https://www.iata.org/en/travel-centre/ , destination immigration/embassy research, and https://www.gov.uk/foreign-travel-advice (UK-oriented). Passport nationality, transit, residency and purpose matter. Checklist outputs are not legal/medical advice or independently verified eligibility decisions.
 
 ## Privacy and security
