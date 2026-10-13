@@ -21,7 +21,7 @@ test('saved trip actions avoid unsafe HTML interpolation and support worldwide d
   const render=script.slice(start,end);
   assert.match(render,/document\.createElement\('article'\)/);
   assert.match(render,/\.textContent=t\.destination/);
-  assert.match(render,/t\.worldPlace/);
+  assert.match(render,/WayfarerJourneyIntegrity\?\.resolveSavedWorldPlace\(t\)/);
   assert.match(render,/resumeTrip\(true\)/);
   assert.match(render,/Confirm removal/);
   assert.match(render,/addEventListener\('input',renderTrips\)/);

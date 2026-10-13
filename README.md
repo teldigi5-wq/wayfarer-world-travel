@@ -230,6 +230,12 @@ Run `npm run check && npm test`. Before deploying the PR to preview, configure a
 
 Official integration references: [SerpApi Google Flights API](https://serpapi.com/google-flights-api), [SerpApi Google Hotels API](https://serpapi.com/google-hotels-api), [SerpApi pricing](https://serpapi.com/pricing).
 
+### Saved journey geography and handoff integrity — release candidate
+
+The My Journeys screen restores destination, duration, pace and budget without reusing coordinates from another trip. Three curated destinations (Kyoto, Bali and Switzerland) use their matching bundled reference coordinates and country codes. Other saved locations retain geographic coordinates only when the stored destination name/country agree and latitude, longitude and two-letter country code are valid. Older or incomplete records keep their destination/country label **without assigning an airport, location or country code**: travelers are prompted to select a matching World Explorer result before location-based research. These coordinates are saved planning inputs, not guarantees of external verification, current supplier offers or booking availability.
+
+Browser-stored journeys are validated as an array before use, so corrupted local storage will not crash the saved-trip view. Primary navigation now updates `aria-current="page"` for the active view. Regression coverage lives in `tests/journey-integrity.test.mjs`; `npm run check` syntax-checks the pure, no-network `journey-integrity.js` helper. These changes do not activate paid AI/supplier APIs, alter provider secrets or release automatically to Production.
+
 ## Run and test
 
 Install Node.js 20+ from its official distribution. No package install, API key, environment variable, card or build dependency is needed.
