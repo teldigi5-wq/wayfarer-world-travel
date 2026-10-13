@@ -1,3 +1,4 @@
+import {timingSafeEqual} from 'node:crypto';
 import {getJson,scrub,validHttpsSource,verificationSummary} from '../agent-runtime.mjs';
 
 const known={
@@ -14,7 +15,8 @@ const int=(value,min,max,fallback)=>{
 function tripQuery(query={}){
   const destination=scrub(query.destination,80);
   const base=known[destination];
-  const lat=Number(query.lat),lon=Number(query.lon);
+  const lat=query.lat===undefined||query.lat===null||String(query.lat).trim()===''?NaN:Number(query.lat);
+  const lon=query.lon===undefined||query.lon===null||String(query.lon).trim()===''?NaN:Number(query.lon);
   const countryCode=scrub(query.countryCode,2).toUpperCase()||base?.country||'';
   const latitude=base?.lat??lat,longitude=base?.lon??lon;
   if(!destination||destination.length<2||!Number.isFinite(latitude)||
@@ -135,13 +137,20 @@ export default async function handler(req,res){
     ]);
     const brief={destination:trip.destination,days:trip.days,budget:trip.budget,
       pace:trip.pace,moods:trip.moods};
-    const ai=await compose(brief,{
+    // Public sources are free to read. Paid AI generation requires explicit
+    // beta authorization, so a visible API key can never be drained by crawlers.
+    const token=process.env.WAYFARER_AI_BETA_TOKEN||'';
+    const offered=String(req.headers?.['x-wayfarer-beta-token']||'');
+    const permitted=process.env.WAYFARER_INTELLIGENCE_AI_ENABLED==='true'&&
+      token.length>=24&&offered.length===token.length&&
+      timingSafeEqual(Buffer.from(offered),Buffer.from(token));
+    const ai=permitted?await compose(brief,{
       weather:w.ok?{temperature:w.temperature,wind:w.wind,observedAt:w.observedAt,
         sourceUrl:w.sourceUrl,currentOnly:true}:null,
       destination:pl.ok?{summary:pl.extract,sourceUrl:pl.sourceUrl}:null,
       country:c.ok?{currencyCode:c.currencyCode,language:c.language,
         timezone:c.primaryTimezone,sourceUrl:c.sourceUrl}:null
-    });
+    }):{ok:false,error:'AI composer requires private beta access. Source research remains available.',model:MODEL};
     const verification=verificationSummary({
       weather:w,place:pl,country:c,ai,days:trip.days,dailyBudget:trip.budget
     });
