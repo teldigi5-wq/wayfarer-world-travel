@@ -26,7 +26,15 @@
     try{main?.focus({preventScroll:true});}catch{}
     setTimeout(()=>splash.remove(),380);
   }
-  function onKey(e){if(e.key==='Escape')finish();}
+  function onKey(e){
+    if(e.key==='Escape'){finish();return;}
+    // aria-modal must also behave modally: keep keyboard focus on Skip,
+    // never let a fast Tab keystroke land behind the splash.
+    if(e.key==='Tab'&&!closed){
+      e.preventDefault();
+      skip?.focus({preventScroll:true});
+    }
+  }
   function onVisibility(){if(document.visibilityState==='hidden')finish();}
   skip?.addEventListener('click',finish,{once:true});
   document.addEventListener('keydown',onKey);
