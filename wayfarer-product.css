@@ -86,3 +86,23 @@
 }
 .motion-off #wf-world-atlas,.motion-off #wf-service-plans,
 .motion-off #wf-world-atlas .wf-country{transition:none!important;transform:none!important;opacity:1!important}
+
+/* Optional supplier choice flow—keyboard-first, clear price provenance. */
+.wf-supplier-select {
+  width:100%;min-height:48px;margin:15px 0 3px;padding:12px 15px;
+  color:#102b24;background:#ebd39e;border:1px solid #f1ddaf;border-radius:9px;
+  font:700 .87rem/1.4 'DM Sans',sans-serif;cursor:pointer;text-align:left;
+}
+.wf-supplier-select:hover{background:#f5e5bd}
+.wf-supplier-select:focus-visible{outline:3px solid #f4db9a;outline-offset:4px}
+.wf-supplier-select[disabled]{opacity:.7;cursor:progress}
+.wf-supplier-options{margin:12px 0 0;padding:0 0 0 12px;border-left:2px solid #dcbf8c;min-width:0}
+.wf-supplier-options .travel-search-item{margin:12px 0;padding:14px;border:1px solid #d9e6d55c;border-radius:10px;background:#1d4a3d}
+.wf-supplier-options .travel-search-item strong,.wf-supplier-options .travel-search-item p,.wf-supplier-options .travel-search-item small{overflow-wrap:anywhere}
+.wf-provider-message{font-size:.92rem;line-height:1.65;color:#f0eadb}
+.wf-provider-caveat{font-size:.85rem;line-height:1.7;color:#d2dfd3}
+.wf-supplier-options>a{display:inline-block;margin:12px 0;min-height:44px;padding:10px 14px;
+color:#f7e2b6;text-decoration:underline;text-underline-offset:4px}
+.wf-supplier-options>a:focus-visible{outline:3px solid #f4db9a;outline-offset:3px}
+@media(max-width:680px){.wf-supplier-options{padding-left:10px}.wf-supplier-select{font-size:.83rem}}
+@media(prefers-reduced-motion:reduce){.wf-supplier-select{transition:none!important}}
