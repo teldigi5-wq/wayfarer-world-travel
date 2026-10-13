@@ -121,6 +121,18 @@ The customer-focused Destinations and Guides product views have been added to th
 
 Development review: `feat/cinematic-destinations-guides-20261013`, stacked on the active comparison/agent work. Full GitHub CI and visual Preview acceptance are required before merging any of these changes to Production.
 
+### Ten curated destinations + Sri Lanka attraction guide (Preview candidate)
+
+The Discover homepage now includes an **editorial collection of 10 countries** in a 2×5 photographic grid with a Sri Lanka spotlight. This is **not a statistically ranked global top-ten list**. Each country has an accessible detail view, a set of **specific real places to visit**, contextual planning guidance, official tourism references, and `Plan [place]` actions that prefill the World Index in Journey Studio. Customers must select the matching search result before their trip selection is changed.
+
+The collection includes Sri Lanka, Japan, Italy, Switzerland, France, Iceland, Thailand, Indonesia, Norway and the United Arab Emirates. **Sri Lanka's highlighted places:** Sigiriya, Ella, Galle Fort, Nuwara Eliya, Kandy, Yala National Park and Mirissa. These are editorial starting points, not guaranteed opening hours, entrance prices, travel times or available tickets. The data lives in `country-atlas.json` (10 countries, 52 attraction summaries) to keep country content independently maintainable.
+
+- **Accuracy and sources:** Tourism links are per-country HTTPS resources. For Sri Lankan cultural heritage, consult [Sri Lanka Tourism](https://www.srilanka.travel/) and the official [Cultural Heritage reference](https://www.srilanka.travel/cultural_heritage). All fares, room inventory and border clearance require separate verification.
+- **Progressive enhancement:** The atlas loads a local static JSON file; if it cannot load, a readable fallback message appears and the original Discover and Journey Studio still work. Browsing/filters do not spend SerpApi or Groq credits.
+- **Accessibility and responsiveness:** Properly labeled buttons, aria-live search-result count, empty states, readable country and place cards, keyboard-visible focus, mobile single-column guides and a reduced-motion treatment.
+- **Licensing and imagery:** The Sri Lanka Sigiriya image comes from a free-to-use Unsplash photograph; other curated destination images are requested from Unsplash. The site remains readable if any image fails. Do not mistake concept mockups for actual available rooms, ticket fares or endorsed travel plans.
+- **Deployment:** These changes are on `feat/top10-country-atlas-srilanka-20261013`, stacked on draft PR #13 (which builds on earlier flight-comparison and agent work). CI + protected Vercel Preview visual QA are mandatory before Production.
+
 ### Design system and accessibility
 
 - **Legibility before decoration:** dark evergreen interactive cards (`#12362D`, `#194237`), warm ivory text (`#FAF6EB`), calm green secondary text (`#C4D5CA`), and restrained brass accents (`#E8C992`). The functional panel pairs pass WCAG AA contrast checks.
