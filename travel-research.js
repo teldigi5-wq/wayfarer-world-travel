@@ -137,11 +137,7 @@
               ' | quote not guaranteed; re-select and verify on the provider website');
             area.append(sellerCard);
           }
-          const handoff=document.createElement('a');
-          handoff.href='https://www.google.com/travel/flights';
-          handoff.target='_blank';handoff.rel='noopener noreferrer';
-          handoff.textContent='Verify the exact itinerary and final fare on Google Flights ↗';
-          area.append(handoff);
+          // Each seller card already includes its own external booking-research link.
         }
         if(data.limitations?.length)area.append(word('p',data.limitations.join(' '),'wf-provider-caveat'));
         completed=true;
