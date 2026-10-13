@@ -70,6 +70,10 @@ test('skip and Escape close immediately and transfer keyboard focus to main cont
   const escaped=simulate();escaped.callbacks.keydown({key:'Escape'});
   assert.ok(escaped.classes.has('wf-splash-closing'));
   assert.ok(escaped.actions.includes('main focused'));
+  const tabbed=simulate();let trapped=false;
+  tabbed.callbacks.keydown({key:'Tab',preventDefault:()=>{trapped=true;}});
+  assert.equal(trapped,true);
+  assert.ok(tabbed.actions.filter(x=>x==='skip focused').length>=2);
   const hiddenTab=simulate();
   hiddenTab.doc.visibilityState='hidden';
   hiddenTab.callbacks.visibilitychange();
