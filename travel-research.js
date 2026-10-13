@@ -233,6 +233,12 @@
       offer.budgetFit==='within_budget'?'Within allocated stay budget':'No comparable stay budget';
     card.append(word('p',budgetState,'wf-fare-budget '+(offer.budgetFit||'')));
     card.append(word('p','Indicative supplier search result. Room occupancy, taxes, cancellation policy, current room availability and the final checkout total have NOT been verified. Confirm with the hotel before purchase.','wf-hotel-disclaimer'));
+    const handoff=word('div','','wf-external-flight-handoff');
+    const hotelLink=word('a','Compare this stay on Google Hotels ↗','wf-flight-compare-link');
+    hotelLink.href='https://www.google.com/travel/hotels';
+    hotelLink.target='_blank';hotelLink.rel='noopener noreferrer';
+    const note=word('p','Opens Google Hotels in a separate tab. Search the same hotel, dates and occupancy; a matching room or price is not guaranteed.','wf-flight-handoff-note');
+    handoff.append(hotelLink,note);card.append(handoff);
     return card;
   }
   function resultPanel(title,obj,kind){
