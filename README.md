@@ -137,12 +137,13 @@ The collection includes Sri Lanka, Japan, Italy, Switzerland, France, Iceland, T
 
 Wayfarer now has a short, cinematic first-visit entrance with the existing mountain-lake photo, evergreen overlay and ivory/gold wordmark. The intro is **decorative**, not a pretend progress indicator: it does **not** await Groq, SerpApi, images or other provider APIs.
 
-- The splash is initially `hidden` and appears only when the first-party `splash-screen.js` loads successfully. Without JavaScript, the page remains immediately accessible instead of displaying an infinite loading animation.
-- It dismisses automatically after **1,250 ms**, can be skipped immediately by clicking **Skip introduction**, closes with Escape, and is bypassed for `prefers-reduced-motion` and the site's saved **Motion off** preference. Session storage prevents repeating it in the same browser tab.
-- Its CSS has a 3-second visibility/pointer-event safety fallback and keyboard focus styling. It has **no vendor libraries, paid API calls, external audio or auto-play video**.
+- **First paint shows the splash, not the homepage.** It is the first visible element of the document, before the header and main content. Render-blocking first-party CSS makes the overlay visible even before deferred JavaScript executes, preventing homepage flashing. This is a branded *welcome*, not a simulated API progress indicator.
+- It dismisses automatically after **1,350 ms** from controller startup, can be skipped immediately by clicking **Skip introduction**, closes with Escape, and is bypassed for `prefers-reduced-motion` and the site's saved **Motion off** preference. It appears on each **full reload/navigation**, not when visitors switch internal application tabs.
+- With JavaScript blocked, CSS automatically clears the overlay after **3 seconds**, so it cannot permanently obscure the website. For reduced-motion users CSS hides it from first paint. Note that no-JavaScript visitors may briefly see the static branded welcome before the fallback.
+- The implementation has visible keyboard focus and transfers focus to the real page on dismissal. It has **no vendor libraries, paid API calls, external audio or autoplay video**.
 - The homepage now explains the customer workflow in three readable steps: Discover → Plan → Verify. It clarifies that checkout remains on external providers. The former “Watch the story” button is now honestly labeled “How Wayfarer works”.
 - Country detail views include a functional **Back to country collection** control with keyboard focus restoration, preventing visitors from becoming stranded on an expanded destination guide.
-- Regression tests cover first-visit timeout, immediate skip, Escape, repeat visits, reduced motion, safe no-JS fallback, honest homepage copy and navigation.
+- Regression tests cover first-paint ordering, automatic dismissal on reloads, immediate skip, Escape, reduced motion, safe no-JS fallback, honest homepage copy and navigation.
 
 This is a **draft stacked Preview release**, not an assertion that all browser issues have been eliminated. Run the full CI suite, visually review desktop/mobile in the protected Vercel Preview, then merge the dependent PR chain only after release approval. Production stays unchanged during review.
 
