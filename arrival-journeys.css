@@ -1,0 +1,108 @@
+
+/* Wayfarer Arrival and Journeys — a calm, source-led editorial experience.
+   Isolated to #arrival / #trips to preserve Discover and Studio. */
+#arrival .app,#trips .app{min-height:100vh;background:radial-gradient(ellipse at 86% 4%,rgba(37,80,69,.62),transparent 42%),linear-gradient(155deg,#061c18 0%,#0b2923 58%,#071e1a 100%);color:#f6f2e9;padding-top:132px;padding-bottom:105px}
+#arrival .wf-page-heading,#trips .wf-page-heading{align-items:end;margin-bottom:31px}
+#arrival .wf-page-heading h1,#trips .wf-page-heading h1{font:500 clamp(3.1rem,5.2vw,5.5rem)/.94 'Cormorant Garamond',Georgia,serif;letter-spacing:-.04em;color:#fff8ec;margin:16px 0 10px}
+#arrival .wf-page-heading h1 em,#trips .wf-page-heading h1 em{font-weight:400;color:#d9b985}
+#arrival .wf-page-heading p,#trips .wf-page-heading p{font-size:clamp(.9rem,1vw,1.03rem);line-height:1.72;max-width:680px;color:#d0dad3}
+#arrival .wf-page-heading .eyebrow,#trips .wf-page-heading .eyebrow{color:#d8bc90;letter-spacing:.15em;font-size:.69rem}
+.wf-page-top-actions{display:flex;flex-direction:column;align-items:end;gap:12px;flex:none}
+.wf-status-chip{font-size:.74rem;color:#d4e4d9;border:1px solid #c6d7c533;background:#eff7eb0c;padding:9px 13px;border-radius:100px;white-space:nowrap;display:inline-flex;align-items:center;gap:9px}
+.wf-status-dot{width:7px;height:7px;border-radius:50%;background:#94cfaa;box-shadow:0 0 0 3px #9cceb522}
+#arrival .wf-outline-button,#trips .wf-outline-button{display:inline-flex;align-items:center;justify-content:center;min-height:44px;border:1px solid #d8c29d78;border-radius:11px;background:#e4e7d70a;color:#f7f0e4;padding:10px 16px;font:600 .8rem 'DM Sans',sans-serif;transition:background .22s ease,border-color .22s ease,transform .22s ease}
+#arrival .wf-outline-button:hover,#trips .wf-outline-button:hover{background:#faf6e51c;border-color:#e6cfab}
+#arrival .wf-outline-button:focus-visible,#trips .wf-outline-button:focus-visible,#arrival .wf-arrival-next button:focus-visible,#trips .wf-trip-action:focus-visible{outline:3px solid #eacb94;outline-offset:3px}
+.wf-overline,.wf-card-index{display:block;font:700 .65rem 'DM Sans',sans-serif;letter-spacing:.19em;color:#ead4ac}
+.wf-overline-dark{color:#816237}
+.wf-arrival-context{max-width:1380px;margin:0 auto 18px;display:grid;grid-template-columns:1.3fr .85fr 1fr 1fr;gap:1px;background:#ffffff22;border:1px solid #ffffff29;border-radius:17px;overflow:hidden}
+.wf-arrival-context>div{padding:20px 22px;background:#11342ce8;min-width:0}
+.wf-arrival-context span,.wf-library-count>span,.wf-search-label>span{font:700 .65rem 'DM Sans',sans-serif;letter-spacing:.14em;color:#c8b18b;display:block;margin-bottom:9px}
+.wf-arrival-context strong{font:600 clamp(.85rem,1.15vw,1.07rem) 'DM Sans',sans-serif;color:#f5f4ec;overflow-wrap:anywhere}
+#arrival .wf-arrival-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,.85fr);gap:18px}
+#arrival .wf-arrival-grid>*{min-width:0}
+#arrival .wf-arrival-visual{grid-column:auto;height:auto;min-height:510px;border:1px solid #e9eee128;border-radius:20px;position:relative;display:flex;align-items:end;padding:clamp(23px,3vw,44px);overflow:hidden;isolation:isolate;background:linear-gradient(0deg,rgba(4,21,17,.5),rgba(4,21,17,.05)),url('wayfarer-hero-v3.jpg') center/cover no-repeat,#18332c}
+#arrival .wf-arrival-visual>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;z-index:0;filter:saturate(.86) contrast(1.04);transition:transform 900ms cubic-bezier(.2,.65,.2,1)}
+#arrival .wf-arrival-visual:hover>img{transform:scale(1.025)}
+#arrival .wf-arrival-visual:after{content:'';position:absolute;inset:0;z-index:1;background:linear-gradient(0deg,rgba(4,21,17,.95),rgba(4,21,17,.4) 48%,rgba(4,21,17,.06) 100%);pointer-events:none}
+#arrival .wf-arrival-image-copy{position:relative;z-index:2;max-width:580px}
+#arrival .wf-arrival-image-copy h2{font:500 clamp(3.2rem,5vw,5rem)/.95 'Cormorant Garamond',Georgia,serif;letter-spacing:-.025em;margin:12px 0;color:#fffdf7}
+#arrival .wf-arrival-image-copy p{font-size:.91rem;line-height:1.75;color:#e7ebe3;max-width:56ch;margin:0 0 24px}
+#arrival .wf-arrival-visual .buttons{gap:11px;flex-wrap:wrap}
+#arrival .wf-arrival-visual .buttons button{min-height:44px;font-size:.84rem;padding:12px 18px}
+#arrival .wf-readiness-panel,#arrival .wf-intelligence-panel{color:#18322a;background:#f7f4ed;border:1px solid #e4dac9;box-shadow:0 22px 52px #00000020;border-radius:20px}
+#arrival .wf-readiness-panel{padding:clamp(20px,2.5vw,30px)}
+#arrival .wf-arrival-panel-top{margin-bottom:21px}
+#arrival .wf-arrival-panel-top h2,#arrival .wf-intelligence-panel h2{font:600 clamp(1.7rem,2.1vw,2.15rem)/1.08 'Cormorant Garamond',Georgia,serif;color:#19382f;margin:8px 0 0}
+#arrival .wf-mini-label{border:1px solid #d6cbb7;border-radius:100px;padding:6px 9px;white-space:nowrap;font-size:.63rem;color:#4a6659}
+#arrival .readiness{display:flex;gap:19px;align-items:center;border:1px solid #e2daca;background:#fffcf7;padding:17px;border-radius:15px;margin-bottom:12px}
+#arrival .ring{width:83px;height:83px;flex:none;background:conic-gradient(#1a705b calc(var(--value)*1%),#e0e8dc 0)}
+#arrival .ring:before{background:#fffcf7}
+#arrival .ring span{font-weight:700;font-size:1.2rem;color:#215647}
+#arrival .readiness strong{font-size:.93rem;color:#183d30;line-height:1.4}
+#arrival .fine{font-size:.76rem;line-height:1.65;color:#61716a}
+#arrival .wf-checklist-items{display:grid}
+#arrival .check{cursor:pointer;display:flex;align-items:center;gap:13px;padding:16px 4px;border-bottom:1px solid #e1dbd0;font-size:.88rem;color:#172e29}
+#arrival .check:focus-within{outline:2px solid #23634d;outline-offset:2px;border-radius:4px}
+#arrival .check input{flex:none;width:21px;height:21px;accent-color:#1d765c}
+#arrival .check span{font-weight:700;line-height:1.3}
+#arrival .check small{display:block;font-weight:400;line-height:1.6;font-size:.74rem;color:#5b6e61;margin-top:4px}
+#arrival .wf-checklist-note{font-size:.72rem;line-height:1.65;color:#67766d;margin:18px 0 0}
+#arrival .wf-intelligence-panel{grid-column:1/-1;padding:30px}
+#arrival .wf-intelligence-panel .panel-top{align-items:center;gap:16px}
+#arrival .wf-intelligence-panel .wf-outline-button.dark{background:#14382e;color:#f7f0e4;border-color:#205244}
+#arrival .wf-intelligence-panel .wf-outline-button.dark:hover{background:#235a49}
+#arrival .wf-arrival-intel{grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin:17px 0}
+#arrival .wf-arrival-intel>div{border:1px solid #dfd9cc;background:#fffdf8;padding:18px;border-radius:13px;min-width:0}
+#arrival .wf-arrival-intel span{font-size:.63rem;color:#6c725e}
+#arrival .wf-arrival-intel strong{font-size:clamp(.95rem,1.15vw,1.22rem);color:#1c4437;overflow-wrap:anywhere;line-height:1.45}
+#arrival .wf-context-note{padding:18px;border-radius:14px;background:#e6ede5;border:1px solid #d2dfd2}
+#arrival .wf-context-note .tip{background:transparent;color:#2a4c3d;padding:0;margin:10px 0 0;font-size:.83rem;line-height:1.7}
+#arrival .wf-source-label{margin:14px 0 0}
+#arrival .wf-source-label a{color:#165d4b;text-decoration:underline;text-underline-offset:3px}
+.wf-arrival-next{max-width:1380px;margin:18px auto 0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.wf-arrival-next article{min-width:0;padding:26px;border:1px solid #ffffff32;border-radius:17px;background:linear-gradient(145deg,#1c453a,#10352c);min-height:230px;display:flex;flex-direction:column;align-items:start}
+.wf-arrival-next h3{font:500 clamp(1.6rem,2vw,2.05rem) 'Cormorant Garamond',Georgia,serif;color:#faf3e6;margin:18px 0 8px}
+.wf-arrival-next p{font-size:.82rem;line-height:1.7;color:#d9e6db;margin:0 0 15px}
+.wf-unverified-tag{font-size:.67rem;color:#ecd5a5;margin-top:auto;border:1px solid #ecd5a570;border-radius:100px;padding:7px 11px}
+.wf-arrival-next button{margin-top:auto;border:0;background:none;color:#f3d6a2;padding:8px 0;font:700 .79rem 'DM Sans',sans-serif;text-align:left;cursor:pointer}
+/* Journeys: editorial collection view, no fake booking data. */
+#trips .wf-library-toolbar{max-width:1380px;margin:0 auto 18px;display:flex;align-items:center;justify-content:space-between;gap:22px;padding:23px 26px;border:1px solid #ffffff27;background:#ffffff0e;border-radius:17px}
+#trips .wf-library-count strong{display:block;color:#f9f2e4;font:500 clamp(2rem,2.5vw,2.9rem)/1 'Cormorant Garamond',Georgia,serif}
+#trips .wf-library-count small{display:block;font-size:.75rem;line-height:1.6;color:#cad6cb;margin-top:9px}
+#trips .wf-search-label{display:block;width:min(360px,100%)}
+#trips #journey-search{background:#f7f4ec;border:1px solid #d8d4c9;border-radius:10px;width:100%;min-height:46px;padding:12px 14px;color:#143c31;font:500 .9rem 'DM Sans',sans-serif;outline-offset:3px}
+#trips #journey-search:focus-visible{outline:3px solid #d8be8d}
+#trips .wf-journey-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+#trips .wf-journey-grid .trip{min-width:0;display:flex;flex-direction:column;background:#f9f6ef;border:1px solid #dfd5c4;border-radius:17px;box-shadow:0 20px 52px #00000022;transition:transform .35s ease,box-shadow .35s ease;overflow:hidden}
+#trips .wf-journey-grid .trip:hover{transform:translateY(-4px);box-shadow:0 24px 64px #0004}
+#trips .trip-photo{height:245px;background:url('wayfarer-hero-v3.jpg') center/cover no-repeat,#234238;overflow:hidden;position:relative}
+#trips .trip-photo img{display:block;width:100%;height:100%;object-fit:cover;object-position:center;transition:transform .7s ease}
+#trips .trip:hover .trip-photo img{transform:scale(1.035)}
+#trips .trip-photo:after{background:linear-gradient(0deg,#061a16e8 0%,transparent 72%)}
+#trips .trip-photo h3{font:500 2.5rem 'Cormorant Garamond',Georgia,serif;left:23px;bottom:18px;color:#fffdf4;line-height:1.05}
+#trips .wf-trip-country{position:absolute;z-index:2;left:23px;top:20px;color:#fff8e5;font:700 .65rem 'DM Sans',sans-serif;letter-spacing:.14em;background:#0b271d8f;border:1px solid #fffff233;border-radius:50px;padding:8px 10px}
+#trips .trip-body{padding:24px;display:flex;flex-direction:column;flex:1;gap:14px}
+#trips .trip-body .wf-trip-caption{color:#686454;font-size:.68rem;letter-spacing:.16em;font-weight:700}
+#trips .wf-trip-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+#trips .wf-trip-stats>div{background:#ebe7dc;border:1px solid #dfd9ca;border-radius:11px;padding:14px;min-width:0}
+#trips .wf-trip-stats span{display:block;color:#6b7169;font-size:.68rem;line-height:1.5}
+#trips .wf-trip-stats strong{display:block;font-size:.97rem;color:#1b4033;margin-top:4px;overflow-wrap:anywhere}
+#trips .wf-trip-pace{font-size:.76rem;color:#596d5e;line-height:1.6;margin:0}
+#trips .wf-trip-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
+#trips .wf-trip-action{min-height:42px;border:1px solid #c9cebd;border-radius:9px;padding:10px 12px;font:700 .73rem 'DM Sans',sans-serif;cursor:pointer;color:#154232;background:#edf2e9}
+#trips .wf-trip-action.primary{background:#173f32;border-color:#173f32;color:#f8f4e9}
+#trips .wf-trip-action.remove{background:transparent;color:#70403c;border-color:#dfcfc9}
+#trips .wf-trip-action:hover{filter:brightness(.95)}
+#trips .wf-journey-grid .empty{grid-column:1/-1;border:1px solid #ffffff32;border-radius:20px;background:linear-gradient(95deg,#071e1be8,#112f2980),url('wayfarer-hero-v3.jpg') center/cover;padding:clamp(35px,5vw,72px) 28px;text-align:left;color:#f6f0e5;min-height:330px;display:flex;flex-direction:column;justify-content:center;align-items:start}
+#trips .empty .eyebrow{color:#ddc399}
+#trips .empty h2{font:500 clamp(2.4rem,4vw,4.2rem)/1 'Cormorant Garamond',Georgia,serif;letter-spacing:-.02em;margin:16px 0 20px;color:#fff8ec}
+#trips .empty p{font-size:.88rem;line-height:1.7;color:#d5e2d7;max-width:52ch;margin:0 0 20px}
+#trips .empty .primary{font-size:.83rem;min-height:46px;border-radius:10px;background:#f4ecd9;color:#18382c;padding:12px 18px}
+#trips .wf-journey-data-note{max-width:1380px;margin:24px auto 0;color:#bbcabe;font-size:.76rem;line-height:1.75}
+@media(max-width:1080px){#arrival .wf-arrival-grid{grid-template-columns:minmax(0,1fr) minmax(280px,.9fr)}#arrival .wf-arrival-visual{min-height:490px}#trips .wf-journey-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:850px){#arrival .wf-arrival-grid{grid-template-columns:1fr}#arrival .wf-arrival-visual{min-height:420px}#arrival .wf-arrival-intel{grid-template-columns:repeat(2,minmax(0,1fr))}.wf-arrival-context{grid-template-columns:repeat(2,minmax(0,1fr))}.wf-arrival-next{grid-template-columns:1fr 1fr}}
+@media(max-width:650px){#arrival .app,#trips .app{padding-top:78px;padding-bottom:108px}#arrival .wf-page-heading h1,#trips .wf-page-heading h1{font-size:clamp(3rem,12vw,4.25rem)}#arrival .wf-page-heading,#trips .wf-page-heading{margin-bottom:23px}#arrival .wf-page-heading p,#trips .wf-page-heading p{font-size:.86rem}.wf-page-top-actions{align-items:flex-start;width:100%}.wf-page-top-actions .wf-outline-button{width:100%}.wf-arrival-context{grid-template-columns:repeat(2,minmax(0,1fr))}.wf-arrival-context>div{padding:16px 14px}.wf-arrival-context strong{font-size:.86rem}#arrival .wf-arrival-visual{min-height:430px;padding:24px}#arrival .wf-arrival-image-copy h2{font-size:3.7rem}#arrival .wf-arrival-image-copy p{font-size:.82rem}#arrival .wf-arrival-image-copy .buttons{display:flex;flex-wrap:wrap}#arrival .wf-arrival-image-copy .buttons button{font-size:.76rem}#arrival .wf-intelligence-panel{padding:20px}#arrival .wf-intelligence-panel .panel-top{flex-direction:column;align-items:start}#arrival .wf-intelligence-panel .panel-top button{width:100%}#arrival .wf-arrival-intel{grid-template-columns:1fr 1fr}#arrival .wf-arrival-intel>div{padding:13px}.wf-arrival-next{grid-template-columns:1fr}#trips .wf-library-toolbar{flex-direction:column;align-items:stretch;padding:18px}#trips .wf-search-label{width:100%}#trips .wf-journey-grid{grid-template-columns:1fr}#trips .trip-photo{height:220px}#trips .trip-body{padding:20px}}
+@media(max-width:380px){#arrival .wf-arrival-visual{min-height:490px}#arrival .wf-arrival-image-copy h2{font-size:3.1rem}#arrival .readiness{gap:12px;padding:13px}#arrival .ring{width:70px;height:70px}#arrival .ring:before{inset:7px}#arrival .wf-readiness-panel{padding:16px}#arrival .wf-arrival-intel{grid-template-columns:1fr 1fr}#arrival .wf-arrival-intel strong{font-size:.85rem}}
+@media(prefers-reduced-motion:reduce){#arrival .wf-arrival-visual>img,#trips .trip-photo img,#trips .wf-journey-grid .trip{transition:none!important;transform:none!important}}
+.motion-off #arrival .wf-arrival-visual>img,.motion-off #trips .trip-photo img,.motion-off #trips .wf-journey-grid .trip{transition:none!important;transform:none!important}
