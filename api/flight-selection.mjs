@@ -85,12 +85,25 @@ function normalizeReturn(data,state,secret,checkedAt){
 function normalizeBooking(data,checkedAt){
   const options=(Array.isArray(data.booking_options)?data.booking_options:[])
     .slice(0,14).flatMap(item=>{
-      const choice=item?.together||item?.departing;
+      const separate=item?.separate_tickets===true;
+      const departure=separate?item?.departing:null;
+      const returning=separate?item?.returning:null;
+      // Separate tickets need two actual seller prices before any combined
+      // estimate may be shown; a departing-only quote is not a round-trip fare.
+      const choice=separate?departure:item?.together;
       if(!choice || !text(choice.book_with)||!price(choice.price))return [];
-      return [{seller:text(choice.book_with,100),price:money(choice.price),
-        currency:'USD',separateTickets:!!item.separate_tickets,
-        sellerIsAirline:choice.airline===true,
-        offerType:item.separate_tickets?'separate_tickets':'together',
+      if(separate && (!returning||!text(returning.book_with)||!price(returning.price)))return [];
+      const seller=separate?
+        text(choice.book_with,65)+' (departing) / '+text(returning.book_with,65)+' (returning)':
+        text(choice.book_with,100);
+      const quote=separate?Number(choice.price)+Number(returning.price):Number(choice.price);
+      if(!price(quote))return [];
+      return [{seller,price:money(quote),
+        currency:'USD',separateTickets:separate,
+        sellerIsAirline:choice.airline===true&&(!separate||returning.airline===true),
+        priceBasis:separate?'Sum of departing and returning seller quotes; two separate purchases may be required':
+          'Seller-reported quote for selected itinerary; final payable amount not verified',
+        offerType:separate?'separate_tickets':'together',
         checkedAt,availability:'seller_option_listed',
         seatInventoryVerified:false,bookingConfirmed:false}];
     }).sort((a,b)=>Number(a.price)-Number(b.price)).slice(0,MAX_CHOICES);
