@@ -1,5 +1,5 @@
 /* Wayfarer Motion System — premium editorial experience, native & budget-friendly.
-   Motion is limited to transform/opacity; it respects OS and manual reduced-motion. */
+   Motion uses limited transform/opacity and follows OS reduced-motion settings. */
 :root {
   --motion-ease: cubic-bezier(.22,1,.36,1);
   --motion-exit: cubic-bezier(.4,0,1,1);
@@ -26,10 +26,6 @@ button,input,select {touch-action:manipulation}
 .nav-links button:hover{background:#ffffff10}
 .nav-utility{display:flex;align-items:center;gap:15px}
 .live{white-space:nowrap;color:#e9e4d0c9;font-size:9px;letter-spacing:.13em}
-.motion-toggle{border:1px solid #ffffff28;border-radius:8px;background:#ffffff0c;color:#f5f1e6;display:flex;align-items:center;gap:7px;padding:9px 11px;white-space:nowrap;font-size:10px;transition:background .2s}
-.motion-toggle:hover,.motion-toggle[aria-pressed="false"]{background:#ffffff19}
-.motion-toggle-dot{height:7px;width:7px;border-radius:50%;background:var(--motion-gold);box-shadow:0 0 9px #d3b47c90}
-.motion-toggle[aria-pressed="false"] .motion-toggle-dot{background:#bbb5ab;box-shadow:none}
 .hero{min-height:730px;height:min(920px,100svh);overflow:clip;isolation:isolate;background:#051b16}
 .hero:after{z-index:1;background:linear-gradient(90deg,rgba(3,20,16,.9) 0%,rgba(4,23,19,.6) 39%,rgba(2,20,17,.08) 76%),linear-gradient(0deg,rgba(4,20,16,.62),transparent 32%);mix-blend-mode:normal}
 .hero:before{z-index:1;opacity:.46}
