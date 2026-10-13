@@ -22,7 +22,8 @@ test('flight CTA never claims checkout, final price or a matched deep link',()=>
   assert.doesNotMatch(js,/window\.location\s*=|location\.href\s*=/);
 });
 test('copy itinerary does not leak supplier auth details',()=>{
-  assert.match(js,/navigator\.clipboard\?\.writeText\(details\)/);
+  assert.match(js,/navigator\.clipboard\.writeText\(details\)/);
+  assert.match(js,/navigator\.clipboard\?\.writeText/);
   assert.doesNotMatch(js,/navigator\.clipboard\.writeText\(selection\.token\)/);
   assert.match(js,/Clipboard unavailable/);
 });
