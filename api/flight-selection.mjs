@@ -65,7 +65,7 @@ function normalizeReturn(data,state,secret,checkedAt){
       arrivalAt:text(seg.arrival_airport?.time,48)
     })).filter(x=>iata(x.from)&&iata(x.to));
     if(!segments.length)return null;
-    const token=signSelection('booking',f.booking_token,state,secret);
+    const token=signSelection('booking',f.booking_token,{from:state.from,to:state.to,checkIn:state.outbound,checkOut:state.returnDate,adults:state.adults},secret);
     return {segments,pricePerAdult:money(f.price),
       estimatedGroup:money(Number(f.price)*state.adults),currency:'USD',
       durationMinutes:Number.isFinite(f.total_duration)?f.total_duration:null,
