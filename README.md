@@ -108,6 +108,19 @@ Journey Studio now displays legible flight and hotel comparison cards rather tha
 
 This feature is currently a stacked **draft Preview PR** on top of the resilient-agent branch. Verify the actual hosted browser rendering at mobile/desktop widths and complete integration tests before releasing it to Production. No payment system or new supplier integration has been activated.
 
+### Cinematic Destinations + Travel Guides (Preview branch, October 2026)
+
+The customer-focused Destinations and Guides product views have been added to the existing navigation while keeping Discover, Journey Studio, Arrival and Journeys intact. Unlike inspirational design mockups, these are functioning pages:
+
+- **Destinations**: photographic introduction, featured Kyoto, six curated starter destinations, free-text search, region/travel-style filters, reset and a useful empty state. Destination actions either reuse the existing Kyoto/Bali/Switzerland planning controller or prefill the worldwide Studio search, requiring the customer to choose the actual city result before a plan is changed. The broader ISO country directory remains available from the Discover view; a listing does not guarantee destination-data or flight coverage.
+- **Guides**: searchable starter collection with Planning, Culture, Arrival and Nature topic controls, keyboard-focusable detailed reading views, source links, and access to Arrival Companion. Content is carefully labeled editorial planning advice and links to national tourism sources rather than pretending to be updated expert-certified guidance or official visa clearance.
+- **Navigation**: six working product views. At small widths, the tab bar uses a legible two-row layout rather than six tiny buttons on one row. Focus rings, alt text, empty-state messaging and reduced-motion support are retained.
+- **Professional art direction**: full-bleed scenic visuals with dark evergreen and warm ivory contrast, disciplined editorial headings and quiet hover movement. Missing external images fall back to readable gradient surfaces with destination text, not misleading replacement images.
+- **No new paid API calls**: Browsing, filters and guide reading all run in the client with local curated data. Flight, stay, agents and any metered API integrations remain separately authorized and manually triggered.
+- **Accuracy**: the screenshots generated during design exploration are not the live interface and may have shown fictional ratings, fares, expert endorsements or paid plans. Those illustrative claims are **not included** in this implementation. All official sources open in a separate browser tab. Supplier bookings and payments remain unavailable.
+
+Development review: `feat/cinematic-destinations-guides-20261013`, stacked on the active comparison/agent work. Full GitHub CI and visual Preview acceptance are required before merging any of these changes to Production.
+
 ### Design system and accessibility
 
 - **Legibility before decoration:** dark evergreen interactive cards (`#12362D`, `#194237`), warm ivory text (`#FAF6EB`), calm green secondary text (`#C4D5CA`), and restrained brass accents (`#E8C992`). The functional panel pairs pass WCAG AA contrast checks.
