@@ -1,0 +1,27 @@
+.ai-assist{margin-top:2rem;padding:clamp(1rem,3vw,2rem);border:1px solid rgba(140,164,255,.35);background:linear-gradient(145deg,rgba(38,52,99,.55),rgba(8,16,36,.83));border-radius:22px}
+.ai-assist h3{color:#f6f8ff;margin:0 0 .6rem}.ai-assist>p{color:#bbc8e7;line-height:1.6}
+.ai-controls{display:flex;flex-wrap:wrap;align-items:end;gap:.9rem}.ai-controls label{flex:1 1 240px;display:grid;gap:.5rem;color:#dae2ff}
+.ai-controls input{box-sizing:border-box;width:100%;padding:.72rem;background:#0b1634;border:1px solid #7283ac;border-radius:9px;color:white}
+.ai-controls :focus-visible{outline:3px solid #a1c4ff;outline-offset:3px}.ai-controls button:disabled{opacity:.7;cursor:wait}
+#ai-status{color:#d3dfff;margin:1rem 0;min-height:1.5rem}
+#ai-output{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:1rem}
+.ai-report{border:1px solid rgba(151,170,226,.3);border-radius:13px;padding:1rem;background:rgba(8,17,42,.65)}
+.ai-report h4{color:#e8efff;margin:0 0 .5rem}.ai-report p{margin:0;color:#cbd6f0;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+#ai-output>a,.ai-disclaimer{grid-column:1/-1}.ai-disclaimer{color:#b6c4e1;font-size:.88rem}#ai-output>a{color:#aac8ff}
+@media(prefers-reduced-motion:reduce){.ai-assist *{transition:none!important;animation:none!important}}
+
+/* Optional provider-backed research: source and availability must remain explicit. */
+.travel-offers{margin-top:24px;padding:24px;border:1px solid rgba(151,173,205,.26);border-radius:20px;background:rgba(9,20,43,.72)}
+.travel-offers h3{margin:0 0 12px}
+.travel-offers p{line-height:1.65}
+.travel-offers-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:14px;margin-top:15px}
+.travel-offer-card{padding:18px;border:1px solid rgba(151,173,205,.22);background:rgba(17,32,57,.72);border-radius:15px;min-width:0}
+.travel-offer-card h4{margin:0 0 10px}
+.travel-offer-item{padding:12px 0;border-top:1px solid rgba(151,173,205,.2);overflow-wrap:anywhere}
+.travel-offer-item p{margin:0 0 6px}
+.travel-offer-item small{opacity:.8;line-height:1.5;display:block}
+.travel-offer-status{opacity:.85}
+.travel-offer-warning{color:#F6D5A1;font-size:.9rem}
+.travel-offers-handoffs{grid-column:1/-1}
+.travel-offers a{text-decoration:underline;text-underline-offset:4px}
+@media(max-width:600px){.travel-offers{padding:16px}.travel-offers-grid{grid-template-columns:1fr}}

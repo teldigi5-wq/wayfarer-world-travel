@@ -165,3 +165,12 @@ footer .brand{color:var(--on-dark)}
 @media(max-width:560px){.form-grid{grid-template-columns:1fr}.postcard{display:none}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.js [data-reveal]{opacity:1;transform:none}}
 
+
+
+/* Accessible country-autocomplete and airport-route discovery. */
+.country-suggestions{display:flex;flex-wrap:wrap;gap:8px;margin:7px 0 10px}
+.country-suggestion{appearance:none;font:inherit;font-size:.88rem;padding:7px 13px;border:1px solid #C8D3ED;border-radius:100px;background:#F8FAFF;color:#213052;cursor:pointer;transition:border-color .2s,background .2s}
+.country-suggestion:hover,.country-suggestion:focus-visible{border-color:#4F7CFF;background:#E7EDFF}
+#airport-data-status{font-size:.83rem;line-height:1.5;margin:12px 0}
+#origin-airport,#destination-airport{width:100%;min-width:0;max-width:100%;text-overflow:ellipsis}
+@media(max-width:650px){.country-suggestion{font-size:.82rem;padding:8px 11px}.country-suggestions{max-height:180px;overflow-y:auto}}

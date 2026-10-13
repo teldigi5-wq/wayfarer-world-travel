@@ -1,0 +1,220 @@
+/* Wayfarer / legibility system — 2026-10-13.
+   Dark functional surfaces for Arrival/Journeys, purpose-led focus/interaction.
+   Scope keeps the photography, planning logic and navigation untouched. */
+:root{
+  --wf-ui-deep:#08221d;
+  --wf-ui-card:#12362d;
+  --wf-ui-raised:#194237;
+  --wf-ui-paper:#faf6eb;
+  --wf-ui-body:#e8f0e7;
+  --wf-ui-secondary:#c4d5ca;
+  --wf-ui-accent:#e8c992;
+  --wf-ui-line:rgba(222,236,222,.21);
+  --wf-ui-focus:#f3d99d;
+}
+#arrival .wf-readiness-panel,
+#arrival .wf-intelligence-panel,
+#trips .wf-journey-grid .trip {
+  color:var(--wf-ui-body);
+  background:var(--wf-ui-card);
+  border:1px solid var(--wf-ui-line);
+  box-shadow:0 22px 50px rgba(0,13,10,.26);
+}
+#arrival .wf-readiness-panel,
+#arrival .wf-intelligence-panel {padding:clamp(22px,2.4vw,34px);}
+#arrival .wf-arrival-panel-top h2,
+#arrival .wf-intelligence-panel h2{
+  color:var(--wf-ui-paper);
+  font-size:clamp(2rem,2.3vw,2.55rem);
+  line-height:1.07;
+}
+#arrival .wf-overline-dark,
+#trips .trip-body .wf-trip-caption{
+  color:var(--wf-ui-accent);
+  font-size:.76rem;
+  letter-spacing:.12em;
+}
+#arrival .wf-mini-label {
+  background:rgba(241,222,184,.07);
+  border:1px solid rgba(244,214,158,.35);
+  color:var(--wf-ui-accent);
+  font-size:.78rem;
+}
+#arrival .readiness {
+  border-color:var(--wf-ui-line);
+  background:var(--wf-ui-raised);
+  color:var(--wf-ui-body);
+  gap:20px;
+  padding:clamp(17px,2vw,23px);
+}
+#arrival .ring{
+  background:conic-gradient(var(--wf-ui-accent) calc(var(--value)*1%), #416156 0);
+}
+#arrival .ring:before{background:var(--wf-ui-raised);}
+#arrival .ring span{
+  color:var(--wf-ui-paper);
+  font-size:1.3rem;
+  font-variant-numeric:tabular-nums;
+}
+#arrival .readiness strong{color:var(--wf-ui-paper);font-size:1rem;}
+#arrival .fine,
+#arrival .wf-checklist-note,
+#arrival .wf-source-label {
+  color:var(--wf-ui-secondary);
+  font-size:clamp(.88rem,.97vw,.98rem);
+  line-height:1.7;
+}
+#arrival .check{
+  min-height:70px;
+  padding:16px 4px;
+  border-color:var(--wf-ui-line);
+  color:var(--wf-ui-body);
+  font-size:1rem;
+  gap:15px;
+}
+#arrival .check span{color:var(--wf-ui-paper);font-weight:650;}
+#arrival .check small{
+  color:var(--wf-ui-secondary);
+  font-size:.91rem;
+  line-height:1.55;
+  margin-top:5px;
+  font-weight:400;
+}
+#arrival .check input{
+  width:22px;height:22px;
+  accent-color:var(--wf-ui-accent);
+  cursor:pointer;
+}
+#arrival .check:focus-within {
+  outline:3px solid var(--wf-ui-focus);
+  outline-offset:3px;
+}
+#arrival .wf-arrival-intel {gap:13px;margin:22px 0;}
+#arrival .wf-arrival-intel>div {
+  background:var(--wf-ui-raised);
+  border:1px solid var(--wf-ui-line);
+  padding:clamp(17px,1.7vw,24px);
+}
+#arrival .wf-arrival-intel span,
+#trips .wf-trip-stats span {
+  color:var(--wf-ui-secondary);
+  font-size:.83rem;
+  letter-spacing:.025em;
+  line-height:1.45;
+}
+#arrival .wf-arrival-intel strong,
+#trips .wf-trip-stats strong {
+  color:var(--wf-ui-paper);
+  font-size:clamp(1.01rem,1.14vw,1.22rem);
+  line-height:1.4;
+}
+#arrival .wf-context-note {
+  background:var(--wf-ui-raised);
+  border:1px solid var(--wf-ui-line);
+  padding:clamp(17px,1.7vw,23px);
+}
+#arrival .wf-context-note .tip{
+  color:var(--wf-ui-body);
+  background:none;
+  font-size:.98rem;
+  line-height:1.75;
+  margin-top:12px;
+}
+#arrival .wf-source-label a {
+  color:var(--wf-ui-accent);
+  text-decoration:underline;
+  text-underline-offset:3px;
+}
+#arrival .wf-intelligence-panel .wf-outline-button.dark {
+  color:var(--wf-ui-deep);
+  background:var(--wf-ui-accent);
+  border:1px solid var(--wf-ui-accent);
+  font-size:.87rem;
+  min-height:46px;
+}
+#arrival .wf-intelligence-panel .wf-outline-button.dark:hover{
+  color:var(--wf-ui-deep);background:#f4dcab;
+}
+#trips .wf-journey-grid .trip-body{padding:clamp(21px,2.2vw,30px);}
+#trips .wf-trip-stats>div {
+  background:var(--wf-ui-raised);
+  border:1px solid var(--wf-ui-line);
+  padding:17px;
+}
+#trips .wf-trip-stats strong{margin-top:7px;}
+#trips .wf-trip-pace{
+  color:var(--wf-ui-secondary);
+  font-size:.92rem;
+  line-height:1.65;
+}
+#trips .wf-trip-action{
+  min-height:44px;
+  font-size:.87rem;
+  border:1px solid #8fae9a;
+  background:var(--wf-ui-raised);
+  color:var(--wf-ui-paper);
+}
+#trips .wf-trip-action.primary{
+  color:#0a2922;
+  background:var(--wf-ui-accent);
+  border-color:var(--wf-ui-accent);
+}
+#trips .wf-trip-action.remove{
+  color:#ffd7ce;
+  background:transparent;
+  border-color:#b99491;
+}
+#trips .wf-trip-action:hover{filter:none;background:#295748;}
+#trips .wf-trip-action.primary:hover{background:#f2d9a8;}
+#trips .wf-trip-action.remove:hover{background:#58352f;}
+#trips #journey-search {
+  background:var(--wf-ui-raised);
+  color:var(--wf-ui-paper);
+  border:1px solid #93b2a3;
+  min-height:50px;
+  font-size:1rem;
+}
+#trips #journey-search::placeholder{color:var(--wf-ui-secondary);}
+#trips .wf-library-count small,
+#trips .wf-journey-data-note {
+  color:var(--wf-ui-secondary);
+  font-size:.87rem;
+}
+#arrival .wf-arrival-context span,
+#trips .wf-library-count>span,
+#trips .wf-search-label>span {
+  color:var(--wf-ui-accent);
+  font-size:.76rem;
+}
+#arrival .wf-arrival-context strong{font-size:clamp(.96rem,1.15vw,1.13rem);}
+#arrival .wf-arrival-next p{font-size:.97rem;}
+#arrival .wf-unverified-tag{font-size:.82rem;}
+#arrival .wf-arrival-next button{font-size:.93rem;min-height:44px;}
+#arrival .wf-arrival-image-copy p{font-size:1.01rem;}
+#arrival .wf-page-heading p,#trips .wf-page-heading p{font-size:clamp(1rem,1.1vw,1.15rem);}
+#arrival a:focus-visible,#trips a:focus-visible,
+#arrival button:focus-visible,#trips button:focus-visible,
+#trips #journey-search:focus-visible {
+  outline:3px solid var(--wf-ui-focus);
+  outline-offset:4px;
+}
+@media(max-width:850px){
+  #arrival .wf-readiness-panel,#arrival .wf-intelligence-panel{padding:24px;}
+}
+@media(max-width:650px){
+  #arrival .wf-readiness-panel,#arrival .wf-intelligence-panel{padding:19px;}
+  #arrival .check{min-height:73px;}
+  #arrival .wf-arrival-intel{grid-template-columns:repeat(2,minmax(0,1fr));}
+  #arrival .wf-arrival-intel>div{padding:16px;}
+  #arrival .wf-arrival-intel strong{font-size:1rem;}
+  #arrival .wf-arrival-intel span{font-size:.75rem;}
+  #trips .wf-trip-stats{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media(max-width:380px){
+  #arrival .wf-arrival-intel{grid-template-columns:1fr 1fr;}
+  #arrival .readiness{gap:12px;}
+}
+@media(prefers-reduced-motion:reduce){
+  #arrival .wf-readiness-panel,#arrival .wf-intelligence-panel,
+  #trips .wf-journey-grid .trip{transition:none!important;}
+}
