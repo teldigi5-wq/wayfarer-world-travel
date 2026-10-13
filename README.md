@@ -31,6 +31,20 @@ Each lookup may consume an additional search credit. The signed selection expire
 
 Provider reference: [SerpApi Google Flights Booking Options API](https://serpapi.com/google-flights-booking-options). A public commercial release still requires a suitable authorized booking/inventory provider, durable usage controls, explicit account/billing rules, monitoring and supplier terms review.
 
+#### Flight comparison and external booking — the no-checkout model
+
+Wayfarer is a **travel-research and referral website**, not an airline ticket seller. Customers can compare provider-returned schedules, indicative prices and booking-seller names, then choose **Compare tickets on Google Flights**. That link opens `https://www.google.com/travel/flights` in a **new browser tab** (`target="_blank" rel="noopener noreferrer"`); the Wayfarer tab stays open. Travelers may copy the itinerary reference and manually re-select it on Google Flights. **The link does not preselect or reserve the exact flight**, and no claim is made that a fare will be identical at checkout. Genuine airline or travel-agent specific deep links may be added only when a trusted provider returns an authorized, validated HTTPS checkout link.
+
+For accuracy, Wayfarer uses these terms:
+- `search_results`: provider-returned search schedule/price; **not guaranteed bookable**.
+- `seller_option_listed`: seller shown in a Google Flights research result; **not confirmed seat inventory**.
+- `no_results`: search found no usable offers; **not proof of sold-out tickets**.
+- `sandbox_offer`: illustrative Duffel test mode; **never display as a real live ticket**.
+- `supplier_offer_unbooked`: supplier live offer, where authorized; **may expire or reprice and is not reserved**.
+- `confirmed_booking`: **not implemented**—requires an actual completed supplier booking transaction.
+
+**Cost discipline:** SerpApi's current free tier offers a limited monthly search allowance; each fresh search and optional flight-selection call may count toward it. Duffel's test mode is free but has simulated prices. Live Duffel charges may apply for low booking conversion/excess searches and **is not necessary for our link-out-only MVP**. Do not enable Duffel live mode purely for outbound referral links. Provider limits, pricing and terms can change, so recheck supplier documents before launch.
+
 #### Optional airline-authorized offers — Duffel test mode (new)
 
 Wayfarer now includes an isolated `POST /api/airline-offers` supplier adapter and a Journey Studio airline-offer panel. **It is disabled by default** and is not connected to any actual airline account yet. The existing SerpApi Google Travel research remains separate.
