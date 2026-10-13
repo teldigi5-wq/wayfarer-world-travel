@@ -41,7 +41,7 @@ test('all editorial content is honestly labeled and does not fabricate live book
   assert.match(js,/official tourism source/i);
   assert.match(js,/not live availability/i);
   assert.match(js,/not government advice/i);
-  assert.match(js,/travel data coverage varies/i);
+  assert.match(js,/flight, hotel and local data coverage varies/i);
   assert.doesNotMatch(js,/Expert verified|Verified reviews|Tickets available now|Book now|Reserve seats/);
   assert.doesNotMatch(js,/fetch\(|\/api\/travel-search|\/api\/intelligence|navigator\.geolocation/);
 });
