@@ -13,8 +13,28 @@
 .nav .brand{font-weight:600;flex-shrink:0}
 .nav .nav-links{margin-inline:auto;gap:3px;background:rgba(255,250,233,.035);border-color:rgba(252,241,213,.14);}
 .nav .nav-links button{font-size:clamp(.75rem,.86vw,.83rem);font-weight:600;letter-spacing:0;min-height:46px;padding:11px clamp(10px,1vw,17px);color:#e4ebe3;}
-.nav .nav-links button.active,.nav .nav-links button[aria-current="page"]{background:rgba(244,226,193,.15);color:#fff6e5;box-shadow:inset 0 0 0 1px rgba(245,225,189,.29);}
-.nav .nav-links button:hover:not(.active){color:#fff7e9;background:rgba(244,226,193,.09);}
+/* Only the actual route receives the active treatment.
+   Hover must never look like a second selected page, especially on touch. */
+.nav .nav-links button{position:relative;box-shadow:none;}
+.nav .nav-links button.active:not([aria-current="page"]){background:transparent;color:#e4ebe3;box-shadow:none;}
+.nav .nav-links button[aria-current="page"]{
+ background:rgba(244,226,193,.16);color:#fff6e5;
+ box-shadow:inset 0 0 0 1px rgba(245,225,189,.32);
+}
+.nav .nav-links button[aria-current="page"]::after{
+ content:"";position:absolute;bottom:4px;left:20%;right:20%;height:2px;
+ border-radius:2px;background:#e8c992;pointer-events:none;
+}
+@media(hover:hover) and (pointer:fine){
+ .nav .nav-links button:hover:not([aria-current="page"]){
+  color:#f2eee4;background:rgba(244,226,193,.045);box-shadow:none;
+ }
+}
+@media(hover:none){
+ .nav .nav-links button:hover:not([aria-current="page"]){
+  color:#e4ebe3;background:transparent;box-shadow:none;
+ }
+}
 .nav .nav-utility{flex:0 0 auto;display:flex;align-items:center;gap:0}
 .nav .nav-plan{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:11px 19px;border-radius:8px;border:1px solid #efd6ab;background:#f0d5a6;color:#143228;font:700 .84rem/1.25 'DM Sans',sans-serif;box-shadow:none;white-space:nowrap;}
 .nav .nav-plan:hover{background:#ffe8bc;border-color:#ffe8bc;transform:none;}
