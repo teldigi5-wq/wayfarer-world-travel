@@ -1,4 +1,5 @@
 import { timingSafeEqual } from 'node:crypto';
+import {signSelection} from '../flight-selection-token.mjs';
 
 // Source-grounded, opt-in Google Travel searches via SerpApi.
 // Search results are not real-time airline/hotel inventory or purchase confirmations.
@@ -53,7 +54,7 @@ async function search(provider,key,parameters){
   return parsed;
 }
 function fit(total,budget){return !budget?'budget_not_set':total<=budget?'within_budget':'over_budget'}
-function flightsFrom(data,t,checkedAt){
+function flightsFrom(data,t,checkedAt,secret){
   const entries=[...(Array.isArray(data.best_flights)?data.best_flights:[]),...(Array.isArray(data.other_flights)?data.other_flights:[])];
   const offers=entries.slice(0,12).map(item=>{
     if(!numMoney(item.price)||!Array.isArray(item.flights))return null;
@@ -74,6 +75,10 @@ function flightsFrom(data,t,checkedAt){
       bookableSeats:null,
       bookingLink:null,
       operationalFlightStatus:'not_connected',
+      selection: item.departure_token ?
+        {stage:'return',token:signSelection('return',item.departure_token,t,secret)} :
+        item.booking_token ?
+        {stage:'booking',token:signSelection('booking',item.booking_token,t,secret)} : null,
       checkedAt};
   }).filter(Boolean).sort((a,b)=>Number(a.estimatedGroup)-Number(b.estimatedGroup)).slice(0,6);
   return state(offers.length?'search_results':'no_results',offers.length?
@@ -125,7 +130,7 @@ export default async function handler(req,res){
   ];
   const [f,h]=await Promise.allSettled(jobs);
   const failed=e=>state(e?.quota?'quota_exceeded':'unavailable',e?.quota?'Provider monthly quota or rate limit reached.':'Provider search failed. This is not proof of sold-out inventory.');
-  payload.flights=f.status==='rejected'?failed(f.reason):f.value?flightsFrom(f.value,t,payload.checkedAt):state('needs_details','Select both origin and destination IATA airports.');
+  payload.flights=f.status==='rejected'?failed(f.reason):f.value?flightsFrom(f.value,t,payload.checkedAt,process.env.WAYFARER_AI_BETA_TOKEN):state('needs_details','Select both origin and destination IATA airports.');
   payload.hotels=h.status==='rejected'?failed(h.reason):h.value?hotelsFrom(h.value,t,payload.checkedAt):state('needs_details','Hotel quote supports one shared room for 1–2 adults; room selection is required for larger parties.');
   return json(res,200,payload);
 }
