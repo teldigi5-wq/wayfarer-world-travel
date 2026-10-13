@@ -5,7 +5,7 @@ import vm from 'node:vm';
 const read=relative=>readFileSync(new URL('../'+relative,import.meta.url),'utf8');
 const js=read('splash-screen.js'),css=read('splash-screen.css'),html=read('index.html');
 const clarity=read('clarity-polish.css'),atlas=read('country-atlas.js'),app=read('premium-app.js');
-function simulate({reduced=false,motionOff=false}={}){
+function simulate({reduced=false}={}){
   const callbacks={},timers=[],actions=[];
   let removed=false;
   const classes=new Set();
@@ -23,7 +23,6 @@ function simulate({reduced=false,motionOff=false}={}){
     addEventListener:(name,fn)=>callbacks[name]=fn,
     removeEventListener:name=>{delete callbacks[name];}};
   const environment={window:{matchMedia:()=>({matches:reduced})},document:doc,
-    localStorage:{getItem:()=>motionOff?'off':null},
     setTimeout:(fn,delay)=>{timers.push({fn,delay});return timers.length;},
     clearTimeout:id=>{if(timers[id-1])timers[id-1].cancelled=true;}};
   vm.runInNewContext(js,environment,{timeout:800});
@@ -71,17 +70,19 @@ test('skip and Escape close immediately and transfer keyboard focus to main cont
   const escaped=simulate();escaped.callbacks.keydown({key:'Escape'});
   assert.ok(escaped.classes.has('wf-splash-closing'));
   assert.ok(escaped.actions.includes('main focused'));
+  const tabbed=simulate();let trapped=false;
+  tabbed.callbacks.keydown({key:'Tab',preventDefault:()=>{trapped=true;}});
+  assert.equal(trapped,true);
+  assert.ok(tabbed.actions.filter(x=>x==='skip focused').length>=2);
   const hiddenTab=simulate();
   hiddenTab.doc.visibilityState='hidden';
   hiddenTab.callbacks.visibilitychange();
   assert.ok(hiddenTab.classes.has('wf-splash-closing'));
 });
-test('reduced-motion and Motion off users bypass the splash instantly',()=>{
-  for(const preference of [{reduced:true},{motionOff:true}]){
-    const state=simulate(preference);
-    assert.equal(state.removed,true);
-    assert.equal(state.timers.length,0);
-  }
+test('operating-system reduced-motion users bypass the splash instantly',()=>{
+  const state=simulate({reduced:true});
+  assert.equal(state.removed,true);
+  assert.equal(state.timers.length,0);
   assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
   assert.match(css,/#wf-splash\{opacity:0!important;visibility:hidden!important;pointer-events:none!important/);
   assert.match(css,/@media print\{#wf-splash\{display:none!important\}\}/);

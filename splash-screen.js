@@ -8,10 +8,8 @@
   const skip=document.getElementById('wf-splash-skip');
   const main=document.getElementById('main-content');
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let motionOff=false;
-  try{motionOff=localStorage.getItem('wf-visual-motion-v1')==='off';}catch{}
-  if(reduced||motionOff){
-    // If users prefer less motion, the CSS already hides the splash on first paint.
+  if(reduced){
+    // The OS prefers-reduced-motion setting hides the splash from first paint.
     splash.remove();
     return;
   }
@@ -28,7 +26,15 @@
     try{main?.focus({preventScroll:true});}catch{}
     setTimeout(()=>splash.remove(),380);
   }
-  function onKey(e){if(e.key==='Escape')finish();}
+  function onKey(e){
+    if(e.key==='Escape'){finish();return;}
+    // aria-modal must also behave modally: keep keyboard focus on Skip,
+    // never let a fast Tab keystroke land behind the splash.
+    if(e.key==='Tab'&&!closed){
+      e.preventDefault();
+      skip?.focus({preventScroll:true});
+    }
+  }
   function onVisibility(){if(document.visibilityState==='hidden')finish();}
   skip?.addEventListener('click',finish,{once:true});
   document.addEventListener('keydown',onKey);

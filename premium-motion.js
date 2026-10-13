@@ -2,40 +2,26 @@
 (() => {
   'use strict';
   const root = document.documentElement;
-  const toggle = document.getElementById('motion-toggle');
   const progress = document.getElementById('reading-progress-fill');
   const nav = document.querySelector('.nav');
   const hero = document.querySelector('.hero');
   const heroImage = hero?.querySelector('.hero-media');
   const osReduce = window.matchMedia('(prefers-reduced-motion: reduce)');
-  const STORAGE_KEY = 'wf-visual-motion-v1';
-  let stored = null;
-  try { stored = localStorage.getItem(STORAGE_KEY); } catch {}
-  let enabled = stored === null ? !osReduce.matches : stored === 'on';
   let requested = false;
   let lastScroll = 0;
 
-  function applyPreference() {
-    root.classList.toggle('motion-off', !enabled);
-    if (toggle) {
-      toggle.setAttribute('aria-pressed', String(enabled));
-      toggle.setAttribute('aria-label', enabled ? 'Turn off decorative motion' : 'Turn on decorative motion');
-      toggle.querySelector('.motion-toggle-text').textContent = enabled ? 'Motion on' : 'Motion off';
+  // Deliberately no manual Motion On/Off UI or persisted override.
+  // Follow accessibility settings from the user's operating system.
+  function synchronizeReducedMotion() {
+    root.classList.toggle('motion-off',osReduce.matches);
+    if (osReduce.matches && heroImage) {
+      heroImage.style.setProperty('--hero-offset','0px');
+      lastScroll = 0;
     }
-    if (heroImage && !enabled) heroImage.style.setProperty('--hero-offset', '0px');
+    tick();
   }
-  applyPreference();
-  toggle?.addEventListener('click', () => {
-    enabled = !enabled;
-    stored = enabled ? 'on' : 'off';
-    try { localStorage.setItem(STORAGE_KEY, stored); } catch {}
-    applyPreference();
-  });
-  osReduce.addEventListener?.('change', event => {
-    if (stored !== null) return; // User choice overrides OS only when saved explicitly.
-    enabled = !event.matches;
-    applyPreference();
-  });
+  osReduce.addEventListener?.('change',synchronizeReducedMotion);
+  synchronizeReducedMotion();
   function drawScroll() {
     requested = false;
     const y = Math.max(0,window.scrollY || 0);
@@ -43,7 +29,7 @@
     const page = document.querySelector('.view.active');
     const scrollHeight = Math.max(1, (page?.scrollHeight || document.body.scrollHeight) - window.innerHeight);
     if (progress) progress.style.transform = 'scaleX(' + Math.min(1, y / scrollHeight).toFixed(4) + ')';
-    if (heroImage && enabled && page?.id === 'discover' && y <= window.innerHeight * 1.2) {
+    if (heroImage && !osReduce.matches && page?.id === 'discover' && y <= window.innerHeight * 1.2) {
       const target = Math.min(55, Math.round(y * .07));
       if (Math.abs(target - lastScroll) > 1) {
         heroImage.style.setProperty('--hero-offset',target + 'px');

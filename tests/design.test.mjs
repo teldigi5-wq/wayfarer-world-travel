@@ -11,14 +11,16 @@ test('premium frontend retains all four functional journeys and external motion 
   assert.match(html,/src="premium-motion\.js"/);
   assert.ok(existsSync(new URL('../wayfarer-hero-v3.jpg',import.meta.url)));
 });
-test('supports keyboard skip navigation, real preference state and reduced motion',()=>{
+test('supports keyboard skip navigation, OS reduced-motion behavior without a UI toggle',()=>{
   assert.match(html,/class="skip-link" href="#main-content"/);
   assert.match(html,/id="main-content"/);
-  assert.match(html,/id="motion-toggle" aria-pressed="true"/);
+  assert.doesNotMatch(html,/id="motion-toggle"|Motion on|Motion off/);
+  assert.match(html,/class="nav-plan" data-view="studio"/);
   assert.match(motionCss,/@media\(prefers-reduced-motion:reduce\)/);
   assert.match(motionCss,/\.motion-off \.reveal/);
   assert.match(motionJs,/aria-current/);
-  assert.match(motionJs,/aria-pressed/);
+  assert.match(motionJs,/prefers-reduced-motion: reduce/);
+  assert.doesNotMatch(motionJs,/localStorage|STORAGE_KEY|motion-toggle/);
 });
 test('avoids obsolete hotel availability claims in the upgraded interface',()=>{
   assert.match(html,/No confirmed inventory/);
