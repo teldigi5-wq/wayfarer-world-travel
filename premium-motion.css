@@ -137,7 +137,7 @@ button,input,select {touch-action:manipulation}
 .fine,.source{font-size:11px;line-height:1.7}
 .micro{font-size:9px;letter-spacing:.1em}
 .label{font-size:10px;letter-spacing:.08em}
-.nav-links button,.motion-toggle{min-height:42px}
+.nav-links button{min-height:42px}
 @media(max-width:1080px){.nav-utility .live{display:none}.hero-card{max-width:320px}.hero .display{font-size:clamp(55px,8vw,96px)}}
 @media(max-width:900px){.hero{min-height:720px;height:100svh}.hero-copy{padding-top:210px;padding-right:5vw}.hero-chapter{top:120px}.hero-card{width:290px}.reel{height:auto;min-height:460px}.method{gap:50px}.method-photo{height:520px}.trust div{padding:21px}.app{padding-top:125px}}
 @media(max-width:650px){
