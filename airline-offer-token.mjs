@@ -35,7 +35,9 @@ export function openAirlineOffer(token,secret,now=Date.now()){
   try{
     const iv=Buffer.from(parts[1],'base64url'),tag=Buffer.from(parts[3],'base64url');
     const cipherText=Buffer.from(parts[2],'base64url');
-    if(iv.length!==12||tag.length!==16||cipherText.length>1024)return null;
+    if(iv.length!==12||tag.length!==16||cipherText.length>1024||
+      iv.toString('base64url')!==parts[1]||cipherText.toString('base64url')!==parts[2]||
+      tag.toString('base64url')!==parts[3])return null;
     const decipher=createDecipheriv('aes-256-gcm',k,iv);
     decipher.setAAD(AAD);decipher.setAuthTag(tag);
     const obj=JSON.parse(Buffer.concat([decipher.update(cipherText),decipher.final()]).toString('utf8'));
