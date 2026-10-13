@@ -1,0 +1,354 @@
+{
+  "label": "Wayfarer editorial collection — not statistical tourism ranking",
+  "lastReviewed": "2026-10-13",
+  "countries": [
+    {
+      "id": 1,
+      "code": "LK",
+      "name": "Sri Lanka",
+      "shortName": "Sri Lanka",
+      "region": "Asia",
+      "mood": "Heritage · Hill country · Coast",
+      "summary": "Ancient heritage, green tea hills and Indian Ocean shores.",
+      "source": "https://www.srilanka.travel/",
+      "image": "https://images.unsplash.com/photo-1612862862126-865765df2ded?auto=format&fit=crop&w=1200&q=84",
+      "planning": "Plan region-by-region: the Cultural Triangle, central hills and south coast involve substantial transfer time.",
+      "places": [
+        {
+          "name": "Sigiriya",
+          "description": "Ancient rock fortress and landscaped archaeological grounds."
+        },
+        {
+          "name": "Ella",
+          "description": "Hill-country walks and scenic railway landscapes."
+        },
+        {
+          "name": "Galle Fort",
+          "description": "Historic fortified old town near the southern coast."
+        },
+        {
+          "name": "Nuwara Eliya",
+          "description": "Tea country and cooler upland scenery."
+        },
+        {
+          "name": "Kandy",
+          "description": "Cultural heritage and the Temple of the Tooth area."
+        },
+        {
+          "name": "Yala National Park",
+          "description": "Wildlife-focused park exploration with operator guidance."
+        },
+        {
+          "name": "Mirissa",
+          "description": "Beach time and southern coastal atmosphere."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "code": "JP",
+      "name": "Japan",
+      "shortName": "Japan",
+      "region": "Asia",
+      "mood": "Tradition · Modern cities · Mountains",
+      "summary": "Historic districts, living traditions and distinctive modern cities.",
+      "source": "https://www.japan.travel/en/",
+      "image": "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=1200&q=84",
+      "planning": "Choose a few regional bases; check train timings and transport passes.",
+      "places": [
+        {
+          "name": "Tokyo",
+          "description": "Neighborhoods, museums and contemporary culture."
+        },
+        {
+          "name": "Kyoto",
+          "description": "Historic temples, gardens and craft traditions."
+        },
+        {
+          "name": "Mount Fuji area",
+          "description": "Mountain views and lake-region outings, weather permitting."
+        },
+        {
+          "name": "Osaka",
+          "description": "Food culture and lively urban districts."
+        },
+        {
+          "name": "Nara",
+          "description": "Temples and historic parkland near Kyoto."
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "code": "IT",
+      "name": "Italy",
+      "shortName": "Italy",
+      "region": "Europe",
+      "mood": "Art · Coast · Cuisine",
+      "summary": "Historic cities, regional food and Mediterranean landscapes.",
+      "source": "https://www.italia.it/en",
+      "image": "https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=1200&q=84",
+      "planning": "Use fewer bases for a calmer trip; confirm ferries, train service and site hours.",
+      "places": [
+        {
+          "name": "Rome",
+          "description": "Ancient monuments and major museums."
+        },
+        {
+          "name": "Amalfi Coast",
+          "description": "Cliffside villages and coastal scenery."
+        },
+        {
+          "name": "Venice",
+          "description": "Canal neighborhoods and lagoon heritage."
+        },
+        {
+          "name": "Florence",
+          "description": "Art, architecture and walkable historic streets."
+        },
+        {
+          "name": "Cinque Terre",
+          "description": "Coastal villages and seasonal trails."
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "code": "CH",
+      "name": "Switzerland",
+      "shortName": "Switzerland",
+      "region": "Europe",
+      "mood": "Alpine scenery · Lakes · Rail",
+      "summary": "Lake towns, mountain valleys and scenic rail journeys.",
+      "source": "https://www.myswitzerland.com/en/",
+      "image": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=84",
+      "planning": "Check mountain rail, lift and trail conditions for your travel dates.",
+      "places": [
+        {
+          "name": "Interlaken",
+          "description": "Lakes and Bernese Oberland connections."
+        },
+        {
+          "name": "Zermatt",
+          "description": "Mountain village below the Matterhorn."
+        },
+        {
+          "name": "Lucerne",
+          "description": "Lake-city heritage and mountain access."
+        },
+        {
+          "name": "Lauterbrunnen",
+          "description": "Valley landscapes and alpine excursions."
+        },
+        {
+          "name": "Bern",
+          "description": "Historic old town and riverside walks."
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "code": "FR",
+      "name": "France",
+      "shortName": "France",
+      "region": "Europe",
+      "mood": "Cities · Architecture · Culture",
+      "summary": "Museums, coastal towns and regional food traditions.",
+      "source": "https://www.france.fr/en/",
+      "image": "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1200&q=84",
+      "planning": "Allow realistic travel time between regions and check museum entry rules.",
+      "places": [
+        {
+          "name": "Paris",
+          "description": "World-famous museums and urban neighborhoods."
+        },
+        {
+          "name": "Nice",
+          "description": "Mediterranean promenade and Côte d’Azur access."
+        },
+        {
+          "name": "Provence",
+          "description": "Villages, markets and rural landscapes."
+        },
+        {
+          "name": "Mont Saint-Michel",
+          "description": "Historic tidal-island abbey."
+        },
+        {
+          "name": "Lyon",
+          "description": "Food traditions and architectural districts."
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "code": "IS",
+      "name": "Iceland",
+      "shortName": "Iceland",
+      "region": "Europe",
+      "mood": "Waterfalls · Geology · Landscapes",
+      "summary": "Volcanic landforms, waterfalls and memorable scenic routes.",
+      "source": "https://www.visiticeland.com/",
+      "image": "https://images.unsplash.com/photo-1476610182048-b716b8518aae?auto=format&fit=crop&w=1200&q=84",
+      "planning": "Roads and weather can change quickly; check official conditions before travel.",
+      "places": [
+        {
+          "name": "Reykjavík",
+          "description": "Cultural city and convenient trip base."
+        },
+        {
+          "name": "Golden Circle",
+          "description": "Common route of geological and scenic sites."
+        },
+        {
+          "name": "Vík",
+          "description": "South-coast village and nearby beaches."
+        },
+        {
+          "name": "Jökulsárlón",
+          "description": "Glacial lagoon with seasonal access considerations."
+        },
+        {
+          "name": "Snæfellsnes",
+          "description": "Coastal landscapes and peninsula towns."
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "code": "TH",
+      "name": "Thailand",
+      "shortName": "Thailand",
+      "region": "Asia",
+      "mood": "Temples · Food · Islands",
+      "summary": "City energy, northern culture and southern coastal escapes.",
+      "source": "https://www.tourismthailand.org/",
+      "image": "https://images.unsplash.com/photo-1528181304800-259b08848526?auto=format&fit=crop&w=1200&q=84",
+      "planning": "Different coasts have different wet seasons; verify ferry and operator schedules.",
+      "places": [
+        {
+          "name": "Bangkok",
+          "description": "Temples, markets and city neighborhoods."
+        },
+        {
+          "name": "Chiang Mai",
+          "description": "Northern Thai temples and culture."
+        },
+        {
+          "name": "Phuket",
+          "description": "Beaches and nearby island trips."
+        },
+        {
+          "name": "Krabi",
+          "description": "Limestone landscapes and boat excursions."
+        },
+        {
+          "name": "Ayutthaya",
+          "description": "Historic temple ruins near Bangkok."
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "code": "ID",
+      "name": "Indonesia",
+      "shortName": "Indonesia",
+      "region": "Asia",
+      "mood": "Islands · Culture · Nature",
+      "summary": "A diverse archipelago with distinct islands and ecosystems.",
+      "source": "https://www.indonesia.travel/",
+      "image": "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=1200&q=84",
+      "planning": "Select specific islands first; inter-island transport and protected-area permits need advance checking.",
+      "places": [
+        {
+          "name": "Bali",
+          "description": "Island landscapes and Balinese culture."
+        },
+        {
+          "name": "Ubud",
+          "description": "Arts, temples and surrounding rice terraces."
+        },
+        {
+          "name": "Komodo National Park",
+          "description": "Protected island and wildlife landscapes."
+        },
+        {
+          "name": "Yogyakarta",
+          "description": "Javanese heritage and temple-site access."
+        },
+        {
+          "name": "Raja Ampat",
+          "description": "Remote marine environments requiring careful logistics."
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "code": "NO",
+      "name": "Norway",
+      "shortName": "Norway",
+      "region": "Europe",
+      "mood": "Fjords · Islands · Northern cities",
+      "summary": "Dramatic coasts, mountain scenery and fjord regions.",
+      "source": "https://www.visitnorway.com/",
+      "image": "https://images.unsplash.com/photo-1531366936337-7c912a4589a7?auto=format&fit=crop&w=1200&q=84",
+      "planning": "Plan daylight and transport carefully; roads and seasonal ferries may change.",
+      "places": [
+        {
+          "name": "Lofoten",
+          "description": "Island villages and dramatic mountain shores."
+        },
+        {
+          "name": "Bergen",
+          "description": "Harbor heritage and gateway to fjords."
+        },
+        {
+          "name": "Geirangerfjord",
+          "description": "Fjord landscapes and viewpoints."
+        },
+        {
+          "name": "Tromsø",
+          "description": "Northern culture and seasonal night skies."
+        },
+        {
+          "name": "Oslo",
+          "description": "Museums, waterfronts and urban culture."
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "code": "AE",
+      "name": "United Arab Emirates",
+      "shortName": "UAE",
+      "region": "Middle East",
+      "mood": "Architecture · Desert · Heritage",
+      "summary": "Modern cities, art districts and desert experiences.",
+      "source": "https://u.ae/en/information-and-services/visiting-and-exploring-the-uae",
+      "image": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=1200&q=84",
+      "planning": "Compare cities and airports; confirm current weather and licensed excursion operators.",
+      "places": [
+        {
+          "name": "Dubai",
+          "description": "Architecture, waterfronts and historic districts."
+        },
+        {
+          "name": "Abu Dhabi",
+          "description": "Cultural landmarks, museums and coastline."
+        },
+        {
+          "name": "Al Ain",
+          "description": "Oasis landscapes and heritage."
+        },
+        {
+          "name": "Hatta",
+          "description": "Mountain-area recreation near Dubai."
+        },
+        {
+          "name": "Desert conservation areas",
+          "description": "Guided outdoor experiences with appropriate operators."
+        }
+      ]
+    }
+  ]
+}

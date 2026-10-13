@@ -1,0 +1,75 @@
+/* Wayfarer country atlas — truthful editorial discovery, cinematic imagery, strong UX hierarchy. */
+#wf-top10-atlas,#wf-top10-detail{--atlas-ivory:#faf2e4;--atlas-gold:#f0cf91;--atlas-muted:#c9dccc;--atlas-rule:rgba(218,229,208,.26);--atlas-panel:#123d32;color:var(--atlas-ivory);background:#071f1a;}
+#wf-top10-atlas *,#wf-top10-detail *{box-sizing:border-box;}
+#wf-top10-atlas{padding:clamp(60px,6vw,115px) clamp(20px,4.3vw,88px) clamp(65px,7vw,110px);background:radial-gradient(ellipse at 90% 4%,#2a5b4868,transparent 47%),linear-gradient(145deg,#051a16,#10392e 65%,#071f1a);border-top:1px solid rgba(240,207,145,.34);border-bottom:1px solid rgba(240,207,145,.34);}
+.wf-top10-header{display:flex;justify-content:space-between;align-items:end;flex-wrap:wrap;gap:25px 45px;margin:0 0 clamp(25px,3vw,45px);}
+.wf-top10-header>div{min-width:0;max-width:760px;}
+.wf-top10-kicker{display:block;color:var(--atlas-gold);font:700 .72rem/1.55 'DM Sans',sans-serif;letter-spacing:.15em;}
+.wf-top10-header h2{color:var(--atlas-ivory);font:500 clamp(2.9rem,5.3vw,6.2rem)/.95 'Cormorant Garamond',Georgia,serif;letter-spacing:-.028em;margin:12px 0 18px;text-wrap:balance;}
+.wf-top10-header h2 em{color:var(--atlas-gold);font-weight:400;}
+.wf-top10-header p{font:400 clamp(.94rem,1.03vw,1.06rem)/1.85 'DM Sans',sans-serif;color:#e1ecdf;max-width:63ch;margin:0;}
+.wf-top10-search{display:flex;flex-direction:column;gap:9px;flex:0 1 360px;font:700 .77rem/1.5 'DM Sans',sans-serif;letter-spacing:.09em;color:var(--atlas-gold);}
+.wf-top10-search input{width:100%;min-width:0;min-height:51px;border:1px solid #b5c7b3;background:#173f34;color:#fff9eb;border-radius:8px;padding:12px 15px;letter-spacing:0;font:500 .98rem/1.4 'DM Sans',sans-serif;}
+.wf-top10-search input::placeholder{color:#d2ded1;}
+.wf-top10-atlas button:focus-visible,#wf-top10-detail button:focus-visible,#wf-top10-detail a:focus-visible,.wf-top10-search input:focus-visible{outline:3px solid #f5d496;outline-offset:3px;}
+.wf-top10-layout{display:grid;grid-template-columns:minmax(0,2.12fr) minmax(320px,.94fr);gap:clamp(16px,1.9vw,26px);align-items:stretch;}
+.wf-top10-main{min-width:0;}
+.wf-top10-grid-label{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px 15px;margin-bottom:14px;}
+.wf-top10-grid-label h3{font:500 clamp(1.8rem,2.3vw,2.7rem)/1 'Cormorant Garamond',Georgia,serif;color:var(--atlas-ivory);margin:0;}
+#wf-top10-count{font:600 .83rem/1.5 'DM Sans',sans-serif;color:var(--atlas-muted);}
+.wf-top10-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:clamp(8px,1vw,14px);}
+.wf-top10-item{min-width:0;}
+.wf-top10-card{display:block;width:100%;height:100%;padding:0;border:1px solid var(--atlas-rule);background:#0f372d;border-radius:12px;overflow:hidden;cursor:pointer;text-align:left;transition:transform .3s ease,border-color .25s ease,box-shadow .25s ease;}
+.wf-top10-card:hover{transform:translateY(-4px);border-color:var(--atlas-gold);box-shadow:0 18px 38px #001b134d;}
+.wf-top10-card-photo{position:relative;height:clamp(138px,11vw,205px);background:radial-gradient(ellipse at 23% 24%,#41705b,#0d372c);overflow:hidden;}
+.wf-top10-card-photo img{width:100%;height:100%;display:block;object-fit:cover;transition:transform .55s cubic-bezier(.2,.7,.3,1);}
+.wf-top10-card:hover img{transform:scale(1.055);}
+.wf-top10-card-photo:after{content:'';position:absolute;inset:40% 0 0;pointer-events:none;background:linear-gradient(transparent,#072119c4);}
+.wf-top10-number{position:absolute;z-index:1;top:10px;left:10px;display:flex;align-items:center;justify-content:center;width:30px;height:30px;border:1px solid #ffeed0;border-radius:100%;background:#06211cb8;color:#fff3de;font:700 .78rem/1 'DM Sans',sans-serif;}
+.wf-top10-card-copy{padding:12px 13px 15px;min-height:106px;}
+.wf-top10-card-copy h4{font:500 clamp(1.38rem,1.5vw,1.8rem)/1.03 'Cormorant Garamond',Georgia,serif;color:#fff5e6;margin:0 0 6px;overflow-wrap:anywhere;}
+.wf-top10-card-copy p{font:500 .78rem/1.5 'DM Sans',sans-serif;color:#dbe8dc;margin:0;overflow-wrap:anywhere;}
+.wf-top10-sri-lanka{position:relative;min-width:0;min-height:100%;border:1px solid #eacb8d9b;border-radius:14px;overflow:hidden;background:#153b2d;isolation:isolate;display:flex;flex-direction:column;justify-content:end;}
+.wf-top10-sri-photo{position:absolute;inset:0;z-index:-2;background:radial-gradient(at 38% 12%,#758860,#184b3d);}
+.wf-top10-sri-photo img{width:100%;height:100%;object-fit:cover;object-position:50% 30%;display:block;}
+.wf-top10-sri-lanka:before{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,#011b155e,#041c17b8 34%,#031e18f2 78%);pointer-events:none;}
+.wf-top10-sri-copy{padding:clamp(22px,2vw,32px);background:linear-gradient(transparent,#06251c56);text-shadow:0 2px 8px #00160d75;}
+.wf-top10-sri-copy h3{font:500 clamp(2.6rem,3vw,3.7rem)/.96 'Cormorant Garamond',Georgia,serif;letter-spacing:-.015em;color:#fff8e7;margin:12px 0 16px;}
+.wf-top10-sri-copy p{font:500 .97rem/1.77 'DM Sans',sans-serif;color:#fbf8ed;margin:0 0 22px;}
+.wf-top10-sri-small{font:700 .75rem/1.4 'DM Sans',sans-serif;color:var(--atlas-gold);letter-spacing:.09em;}
+.wf-top10-sri-tags{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 24px;}
+.wf-top10-sri-tags span{border:1px solid #fff3d383;background:#0b3127b5;border-radius:30px;padding:7px 10px;color:#fdf7e9;font:600 .8rem/1.3 'DM Sans',sans-serif;}
+#wf-top10-sri-open,.wf-top10-primary{min-height:50px;background:#f5d79f;color:#103227;border:1px solid #f6dfa9;padding:11px 22px;font:700 .94rem/1.4 'DM Sans',sans-serif;border-radius:8px;cursor:pointer;}
+#wf-top10-sri-open:hover,.wf-top10-primary:hover{background:#ffe9bb;}
+.wf-top10-sri-copy small{display:block;font:.76rem/1.6 'DM Sans',sans-serif;color:#e2e8db;margin-top:17px;}
+.wf-top10-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px 24px;margin-top:22px;padding:20px 23px;background:#1a4336;border:1px solid var(--atlas-rule);border-radius:11px;}
+.wf-top10-footer p{color:#edf2e7;font:.89rem/1.65 'DM Sans',sans-serif;margin:0;max-width:67ch;}
+#wf-top10-all{min-height:44px;padding:10px 17px;color:#f5ddaf;border:1px solid #f2d59a;background:#0b3027;border-radius:8px;font:700 .87rem 'DM Sans',sans-serif;cursor:pointer;}
+#wf-top10-all:hover{background:#285544;}
+.wf-top10-no-results{padding:24px;color:#fbefda;grid-column:1/-1;border:1px dashed var(--atlas-rule);border-radius:9px;font:500 .94rem/1.6 'DM Sans',sans-serif;}
+#wf-top10-detail{margin:0 auto 55px;padding:clamp(55px,5vw,85px) clamp(20px,4.5vw,80px);border-block:1px solid #e1c69179;scroll-margin-top:28px;}
+#wf-top10-detail[hidden]{display:none!important;}
+.wf-top10-detail-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.9fr);gap:clamp(20px,3.5vw,60px);align-items:center;margin:0 auto 45px;max-width:1510px;}
+.wf-top10-detail-photo{aspect-ratio:1.52;background:linear-gradient(120deg,#194d3c,#4f7659);border-radius:14px;overflow:hidden;}
+.wf-top10-detail-photo img{width:100%;height:100%;object-fit:cover;display:block;}
+.wf-top10-detail-intro h2{font:500 clamp(3.7rem,6vw,7rem)/.91 'Cormorant Garamond',Georgia,serif;color:var(--atlas-ivory);margin:15px 0 21px;}
+.wf-top10-detail-lead{font:500 clamp(.98rem,1.15vw,1.18rem)/1.8 'DM Sans',sans-serif;color:#e4efe3;max-width:60ch;}
+.wf-top10-planning{color:#f0d9b5;font:500 .89rem/1.75 'DM Sans',sans-serif;border-left:2px solid #e1c691;padding-left:16px;margin:23px 0;}
+.wf-top10-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px 23px;margin-top:24px;}
+.wf-top10-official{color:#ffe0aa;min-height:44px;display:inline-flex;align-items:center;font:700 .9rem 'DM Sans',sans-serif;text-underline-offset:4px;}
+.wf-top10-detail-heading{max-width:1510px;margin:0 auto 23px;}
+.wf-top10-detail-heading h3{font:500 clamp(2.5rem,4.2vw,4.8rem)/.99 'Cormorant Garamond',Georgia,serif;color:var(--atlas-ivory);margin:11px 0;}
+.wf-top10-detail-heading p{color:var(--atlas-muted);font:500 .9rem/1.5 'DM Sans',sans-serif;}
+.wf-top10-place-grid{max-width:1510px;margin-inline:auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;}
+.wf-top10-place-card{display:flex;flex-direction:column;min-width:0;border-radius:12px;border:1px solid var(--atlas-rule);background:#143c31;padding:clamp(20px,2vw,26px);}
+.wf-top10-place-index{color:var(--atlas-gold);font:700 .75rem/1 'DM Sans',sans-serif;}
+.wf-top10-place-card h4{font:500 clamp(1.9rem,2.3vw,2.7rem)/1 'Cormorant Garamond',Georgia,serif;color:var(--atlas-ivory);margin:18px 0 9px;}
+.wf-top10-place-card p{font:500 .88rem/1.7 'DM Sans',sans-serif;color:var(--atlas-muted);margin:0 0 20px;flex:1;}
+.wf-top10-place-plan{background:transparent;color:var(--atlas-gold);border:1px solid #e5cd9d94;border-radius:7px;align-self:start;min-height:43px;padding:9px 12px;font:700 .85rem 'DM Sans',sans-serif;cursor:pointer;}
+.wf-top10-place-plan:hover{background:#275544;}
+.wf-top10-small{max-width:1510px;margin:24px auto 0;color:var(--atlas-muted);font:400 .84rem/1.7 'DM Sans',sans-serif;}
+@media(max-width:1150px){.wf-top10-layout{grid-template-columns:1fr}.wf-top10-sri-lanka{min-height:380px}.wf-top10-sri-photo{height:100%}.wf-top10-sri-copy{max-width:660px}.wf-top10-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+@media(max-width:800px){.wf-top10-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.wf-top10-detail-hero{grid-template-columns:1fr}.wf-top10-place-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){#wf-top10-atlas{padding:57px 18px 68px}.wf-top10-header h2{font-size:3.35rem}.wf-top10-search{flex:1 1 100%}.wf-top10-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.wf-top10-card-photo{height:145px}.wf-top10-card-copy{min-height:118px;padding:11px}.wf-top10-card-copy h4{font-size:1.45rem}.wf-top10-card-copy p{font-size:.72rem}.wf-top10-sri-copy{padding:22px}.wf-top10-footer{padding:19px}.wf-top10-footer button{width:100%}.wf-top10-place-grid{grid-template-columns:1fr}.wf-top10-detail-intro h2{font-size:4.5rem}#wf-top10-detail{padding:50px 18px}}
+@media(prefers-reduced-motion:reduce){.wf-top10-card,.wf-top10-card-photo img{transition:none!important;transform:none!important}}
+.motion-off .wf-top10-card,.motion-off .wf-top10-card-photo img{transition:none!important;transform:none!important}
