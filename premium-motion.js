@@ -64,7 +64,10 @@
     if (!active) return;
     syncNavSelection(active.id);
     const title = active.querySelector('h1');
-    if (title) {
+    // A destination handoff may already have focused the visible World Explorer
+    // search. Never override that intentional input focus with the page heading.
+    const focusIsInCurrentView = active.contains?.(document.activeElement) === true;
+    if (title && !focusIsInCurrentView) {
       title.setAttribute('tabindex', '-1');
       title.focus({preventScroll:true});
     }
