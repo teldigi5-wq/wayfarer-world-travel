@@ -21,6 +21,8 @@
   }
   function studio(country,place){
     nav('studio');
+    // The studio starts on Overview; expose the destination search before focusing it.
+    $('wf-tab-explore')?.click();
     const select=$('country-filter'),search=$('world-query');
     if(select){select.value=country.code;select.dispatchEvent(new Event('change',{bubbles:true}));}
     if(search){search.value=place;search.focus({preventScroll:true});}
