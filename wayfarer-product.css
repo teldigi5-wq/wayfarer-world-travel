@@ -65,3 +65,24 @@
   .wf-price-plan,.wf-country{animation:none!important;transition:none!important;transform:none!important}
 }
 .motion-off .wf-price-plan,.motion-off .wf-country{animation:none!important;transition:none!important;transform:none!important}
+
+/* Quiet cinematic entrances: only opt-in after JavaScript mounts the section.
+   No scrolling canvas, no infinite loops, zero hidden content if JS is disabled. */
+@media(prefers-reduced-motion:no-preference){
+  html.wf-premium-animated #wf-world-atlas:not(.wf-visible),
+  html.wf-premium-animated #wf-service-plans:not(.wf-visible){
+    opacity:.90;transform:translate3d(0,18px,0);
+  }
+  html.wf-premium-animated #wf-world-atlas,
+  html.wf-premium-animated #wf-service-plans{
+    transition:opacity .6s ease-out,transform .75s cubic-bezier(.22,1,.36,1);
+  }
+  html.wf-premium-animated #wf-world-atlas.wf-visible,
+  html.wf-premium-animated #wf-service-plans.wf-visible{
+    opacity:1;transform:translate3d(0,0,0);
+  }
+  #wf-world-atlas .wf-country:hover{transform:translate3d(2px,0,0)}
+  #wf-world-atlas .wf-country{transition:background-color .22s,border-color .22s,transform .22s}
+}
+.motion-off #wf-world-atlas,.motion-off #wf-service-plans,
+.motion-off #wf-world-atlas .wf-country{transition:none!important;transform:none!important;opacity:1!important}
