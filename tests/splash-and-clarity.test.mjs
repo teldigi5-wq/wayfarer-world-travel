@@ -5,74 +5,88 @@ import vm from 'node:vm';
 const read=relative=>readFileSync(new URL('../'+relative,import.meta.url),'utf8');
 const js=read('splash-screen.js'),css=read('splash-screen.css'),html=read('index.html');
 const clarity=read('clarity-polish.css'),atlas=read('country-atlas.js'),app=read('premium-app.js');
-function simulate({seen=false,reduced=false,motionOff=false}={}){
-  const callbacks={},timers=[],actions=[],memory={};
+function simulate({reduced=false,motionOff=false}={}){
+  const callbacks={},timers=[],actions=[];
   let removed=false;
-  if(seen)memory['wf-splash-seen-v1']='1';
-  const classNames=new Set();
+  const classes=new Set();
   const splash={
-    hidden:true,classList:{add:name=>classNames.add(name)},
+    hidden:false,
+    classList:{add:name=>classes.add(name)},
     remove:()=>{removed=true;actions.push('removed');}
   };
   const skip={addEventListener:(name,fn)=>callbacks['skip:'+name]=fn,
     focus:()=>actions.push('skip focused')};
   const main={focus:()=>actions.push('main focused')};
-  const doc={visibilityState:'visible',getElementById:id=>
-      id==='wf-splash'?splash:id==='wf-splash-skip'?skip:null,
-    querySelector:id=>id==='#main-content'?main:null,
+  const doc={visibilityState:'visible',getElementById:id=>({
+      'wf-splash':splash,'wf-splash-skip':skip,'main-content':main
+    }[id]||null),
     addEventListener:(name,fn)=>callbacks[name]=fn,
     removeEventListener:name=>{delete callbacks[name];}};
-  const env={window:{matchMedia:()=>({matches:reduced})},document:doc,
-    sessionStorage:{getItem:key=>memory[key]||null,setItem:(key,value)=>{memory[key]=value;}},
+  const environment={window:{matchMedia:()=>({matches:reduced})},document:doc,
     localStorage:{getItem:()=>motionOff?'off':null},
     setTimeout:(fn,delay)=>{timers.push({fn,delay});return timers.length;},
     clearTimeout:id=>{if(timers[id-1])timers[id-1].cancelled=true;}};
-  vm.runInNewContext(js,env,{timeout:600});
-  return {doc,splash,skip,memory,timers,actions,classNames,callbacks,get removed(){return removed;}};
+  vm.runInNewContext(js,environment,{timeout:800});
+  return {doc,splash,skip,timers,actions,classes,callbacks,get removed(){return removed;}};
 }
-test('cinematic splash is first-party, initially hidden, and controls are keyboard usable',()=>{
-  assert.match(html,/id="wf-splash" hidden/);
+test('splash renders first, before homepage, even before JavaScript executes',()=>{
+  const body=html.indexOf('<body>');
+  const splash=html.indexOf('<div id="wf-splash"');
+  const nav=html.indexOf('<header class="nav">');
+  const hero=html.indexOf('<section class="view active" id="discover">');
+  assert.ok(body>=0&&splash>body&&nav>splash&&hero>nav);
+  assert.match(html,/<div id="wf-splash" role="dialog" aria-modal="true"/);
+  assert.doesNotMatch(html,/<div id="wf-splash"[^>]*\bhidden\b/);
+  assert.match(html,/content="dark"/);
+  assert.match(css,/#wf-splash\{\s*position:fixed;inset:0;z-index:99999/);
+  assert.match(css,/#wf-splash:not\(\[hidden\]\)\{animation:wf-splash-safety-hide \.01s linear 3s forwards;\}/);
   assert.match(html,/id="wf-splash-skip"/);
   assert.match(html,/src="splash-screen\.js" defer/);
   assert.match(html,/href="splash-screen\.css"/);
   assert.ok(html.indexOf('src="splash-screen.js"')<html.indexOf('src="premium-motion.js"'));
   assert.ok(html.indexOf('href="splash-screen.css"')>html.indexOf('href="country-atlas.css"'));
-  assert.match(css,/#wf-splash\[hidden\]\{display:none!important\}/);
   assert.match(css,/focus-visible/);
-  assert.match(css,/prefers-reduced-motion:reduce/);
-  assert.match(css,/wf-splash-safety-hide/);
   assert.doesNotMatch(js,/fetch\(|XMLHttpRequest|\/api\/travel-search|\/api\/intelligence|new Image/);
 });
-test('first visit shows the splash then closes within 1250 ms, no backend dependency',()=>{
-  const state=simulate();
-  assert.equal(state.splash.hidden,false);
-  assert.deepEqual(state.actions,['skip focused']);
-  const automatic=state.timers.find(t=>t.delay===1250);
-  assert.ok(automatic);
-  automatic.fn();
-  assert.equal(state.memory['wf-splash-seen-v1'],'1');
-  assert.ok(state.classNames.has('wf-splash-closing'));
-  const removal=state.timers.find(t=>t.delay===400);
-  assert.ok(removal);removal.fn();assert.equal(state.removed,true);
+test('every full navigation starts with visible splash then closes after 1350ms',()=>{
+  for(let run=0;run<2;run++){
+    const state=simulate();
+    assert.equal(state.splash.hidden,false,'visible in original HTML');
+    assert.deepEqual(state.actions,['skip focused']);
+    const automatic=state.timers.find(t=>t.delay===1350);
+    assert.ok(automatic);
+    automatic.fn();
+    assert.ok(state.classes.has('wf-splash-closing'));
+    assert.ok(state.actions.includes('main focused'));
+    const removal=state.timers.find(t=>t.delay===380);
+    assert.ok(removal);removal.fn();
+    assert.equal(state.removed,true);
+  }
+  assert.doesNotMatch(js,/sessionStorage/);
 });
-test('skip and Escape close immediately, retain meaningful keyboard focus',()=>{
-  const clicked=simulate();
-  clicked.callbacks['skip:click']();
-  assert.ok(clicked.classNames.has('wf-splash-closing'));
+test('skip and Escape close immediately and transfer keyboard focus to main content',()=>{
+  const clicked=simulate();clicked.callbacks['skip:click']();
+  assert.ok(clicked.classes.has('wf-splash-closing'));
   assert.ok(clicked.actions.includes('main focused'));
-  const escaped=simulate();
-  escaped.callbacks.keydown({key:'Escape'});
-  assert.ok(escaped.classNames.has('wf-splash-closing'));
+  const escaped=simulate();escaped.callbacks.keydown({key:'Escape'});
+  assert.ok(escaped.classes.has('wf-splash-closing'));
+  assert.ok(escaped.actions.includes('main focused'));
+  const hiddenTab=simulate();
+  hiddenTab.doc.visibilityState='hidden';
+  hiddenTab.callbacks.visibilitychange();
+  assert.ok(hiddenTab.classes.has('wf-splash-closing'));
 });
-test('return visits and reduced-motion users never see or wait for the splash',()=>{
-  for(const pref of [{seen:true},{reduced:true},{motionOff:true}]){
-    const state=simulate(pref);
+test('reduced-motion and Motion off users bypass the splash instantly',()=>{
+  for(const preference of [{reduced:true},{motionOff:true}]){
+    const state=simulate(preference);
     assert.equal(state.removed,true);
     assert.equal(state.timers.length,0);
-    assert.equal(state.splash.hidden,true);
   }
+  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
+  assert.match(css,/#wf-splash\{opacity:0!important;visibility:hidden!important;pointer-events:none!important/);
+  assert.match(css,/@media print\{#wf-splash\{display:none!important\}\}/);
 });
-test('home screen explains actual workflow without invented checkout or video',()=>{
+test('home screen accurately explains the actual customer workflow',()=>{
   assert.match(html,/Travel planning, made simple\./);
   assert.match(html,/01 · Discover/);
   assert.match(html,/02 · Plan/);
@@ -83,7 +97,7 @@ test('home screen explains actual workflow without invented checkout or video',(
   assert.match(clarity,/@media\(max-width:690px\)/);
   assert.match(app,/story-btn'\)\.onclick=.*scrollIntoView\(\{behavior:/);
 });
-test('country pages offer a functional accessible Back action',()=>{
+test('country pages offer a real accessible Back action',()=>{
   assert.match(atlas,/← Back to country collection/);
   assert.match(atlas,/panel\.hidden=true/);
   assert.match(atlas,/nav\('discover'\)/);
