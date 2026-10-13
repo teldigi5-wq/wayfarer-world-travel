@@ -141,9 +141,10 @@ export default async function handler(req,res){
     // beta authorization, so a visible API key can never be drained by crawlers.
     const token=process.env.WAYFARER_AI_BETA_TOKEN||'';
     const offered=String(req.headers?.['x-wayfarer-beta-token']||'');
+    const actual=Buffer.from(offered),expected=Buffer.from(token);
     const permitted=process.env.WAYFARER_INTELLIGENCE_AI_ENABLED==='true'&&
-      token.length>=24&&offered.length===token.length&&
-      timingSafeEqual(Buffer.from(offered),Buffer.from(token));
+      expected.length>=24&&actual.length===expected.length&&
+      timingSafeEqual(actual,expected);
     const ai=permitted?await compose(brief,{
       weather:w.ok?{temperature:w.temperature,wind:w.wind,observedAt:w.observedAt,
         sourceUrl:w.sourceUrl,currentOnly:true}:null,
