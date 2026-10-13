@@ -56,9 +56,32 @@ export function verificationSummary({weather,place,country,ai,days,dailyBudget})
   flags.push('No confirmed airline inventory, restaurant menu prices, visa clearance or local transit fares.');
   const proposed=Number.isFinite(days*dailyBudget)?
     Math.round(days*dailyBudget*100)/100:null;
+  const total=proposed??0;
+  const allocation={
+    accommodation:Math.round(total*.40*100)/100,
+    food:Math.round(total*.25*100)/100,
+    localTransport:Math.round(total*.15*100)/100,
+    activities:Math.round(total*.10*100)/100
+  };
+  allocation.contingency=Math.round((total-allocation.accommodation-allocation.food-
+    allocation.localTransport-allocation.activities)*100)/100;
   return {sourceCount:sources.length,sourceTotal:3,
     status:sources.length===3&&ai?.ok?'complete':sources.length||ai?.ok?'partial':'unavailable',
     plannedGroundTotalUsd:proposed,
-    budgetBasis:'Working daily budget × days; not a supplier quote. Excludes international airfare.',
+    allocationUsd:allocation,
+    budgetBasis:'Illustrative 40/25/15/10/10 ground budget allocation. Not destination prices; excludes international airfare.',
+    nextSteps:[
+      {id:'destinations',state:place?.ok?'reference_available':'needs_source',
+        detail:'Review source-backed destination context and independently verify attractions and operating hours.'},
+      {id:'flights',state:'needs_provider_check',
+        detail:'Choose airports and dates, then explicitly request supplier flight searches. Verify offers on the airline or seller site.'},
+      {id:'stays',state:'needs_provider_check',
+        detail:'Compare hotel search prices, dates, room occupancy and cancellation terms; booking is not confirmed.'},
+      {id:'arrival',state:country?.ok?'reference_available':'needs_source',
+        detail:'Prepare arrival essentials; entry requirements and transfers require official verification.'},
+      {id:'itinerary',state:ai?.ok?'draft_ready':'sample_only',
+        detail:ai?.ok?'Review the AI itinerary against real opening hours and route times.':
+          'Review the retained local sample until AI planning becomes available.'}
+    ],
     flags};
 }
