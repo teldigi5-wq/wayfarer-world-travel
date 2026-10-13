@@ -1,257 +1,215 @@
 import { timingSafeEqual } from 'node:crypto';
 import { validateTrip } from '../planner.mjs';
 
-// Credential-gated provider adapter. No AI-generated fares and no synthetic offer data.
-const MAX_REQUEST_BYTES = 12000;
-const REQUEST_TIMEOUT_MS = 9000;
-const cut = (value, length = 160) => String(value ?? '').trim().slice(0, length);
-
-function response(res, status, value) {
+// Source-controlled adapter only. Provider keys remain on the server.
+// SerpApi Google Travel search results are NOT a booking or seat/room inventory feed.
+const MAX_BYTES = 12000;
+const SEARCH_TIMEOUT_MS = 11000;
+const SEARCH_MAX_RESPONSE = 2000000;
+const cut = (value, max = 160) => String(value ?? '').trim().slice(0, max);
+const category = (status, message, results = []) => ({ status, message, results });
+const dollars = value => Math.round(value * 100) / 100;
+const isIata = value => /^[A-Z]{3}$/.test(value || '');
+const validPrice = value => (typeof value === 'string' || typeof value === 'number') &&
+  Number.isFinite(Number(value)) && Number(value) > 0 && Number(value) < 1e8;
+function reply(res, status, payload) {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  return res.status(status).json(value);
+  return res.status(status).json(payload);
 }
-function equalSecret(a, b) {
-  const left = Buffer.from(String(a), 'utf8');
-  const right = Buffer.from(String(b), 'utf8');
-  return left.length > 0 && left.length === right.length && timingSafeEqual(left, right);
+function tokenMatches(provided, expected) {
+  const a=Buffer.from(String(provided || '')), b=Buffer.from(String(expected || ''));
+  return a.length > 0 && a.length === b.length && timingSafeEqual(a,b);
 }
-function category(status, message, results = []) { return { status, message, results }; }
-function finiteMoney(value) {
-  if (typeof value !== 'string' && typeof value !== 'number') return null;
-  const number = Number(value);
-  return Number.isFinite(number) && number >= 0 && number < 1e9 ? number.toFixed(2) : null;
+function fit(price, budget) {
+  if(!Number.isFinite(budget) || budget<=0)return 'budget_not_set';
+  return price<=budget?'within_budget':'over_budget';
 }
-function budgetFit(price, currency, limit) {
-  if (!Number.isFinite(limit) || limit <= 0) return 'budget_not_set';
-  if (currency !== 'USD') return 'currency_not_comparable';
-  return Number(price) <= limit ? 'within_budget' : 'over_budget';
+function ordered(offers) {
+  const rank={within_budget:0,budget_not_set:1,over_budget:2};
+  return offers.sort((a,b)=>(rank[a.budgetFit]??3)-(rank[b.budgetFit]??3) ||
+    (Number(a.groupTotal || a.price)-Number(b.groupTotal || b.price)));
 }
-function prioritized(offers) {
-  const order = { within_budget:0, budget_not_set:1, currency_not_comparable:2, over_budget:3 };
-  return offers.sort((a,b)=>(order[a.budgetFit]??4)-(order[b.budgetFit]??4) ||
-    (a.currency===b.currency?Number(a.price)-Number(b.price):0));
-}
-function safeCurrency(value) { return /^[A-Z]{3}$/.test(value || '') ? value : null; }
-function isoDate(value) { return /^\d{4}-\d{2}-\d{2}$/.test(value || '') ? value : null; }
-async function fetchJson(url, init = {}) {
-  const result = await fetch(url, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
-  if (!result.ok) {
-    const e = new Error('Provider request failed');
-    e.status = result.status;
-    throw e;
-  }
-  const text = await result.text();
-  if (text.length > 1000000) throw new Error('Provider response too large');
-  return JSON.parse(text);
-}
-function checkPlace(input, results) {
-  const target = cut(input, 120).toUpperCase();
-  if (/^[A-Z]{3}$/.test(target)) return target;
-  const candidates = (Array.isArray(results) ? results : [])
-    .filter(item => item && /^[A-Z]{3}$/.test(item.iataCode || '') && (
-      cut(item.name).toUpperCase() === target ||
-      cut(item.address?.cityName).toUpperCase() === target))
-    .filter(item => String(item.subType || '').toUpperCase() === 'CITY');
-  const codes = [...new Set(candidates.map(item => item.iataCode))];
-  return codes.length === 1 ? codes[0] : null;
-}
-async function locationCode(base, token, input) {
-  if (/^[A-Z]{3}$/.test(cut(input))) return cut(input).toUpperCase();
-  const qs = new URLSearchParams({ subType: 'CITY,AIRPORT', keyword: cut(input), view: 'LIGHT' });
-  const json = await fetchJson(base + '/v1/reference-data/locations?' + qs, {
-    headers: { Authorization: 'Bearer ' + token }
-  });
-  return checkPlace(input, json.data);
-}
-function normalizeFlight(offer, searchedAt) {
-  const price = finiteMoney(offer?.price?.grandTotal ?? offer?.price?.total);
-  const currency = safeCurrency(offer?.price?.currency);
-  const itineraries = (offer?.itineraries || []).slice(0, 2).map(it => ({
-    duration: cut(it?.duration, 35),
-    segments: (it?.segments || []).slice(0, 6).map(seg => ({
-      airline: cut(seg?.carrierCode, 3),
-      flightNumber: cut(seg?.number, 8),
-      from: cut(seg?.departure?.iataCode, 3),
-      departureAt: cut(seg?.departure?.at, 28),
-      to: cut(seg?.arrival?.iataCode, 3),
-      arrivalAt: cut(seg?.arrival?.at, 28)
-    }))
-  })).filter(it => it.segments.length);
-  if (!price || !currency || !itineraries.length) return null;
+function researchLinks(trip) {
+  const destination=[trip.city,trip.country].join(', ');
+  const query = (root, query) => root + new URLSearchParams(query);
   return {
-    price, currency, itineraries,
-    lastCheckedAt: searchedAt,
-    bookingStatus: 'Provider offer found at search time; not booked. Price and seat availability require recheck before checkout.',
-    seatsReported: Number.isInteger(offer?.numberOfBookableSeats) && offer.numberOfBookableSeats > 0 ? offer.numberOfBookableSeats : null
-  };
-}
-function normalizeHotel(entry, searchedAt) {
-  const offer = Array.isArray(entry?.offers) ? entry.offers[0] : null;
-  const price = finiteMoney(offer?.price?.total);
-  const currency = safeCurrency(offer?.price?.currency);
-  const name = cut(entry?.hotel?.name);
-  if (!price || !currency || !name) return null;
-  return {
-    name, price, currency, checkIn: isoDate(offer?.checkInDate),
-    checkOut: isoDate(offer?.checkOutDate), roomType: cut(offer?.room?.typeEstimated?.category || '', 80) || null,
-    lastCheckedAt: searchedAt, bookingStatus: 'Provider offer found for one shared room, not reserved. Confirm room type, taxes, cancellation and final price.'
-  };
-}
-async function flightOffers(base, token, origin, destination, trip, searchedAt) {
-  const qs = new URLSearchParams({
-    originLocationCode: origin, destinationLocationCode: destination,
-    departureDate: trip.startDate, returnDate: trip.endDate,
-    adults: String(trip.travelers), max: '5'
-  });
-  const json = await fetchJson(base + '/v2/shopping/flight-offers?' + qs, {
-    headers: { Authorization: 'Bearer ' + token }
-  });
-  const offers = prioritized((json.data || []).map(entry => normalizeFlight(entry, searchedAt))
-    .filter(Boolean).map(offer=>({
-      ...offer,
-      budgetFit: budgetFit(offer.price, offer.currency, trip.flightBudget),
-      budgetLimitUsd: trip.flightBudget || null
-    })));
-  return category(offers.length ? 'offers_found' : 'no_offers',
-    offers.length ? 'Provider returned priced flight offers. Ticket availability is NOT guaranteed until repricing and checkout.' :
-    'This provider returned no flight offers for the search. This does not mean all tickets are sold out.', offers);
-}
-async function hotelOffers(base, token, city, trip, searchedAt) {
-  if (trip.travelers > 2) return category('needs_details',
-    'Hotel offer search currently supports one shared room for one or two adults. Multi-room occupancy has not been specified.');
-  const headers = { Authorization: 'Bearer ' + token };
-  const list = await fetchJson(base + '/v1/reference-data/locations/hotels/by-city?' + new URLSearchParams({
-    cityCode: city, radius: '10', radiusUnit: 'KM'
-  }), { headers });
-  const ids = [...new Set((list.data || []).map(item => item?.hotelId).filter(v => /^[A-Z0-9]{8}$/.test(v || '')))].slice(0, 6);
-  if (!ids.length) return category('no_offers', 'Provider returned no hotels for this city. This is not proof of no vacancies.');
-  const qs = new URLSearchParams({
-    hotelIds: ids.join(','), adults: String(trip.travelers),
-    checkInDate: trip.startDate, checkOutDate: trip.endDate, roomQuantity: '1'
-  });
-  const offersJson = await fetchJson(base + '/v3/shopping/hotel-offers?' + qs, { headers });
-  const lodgingAllocation = Math.round(trip.budget * 0.4 * 100)/100;
-  const offers = prioritized((offersJson.data || []).map(entry=>normalizeHotel(entry, searchedAt))
-    .filter(Boolean).map(offer=>({
-      ...offer,
-      budgetFit: budgetFit(offer.price,offer.currency,lodgingAllocation),
-      budgetLimitUsd: lodgingAllocation
-    }))).slice(0, 6);
-  return category(offers.length ? 'offers_found' : 'no_offers',
-    offers.length ? 'Provider returned accommodation offers for one shared room. Verify final conditions before reserving.' :
-    'Provider returned no priced hotel offers in this small sample; many other accommodations may exist.', offers);
-}
-function links(trip) {
-  const destination = cut(trip.city, 120) + ', ' + cut(trip.country, 120);
-  return {
-    food: 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('restaurants and menus ' + destination),
-    transport: 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(destination) + '&travelmode=transit',
-    flights: 'https://www.google.com/search?q=' + encodeURIComponent('Google Flights ' + trip.origin + ' to ' + destination + ' ' + trip.startDate + ' ' + trip.endDate),
-    hotels: 'https://www.booking.com/searchresults.html?' + new URLSearchParams({
-      ss: destination, checkin: trip.startDate, checkout: trip.endDate, group_adults: String(trip.travelers)
+    flights: query('https://www.google.com/search?',{
+      q:'Google Flights '+(trip.originAirport||trip.origin)+' to '+
+        (trip.destinationAirport||destination)+' '+trip.startDate+' '+trip.endDate
+    }),
+    hotels: query('https://www.booking.com/searchresults.html?',{
+      ss:destination, checkin:trip.startDate, checkout:trip.endDate,
+      group_adults:String(trip.travelers)
+    }),
+    food:query('https://www.google.com/maps/search/?',{
+      api:'1',query:'restaurants and menus in '+destination
+    }),
+    transport:query('https://www.google.com/maps/dir/?',{
+      api:'1',destination,travelmode:'transit'
     })
   };
 }
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return response(res, 405, { ok: false, error: 'Method not allowed.' });
+function parseTrip(req) {
+  if(Number(req.headers?.['content-length'] || 0)>MAX_BYTES) throw new Error('Body too large');
+  const body=typeof req.body==='string'?JSON.parse(req.body):req.body;
+  if(!body || Array.isArray(body) || Buffer.byteLength(JSON.stringify(body))>MAX_BYTES) {
+    throw new Error('Invalid body');
   }
-  const expected = process.env.WAYFARER_AI_BETA_TOKEN || '';
-  if (!expected || !equalSecret(req.headers?.['x-wayfarer-beta-token'] || '', expected)) {
-    return response(res, 401, { ok: false, error: 'Invalid private beta access code.' });
+  const raw=body.trip;
+  if(!raw || typeof raw!=='object'||Array.isArray(raw))throw new Error('Trip missing');
+  const trip={
+    country:cut(raw.country,120),city:cut(raw.city,120),origin:cut(raw.origin,120),
+    startDate:cut(raw.startDate,10),endDate:cut(raw.endDate,10),
+    travelers:Number(raw.travelers),budget:Number(raw.budget),
+    flightBudget:raw.flightBudget==null||raw.flightBudget===''?0:Number(raw.flightBudget),
+    style:raw.style==='slow'?'slow':'balanced',
+    originAirport:cut(raw.originAirport,3).toUpperCase(),
+    destinationAirport:cut(raw.destinationAirport,3).toUpperCase()
+  };
+  const check=validateTrip(trip);
+  if(!check.valid)throw new Error(check.errors.join(' '));
+  if(!Number.isFinite(trip.flightBudget)||trip.flightBudget<0||trip.flightBudget>1000000||
+    (trip.originAirport&&!isIata(trip.originAirport))||
+    (trip.destinationAirport&&!isIata(trip.destinationAirport)))throw new Error('Invalid airfare budget or airport code');
+  return trip;
+}
+async function serpSearch(params,key) {
+  const url=new URL('https://serpapi.com/search.json');
+  for(const [name,value] of Object.entries(params))url.searchParams.set(name,String(value));
+  url.searchParams.set('api_key',key);
+  let res;
+  try { res=await fetch(url.href,{signal:AbortSignal.timeout(SEARCH_TIMEOUT_MS)}); }
+  catch { throw new Error('Provider unavailable'); }
+  if(!res.ok){
+    const err=new Error(res.status===429?'Provider rate limit reached':'Provider request unavailable');
+    err.quota=res.status===429;
+    throw err;
   }
+  const text=await res.text();
+  if(text.length>SEARCH_MAX_RESPONSE)throw new Error('Provider response too large');
+  let data;
+  try { data=JSON.parse(text); } catch {throw new Error('Malformed provider response');}
+  if(data?.error || data?.search_metadata?.status==='Error'){
+    const err=new Error('Provider search reported an error');
+    err.quota=/limit|quota|credits|searches left/i.test(String(data.error || ''));
+    throw err;
+  }
+  return data;
+}
+function normalizeFlight(raw,people,airBudget,checkedAt) {
+  if(!validPrice(raw?.price)||!Array.isArray(raw?.flights)||!raw.flights.length)return null;
+  const segments=raw.flights.slice(0,6).map(seg=>({
+    airline:cut(seg?.airline,70),flightNumber:cut(seg?.flight_number,20),
+    from:cut(seg?.departure_airport?.id,3),to:cut(seg?.arrival_airport?.id,3),
+    departureAt:cut(seg?.departure_airport?.time,40),
+    arrivalAt:cut(seg?.arrival_airport?.time,40)
+  })).filter(s=>isIata(s.from)&&isIata(s.to));
+  if(!segments.length)return null;
+  const perAdult=dollars(Number(raw.price));
+  // Google Flights labels the first-stage search a round-trip, but returning
+  // itinerary selection normally requires a *second* departure_token request.
+  const groupTotal=dollars(perAdult*people);
+  return {
+    price:perAdult.toFixed(2),currency:'USD',groupTotal:groupTotal.toFixed(2),
+    passengersAssumedAdults:people,priceBasis:'Google Flights indicative per-adult round-trip search price',
+    budgetFit:fit(groupTotal,airBudget),budgetLimitUsd:airBudget||null,
+    itineraries:[{duration:raw.total_duration?String(raw.total_duration)+' min':'',
+      segments}],seatsReported:null,lastCheckedAt:checkedAt,
+    bookingStatus:'Search-only indicative fare. Return flight, booking options, taxes/baggage and seats are NOT verified. No ticket reserved.'
+  };
+}
+function normalizeHotel(raw,trip,checkedAt) {
+  const amount=raw?.total_rate?.extracted_lowest;
+  if(!validPrice(amount)||!cut(raw?.name))return null;
+  const price=dollars(Number(amount));
+  const cap=dollars(trip.budget*0.4);
+  return {
+    name:cut(raw.name),price:price.toFixed(2),currency:'USD',
+    priceBasis:'Displayed lowest total rate from Google Hotels for searched dates',
+    budgetFit:fit(price,cap),budgetLimitUsd:cap,
+    checkIn:trip.startDate,checkOut:trip.endDate,
+    source:cut(raw?.prices?.[0]?.source||'Google Hotels search',90),
+    roomType:null,lastCheckedAt:checkedAt,
+    bookingStatus:'Search price only; room occupancy, taxes, fees, cancellation terms, final rate and availability need provider confirmation. No booking made.'
+  };
+}
+async function flights(trip,key,checkedAt){
+  if(!trip.originAirport||!trip.destinationAirport) {
+    return category('needs_details','Select both departure and arrival IATA airports before searching current flight prices.');
+  }
+  if(trip.travelers>9) return category('needs_details','Flights for groups over nine adults require a specialist quote.');
+  const data=await serpSearch({
+    engine:'google_flights',departure_id:trip.originAirport,arrival_id:trip.destinationAirport,
+    outbound_date:trip.startDate,return_date:trip.endDate,adults:trip.travelers,
+    type:1,travel_class:1,hl:'en',currency:'USD',deep_search:'false'
+  },key);
+  const found=[...(Array.isArray(data.best_flights)?data.best_flights:[]),
+    ...(Array.isArray(data.other_flights)?data.other_flights:[])]
+    .map(v=>normalizeFlight(v,trip.travelers,trip.flightBudget,checkedAt)).filter(Boolean);
+  return category(found.length?'search_results':'no_results', found.length?
+    'Google Flights results through SerpApi. First-stage round-trip fares are indicative: return flights/seat availability are NOT confirmed.' :
+    'No usable priced flights returned by this search. This does not mean all tickets are sold out.',
+    ordered(found).slice(0,6));
+}
+async function hotels(trip,key,checkedAt){
+  if(trip.travelers>2) return category('needs_details',
+    'Hotel search currently assumes one shared room for one or two adults. Provide a room layout before quoting larger groups.');
+  if(trip.startDate===trip.endDate)return category('needs_details',
+    'Check-out must be after check-in for hotel price searches.');
+  const data=await serpSearch({
+    engine:'google_hotels',q:'hotels in '+trip.city+', '+trip.country,
+    check_in_date:trip.startDate,check_out_date:trip.endDate,
+    adults:trip.travelers,currency:'USD',hl:'en'
+  },key);
+  const found=(Array.isArray(data.properties)?data.properties:[])
+    .map(v=>normalizeHotel(v,trip,checkedAt)).filter(Boolean);
+  return category(found.length?'search_results':'no_results',found.length?
+    'Google Hotels search prices through SerpApi. The displayed total is not a confirmed payable rate or room reservation.' :
+    'No complete total-rate hotel prices were returned; other accommodation may still be available.',
+    ordered(found).slice(0,8));
+}
+export default async function handler(req,res){
+  if(req.method!=='POST'){
+    res.setHeader('Allow','POST');
+    return reply(res,405,{ok:false,error:'Method not allowed.'});
+  }
+  const betaCode=process.env.WAYFARER_AI_BETA_TOKEN||'';
+  if(!betaCode||!tokenMatches(req.headers?.['x-wayfarer-beta-token'],betaCode))
+    return reply(res,401,{ok:false,error:'Invalid private beta access code.'});
   let trip;
-  try {
-    if (Number(req.headers?.['content-length'] || 0) > MAX_REQUEST_BYTES) throw Error();
-    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    if (Buffer.byteLength(JSON.stringify(body || {})) > MAX_REQUEST_BYTES) throw Error();
-    const raw = body?.trip || {};
-    trip = { country: cut(raw.country, 120), city: cut(raw.city, 120), origin: cut(raw.origin, 120),
-      startDate: cut(raw.startDate, 10), endDate: cut(raw.endDate, 10), travelers: Number(raw.travelers),
-      budget: Number(raw.budget), style: raw.style === 'slow' ? 'slow' : 'balanced',
-      flightBudget: raw.flightBudget === '' || raw.flightBudget == null ? 0 : Number(raw.flightBudget),
-      originAirport: cut(raw.originAirport, 3).toUpperCase(),
-      destinationAirport: cut(raw.destinationAirport, 3).toUpperCase()
-    };
-  } catch { return response(res, 400, { ok: false, error: 'Invalid JSON trip payload.' }); }
-  const valid = validateTrip(trip);
-  if (!valid.valid) return response(res, 400, { ok: false, error: valid.errors.join(' ') });
-  if (!Number.isFinite(trip.flightBudget) || trip.flightBudget < 0 || trip.flightBudget > 1000000 ||
-    (trip.originAirport && !/^[A-Z]{3}$/.test(trip.originAirport)) ||
-    (trip.destinationAirport && !/^[A-Z]{3}$/.test(trip.destinationAirport))) {
-    return response(res, 400, { ok:false, error:'Invalid flight budget or airport code.' });
-  }
-
-  const refs = links(trip);
-  const data = {
-    ok: true, provider: 'Amadeus Self-Service', mode: 'not_configured', checkedAt: null,
-    flights: category('not_connected', 'Live flight fares and seat availability need an authorized production provider.'),
-    hotels: category('not_connected', 'Live hotel inventory and prices need an authorized production provider.'),
-    food: { ...category('not_connected', 'No reliable worldwide live menu/food price provider is connected. Check the restaurant menu directly.'), researchUrl: refs.food },
-    transport: { ...category('not_connected', 'Live transit fares, routes and operating status are not integrated. Verify with the local transport operator.'), researchUrl: refs.transport },
-    researchLinks: { flights: refs.flights, hotels: refs.hotels },
-    limitations: [
-      'No flight tickets or hotel rooms have been booked.',
-      'An offer found by a supplier is not a guarantee of seats or a final checkout price.',
-      'Food and local transportation prices are unavailable until licensed live provider integrations exist.',
-      'Flights are outside the group USD ground budget; optional flight budget is separate. Budget comparisons apply only to matching USD offers.'
+  try{trip=parseTrip(req);}
+  catch{return reply(res,400,{ok:false,error:'Invalid trip. Check dates, airports and budgets.'});}
+  const links=researchLinks(trip);
+  const payload={
+    ok:true,provider:'SerpApi Google Flights / Google Hotels',mode:'not_configured',
+    checkedAt:null,
+    flights:category('not_connected','Current flight prices require an enabled SerpApi server integration.'),
+    hotels:category('not_connected','Hotel search prices require an enabled SerpApi server integration.'),
+    food:{...category('not_connected','No licensed real-time restaurant menu pricing is connected.'),researchUrl:links.food},
+    transport:{...category('not_connected','No worldwide live transport fare/timetable provider is connected.'),researchUrl:links.transport},
+    researchLinks:{flights:links.flights,hotels:links.hotels},
+    limitations:[
+      'SerpApi retrieves Google Travel search results, not airline seat inventory or confirmed room availability.',
+      'Search results may be cached and change before checkout.',
+      'A round-trip flight search result is indicative until return flights and booking options are selected.',
+      'Prices are USD search indications; baggage, taxes, fees, occupancy and provider terms require verification.',
+      'Ground-budget allocation is separate from the optional group airfare budget.',
+      'Each click may make up to two SerpApi searches and use monthly free search allowance.'
     ]
   };
-  // Amadeus Self-Service was discontinued July 17, 2026. Keep legacy adapter inert.
-  // Do not accept previous self-service credentials or report its output as live.
-  data.provider = 'No currently connected live supplier';
-  data.mode = 'retired_provider';
-  data.flights = category('not_connected', 'Amadeus Self-Service was discontinued in July 2026. A supported flight provider must be integrated before real-time fares or seat availability can be shown.');
-  data.hotels = category('not_connected', 'The legacy Amadeus Self-Service hotel integration is discontinued. A supported accommodation supplier must be integrated to show live offers.');
-  return response(res, 200, data);
-
-  const enabled = process.env.WAYFARER_TRAVEL_ENABLED === 'true';
-  const client = process.env.AMADEUS_CLIENT_ID || '';
-  const secret = process.env.AMADEUS_CLIENT_SECRET || '';
-  if (!enabled || !client || !secret) return response(res, 200, data);
-
-  const production = process.env.AMADEUS_ENV === 'production';
-  const base = production ? 'https://api.amadeus.com' : 'https://test.api.amadeus.com';
-  data.mode = production ? 'production' : 'test';
-  data.checkedAt = new Date().toISOString();
-  const unavailable = label => category('unavailable', label + ' query could not be completed; no availability conclusion can be made.');
-  try {
-    const form = new URLSearchParams({ grant_type: 'client_credentials', client_id: client, client_secret: secret });
-    const auth = await fetchJson(base + '/v1/security/oauth2/token', {
-      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: form
-    });
-    if (typeof auth.access_token !== 'string' || !auth.access_token) throw Error('OAuth returned no access token');
-    const token = auth.access_token;
-    const [origin, city] = await Promise.allSettled([
-      trip.originAirport ? Promise.resolve(trip.originAirport) : locationCode(base, token, trip.origin),
-      locationCode(base, token, trip.city)
-    ]);
-    const sourceCode = origin.status === 'fulfilled' ? origin.value : null;
-    const destinationCityCode = city.status === 'fulfilled' ? city.value : null;
-    const flightDestinationCode = trip.destinationAirport || destinationCityCode;
-    if (sourceCode && flightDestinationCode) {
-      if (trip.travelers <= 9) {
-        try { data.flights = await flightOffers(base, token, sourceCode, flightDestinationCode, trip, data.checkedAt); }
-        catch { data.flights = unavailable('Flight'); }
-      } else data.flights = category('needs_details','Flight API supports up to nine adults per search.');
-    } else data.flights = category('needs_details','Choose origin and destination airport codes, or enter resolvable city names.');
-    if (destinationCityCode) {
-      try { data.hotels = await hotelOffers(base, token, destinationCityCode, trip, data.checkedAt); }
-      catch { data.hotels = unavailable('Hotel'); }
-    } else data.hotels = category('needs_details','Could not resolve the hotel search city. Enter a clearer city name.');
-  } catch {
-    data.flights = unavailable('Flight provider');
-    data.hotels = unavailable('Hotel provider');
-  }
-  if (!production) {
-    for (const name of ['flights', 'hotels']) {
-      if (data[name].status === 'offers_found') {
-        data[name].status = 'test_data';
-        data[name].message = 'TEST ENVIRONMENT / LIMITED CACHED DATA — not live availability, price or bookable inventory.';
-      }
-    }
-  }
-  return response(res, 200, data);
+  const key=process.env.SERPAPI_API_KEY||'';
+  if(process.env.WAYFARER_TRAVEL_ENABLED!=='true'||!key) return reply(res,200,payload);
+  payload.mode='serpapi_search';
+  payload.checkedAt=new Date().toISOString();
+  const unavailable = e => category(e?.quota?'quota_exceeded':'unavailable',
+    e?.quota?'SerpApi quota/rate limit reached; no availability conclusion can be drawn.':
+    'Travel search provider unavailable; no availability conclusion can be drawn.');
+  // Two searches maximum; failures cannot be misreported as sold-out.
+  const [flight,hotel]=await Promise.allSettled([
+    flights(trip,key,payload.checkedAt),hotels(trip,key,payload.checkedAt)
+  ]);
+  payload.flights=flight.status==='fulfilled'?flight.value:unavailable(flight.reason);
+  payload.hotels=hotel.status==='fulfilled'?hotel.value:unavailable(hotel.reason);
+  return reply(res,200,payload);
 }
