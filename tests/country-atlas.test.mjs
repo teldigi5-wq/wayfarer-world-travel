@@ -48,7 +48,7 @@ test('country atlas is visible in discover and detailed attractions open in dest
   assert.match(js,/nav\('destinations-page'\)/);
   assert.match(js,/nav\('studio'\)/);
   assert.match(js,/query|country-filter/);
-  assert.match(js,/select the matching result to add it to your journey/);
+  assert.match(js,/choose the matching result to add it to your journey/);
   assert.match(js,/nav\('discover'\)/);
 });
 test('search, handoff, no-result fallback, and reduced-motion/keyboard behaviors exist',()=>{
