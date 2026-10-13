@@ -46,14 +46,23 @@
   addEventListener('resize',tick,{passive:true});
   tick();
 
-  // Observe the original router's existing class state rather than replacing its handlers.
+  // Reconcile BOTH visual and semantic navigation state from the real active view.
+  // Old view switches and browser restoration must not leave multiple highlighted tabs.
+  function syncNavSelection(activeId) {
+    let selected = false;
+    document.querySelectorAll('.nav-links button[data-view]').forEach(item => {
+      const current = !selected && item.dataset.view === activeId;
+      if (current) selected = true;
+      item.classList.toggle('active', current);
+      if (current) item.setAttribute('aria-current', 'page');
+      else item.removeAttribute('aria-current');
+    });
+  }
+  // Observe the established router's view classes, not an unrelated hover state.
   function syncRouteAccessibility() {
     const active = document.querySelector('.view.active');
     if (!active) return;
-    document.querySelectorAll('.nav-links button[data-view]').forEach(item => {
-      if (item.dataset.view === active.id) item.setAttribute('aria-current', 'page');
-      else item.removeAttribute('aria-current');
-    });
+    syncNavSelection(active.id);
     const title = active.querySelector('h1');
     if (title) {
       title.setAttribute('tabindex', '-1');
@@ -74,7 +83,7 @@
     routerObserver.observe(view, {attributes:true,attributeFilter:['class']});
   });
   const initial = document.querySelector('.view.active');
-  if (initial) document.querySelector('.nav-links button[data-view="' + initial.id + '"]')?.setAttribute('aria-current','page');
+  if (initial) syncNavSelection(initial.id);
   // Original preference chips already handle state; expose that state to assistive tech.
   document.querySelectorAll('.prefs .pref').forEach(chip => {
     const sync = () => chip.setAttribute('aria-pressed',String(chip.classList.contains('on')));
