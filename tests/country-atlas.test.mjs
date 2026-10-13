@@ -70,5 +70,5 @@ test('curated content avoids invented sales, booking inventory, ratings and paid
   assert.doesNotMatch(JSON.stringify(content),/(?:\$[0-9]+|guaranteed seats|verified expert|5-star review|top selling|ranked #1)/i);
   assert.doesNotMatch(js,/\/api\/travel-search|\/api\/airline-offers|\/api\/intelligence|Groq|Stripe|bookingConfirmed/);
   assert.match(js,/Editorial travel ideas only/);
-  assert.match(js,/Tourism source/);
+  assert.match(js,/official tourism source/i);
 });
