@@ -26,7 +26,7 @@ function send(res,status,obj){
 }
 function tripFrom(raw) {
   if(!raw||typeof raw!=='object'||Array.isArray(raw))throw Error('trip');
-  const t={from:clean(raw.from,3).toUpperCase(),to:clean(raw.to,3).toUpperCase(),
+  const t={from:clean(raw.from,12).toUpperCase(),to:clean(raw.to,12).toUpperCase(),
     checkIn:clean(raw.checkIn,10),checkOut:clean(raw.checkOut,10),
     adults:Number(raw.adults)};
   const isDate=x=>dateRx.test(x)&&!Number.isNaN(Date.parse(x+'T00:00:00Z'))&&
