@@ -1,0 +1,35 @@
+/* Wayfarer cinematic entrance. Decorative only; never blocks travel data/API completion. */
+#wf-splash[hidden]{display:none!important}
+#wf-splash{
+  position:fixed;inset:0;z-index:99999;
+  display:grid;place-items:center;overflow:hidden;
+  background:#061e19;color:#fff4e3;
+  isolation:isolate;opacity:1;visibility:visible;
+  transition:opacity .36s ease,visibility .36s ease;
+}
+#wf-splash::before{
+  content:"";position:absolute;inset:0;z-index:-2;
+  background:linear-gradient(90deg,rgba(2,24,20,.94) 0%,rgba(3,25,22,.87) 42%,rgba(6,32,29,.58) 100%),url('wayfarer-hero-v3.jpg') center/cover no-repeat;
+  transform:scale(1.03);
+}
+#wf-splash::after{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(circle at center,transparent 24%,#0317126b),linear-gradient(transparent 70%,#00171170)}
+.wf-splash-inner{width:min(620px,calc(100% - 40px));text-align:center;display:flex;flex-direction:column;align-items:center;gap:13px;padding:35px 10px;}
+.wf-splash-monogram{display:grid;place-items:center;width:66px;height:66px;color:#f3d09d;font:500 3.4rem/1 Georgia,serif;animation:wf-splash-pulse 1.8s ease-in-out infinite alternate}
+.wf-splash-name{font:500 clamp(3.75rem,8vw,6rem)/.94 'Cormorant Garamond',Georgia,serif;letter-spacing:-.035em;color:#fff8e7}
+.wf-splash-name span{color:#f5d5a2}
+.wf-splash-tag{max-width:37ch;margin:2px 0 16px;color:#f4eadb;font:500 clamp(.94rem,2vw,1.06rem)/1.65 'DM Sans',sans-serif}
+.wf-splash-rule{display:block;position:relative;width:min(260px,76%);height:2px;overflow:hidden;background:rgba(247,219,173,.36);border-radius:3px}
+.wf-splash-rule::after{content:"";position:absolute;inset:0;background:#ffe3aa;transform:translateX(-100%);animation:wf-splash-travel 1.2s ease-out forwards;box-shadow:0 0 10px #efd2a2}
+.wf-splash-route{color:#ead5b2;font:700 .72rem/1.4 'DM Sans',sans-serif;letter-spacing:.17em;margin:10px 0 3px}
+.wf-splash-skip{min-height:44px;padding:9px 18px;background:rgba(13,42,34,.72);border:1px solid rgba(255,225,172,.67);border-radius:8px;color:#fff6e8;font:700 .86rem/1.5 'DM Sans',sans-serif;cursor:pointer;}
+.wf-splash-skip:hover{background:rgba(44,82,67,.93);}
+.wf-splash-skip:focus-visible{outline:3px solid #ffdd99;outline-offset:4px;}
+#wf-splash.wf-splash-closing{opacity:0;visibility:hidden;pointer-events:none;}
+/* Hard CSS fallback in case the controller fails after displaying the overlay. */
+#wf-splash:not([hidden]){animation:wf-splash-safety-hide .01s linear 3s forwards;}
+@keyframes wf-splash-safety-hide{to{opacity:0;visibility:hidden;pointer-events:none;}}
+@keyframes wf-splash-travel{to{transform:translateX(0)}}
+@keyframes wf-splash-pulse{to{opacity:.64;transform:scale(.96)}}
+@media(max-width:600px){.wf-splash-inner{gap:11px}.wf-splash-monogram{width:56px;height:56px;font-size:2.9rem}.wf-splash-name{font-size:4.25rem}.wf-splash-route{letter-spacing:.1em}}
+@media(prefers-reduced-motion:reduce){#wf-splash,#wf-splash::before,.wf-splash-monogram,.wf-splash-rule::after{animation:none!important;transition:none!important;transform:none!important}}
+.motion-off #wf-splash,.motion-off .wf-splash-monogram,.motion-off .wf-splash-rule::after{animation:none!important;transition:none!important;transform:none!important}
