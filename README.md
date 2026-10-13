@@ -74,6 +74,27 @@ Relevant official references: [Duffel Offer Requests](https://duffel.com/docs/ap
 
 This feature is in a draft PR. Do **not** enable supplier credentials publicly by copying Preview secrets into Production without cost/quota protection, consent and booked-inventory verification. Automated tests use fixture data and consume **no** real SerpApi credits. Launch gates: Preview browser testing, security and accessibility checks, durable server-side per-user rate limiting, explicit provider quotas, privacy policy and source/provider terms. See the [SerpApi Google Flights API](https://serpapi.com/google-flights-api) and [Booking Options documentation](https://serpapi.com/google-flights-booking-options).
 
+### Resilient, source-grounded travel agents (October 2026, review branch)
+
+One click on **Run AI journey** now coordinates four genuinely connected roles:
+
+1. **Climate Context Agent** retrieves *current conditions* from Open-Meteo and marks them as **not a forecast for travel dates**.
+2. **Destination Research Agent** retrieves Wikipedia destination context with an HTTPS source link, when available.
+3. **Country Reference Agent** retrieves currency code, language and timezone from REST Countries without converting exchange rates or inventing country-entry rules.
+4. **Journey Composer** uses the available public-source context to create a day-by-day AI draft through Groq **only when beta authorization and the AI opt-in flag are configured**. A verification step reports which tools actually succeeded, source limitations, a working ground-budget allocation and next actions.
+
+Each independent, read-only public-source fetch has a bounded timeout and **at most one transient retry**. Groq is **not automatically retried**, as it is a metered service. The entire workflow has a bounded response budget. Partial failures return `verification.status=partial` with reasons; the original local sample is preserved if AI is unavailable. Weather, venues, local routes, visas and ticket availability are not fabricated. The frontend no longer marks failed sources as successful and provides a scannable verification summary.
+
+To enable **optional Groq generation in Preview** (never expose secrets client-side), configure:
+```env
+WAYFARER_INTELLIGENCE_AI_ENABLED=true
+GROQ_API_KEY=<private Groq API key>
+WAYFARER_AI_BETA_TOKEN=<existing private beta access code>
+```
+The visitor enters the Wayfarer beta access code in Journey Studio. It is sent to the server in a request header, not in the URL or website source. If unauthorized or unconfigured, the public research still works and the local draft remains accessible. Do not enable metered AI to unauthenticated public traffic. Before production release, add durable per-user quotas, circuit breaking/monitoring and provider-budget alerts; in-memory/serverless safeguards alone cannot guarantee zero outages or costs.
+
+**Agent responsibilities and limits:** agents can independently research and compose planning suggestions, validate their sources, check the group ground-budget *allocations*, and hand verified country/weather context into Arrival Companion. Airline fare searches, hotel research, seller checks and external ticket-booking links are explicit user-triggered actions to avoid silently spending quota or implying transactions. Wayfarer cannot independently buy tickets, book hotels, issue visas or verify seats without the appropriate authorized provider and user consent.
+
 ### Design system and accessibility
 
 - **Legibility before decoration:** dark evergreen interactive cards (`#12362D`, `#194237`), warm ivory text (`#FAF6EB`), calm green secondary text (`#C4D5CA`), and restrained brass accents (`#E8C992`). The functional panel pairs pass WCAG AA contrast checks.
