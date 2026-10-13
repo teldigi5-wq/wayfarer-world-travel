@@ -151,40 +151,151 @@
       }
     });
   }
+
+  const detail=(label,value,kind='')=>{
+    const block=word('div','','wf-detail '+kind);
+    block.append(word('span',label,'wf-detail-label'),word('strong',value,'wf-detail-value'));
+    return block;
+  };
+  const minuteLabel=minutes=>Number.isFinite(minutes)&&minutes>=0?
+    Math.floor(minutes/60)+'h '+String(minutes%60).padStart(2,'0')+'m':'Duration not supplied';
+  function flightOfferCard(offer,index){
+    const card=word('article','','travel-search-item wf-flight-result');
+    const first=offer.segments?.[0]||{},last=offer.segments?.at(-1)||first;
+    const header=word('div','','wf-result-head');
+    const heading=word('div','','wf-result-heading');
+    heading.append(word('span','FLIGHT OPTION '+String(index+1).padStart(2,'0'),'wf-result-eyebrow'),
+      word('h5',first.airline||'Airline not supplied'));
+    const quote=word('div','','wf-result-quote');
+    quote.append(word('strong',money(offer.perAdult,offer.currency),'wf-quote-amount'),
+      word('span','Per adult · indicative search fare','wf-quote-caption'));
+    header.append(heading,quote);card.append(header);
+    const summary=word('div','','wf-flight-summary');
+    summary.append(detail('DEPARTURE',first.from||'—'),
+      detail('ARRIVAL',last.to||'—'),
+      detail('JOURNEY DURATION',minuteLabel(offer.totalDurationMinutes)),
+      detail('CONNECTIONS',Number.isInteger(offer.stopCount)?
+        (offer.stopCount===0?'Nonstop':offer.stopCount+' stop'+(offer.stopCount===1?'':'s')):'Not supplied'));
+    card.append(summary);
+    const timeline=word('div','','wf-flight-timeline');
+    for(let i=0;i<(offer.segments||[]).length;i++){
+      const segment=offer.segments[i];
+      const row=word('div','','wf-flight-segment');
+      const departure=detail('DEPART · '+(segment.from||'—'),segment.departureAt||'Time not supplied');
+      const route=word('div','','wf-route-line');
+      route.append(word('span',(segment.airline||'Airline')+' '+(segment.number||''),'wf-route-airline'),
+        word('span','→','wf-route-arrow'));
+      const arrival=detail('ARRIVE · '+(segment.to||'—'),segment.arrivalAt||'Time not supplied');
+      row.append(departure,route,arrival);timeline.append(row);
+      if(i<(offer.segments.length-1)){
+        timeline.append(word('p','Connection via '+(segment.to||'unknown airport')+
+          ' · transfer requirements and layover time not verified','wf-connection-note'));
+      }
+    }
+    card.append(timeline);
+    const total=word('div','','wf-flight-financial');
+    total.append(detail('ESTIMATED GROUP FLIGHT COST',money(offer.estimatedGroup,offer.currency)),
+      word('span',offer.budgetFit==='over_budget'?'Above your selected flight budget':
+        offer.budgetFit==='within_budget'?'Within your selected flight budget':
+        'No flight budget selected','wf-fare-budget '+(offer.budgetFit||'')));
+    card.append(total);
+    card.append(word('p','Ticket availability: NOT VERIFIED · No seats reserved · Provider-reported clock times; time zones and live operating status not independently verified. Outbound search fare only; return and checkout totals may change.',
+      'wf-flight-disclaimer'));
+    addSelection(card,offer.selection);
+    const times=(offer.segments||[]).map(segment=>
+      [segment.airline,segment.number,segment.from+' → '+segment.to,
+        'depart '+(segment.departureAt||'unknown'),
+        'arrive '+(segment.arrivalAt||'unknown')].filter(Boolean).join(' · ')).join(' / ');
+    addExternalHandoff(card,'Outbound: '+times+' | '+money(offer.perAdult,offer.currency)+
+      ' per adult (indicative) | origin '+get('travel-origin')+' | arrival '+
+      get('travel-arrival')+' | outbound '+get('check-in')+' | return '+get('check-out')+
+      ' | group: '+get('stay-adults')+' travelers | NOT a confirmed booking');
+    return card;
+  }
+  function hotelOfferCard(offer,index){
+    const card=word('article','','travel-search-item wf-hotel-result');
+    const header=word('div','','wf-result-head');
+    const heading=word('div','','wf-result-heading');
+    heading.append(word('span','STAY OPTION '+String(index+1).padStart(2,'0'),'wf-result-eyebrow'),
+      word('h5',offer.name||'Hotel name not supplied'));
+    const quote=word('div','','wf-result-quote');
+    quote.append(word('strong',money(offer.displayedTotal,offer.currency),'wf-quote-amount'),
+      word('span','Lowest displayed search total · NOT a nightly rate','wf-quote-caption'));
+    header.append(heading,quote);card.append(header);
+    const nights=(Date.parse((offer.checkOut||'')+'T00:00:00Z')-
+      Date.parse((offer.checkIn||'')+'T00:00:00Z'))/86400000;
+    const row=word('div','','wf-hotel-meta');
+    row.append(detail('CHECK-IN',offer.checkIn||'Not supplied'),
+      detail('CHECK-OUT',offer.checkOut||'Not supplied'),
+      detail('LENGTH OF STAY',Number.isInteger(nights)&&nights>0?nights+' nights':'Not supplied'));
+    card.append(row);
+    const budgetState=offer.budgetFit==='over_budget'?'Above allocated stay budget':
+      offer.budgetFit==='within_budget'?'Within allocated stay budget':'No comparable stay budget';
+    card.append(word('p',budgetState,'wf-fare-budget '+(offer.budgetFit||'')));
+    card.append(word('p','Indicative supplier search result. Room occupancy, taxes, cancellation policy, current room availability and the final checkout total have NOT been verified. Confirm with the hotel before purchase.','wf-hotel-disclaimer'));
+    const handoff=word('div','','wf-external-flight-handoff');
+    const hotelLink=word('a','Compare this stay on Google Hotels ↗','wf-flight-compare-link');
+    hotelLink.href='https://www.google.com/travel/hotels';
+    hotelLink.target='_blank';hotelLink.rel='noopener noreferrer';
+    const note=word('p','Opens Google Hotels in a separate tab. Search the same hotel, dates and occupancy; a matching room or price is not guaranteed.','wf-flight-handoff-note');
+    handoff.append(hotelLink,note);card.append(handoff);
+    return card;
+  }
+  function resultPanel(title,obj,kind){
+    const article=word('section','','travel-search-card wf-compare-panel');
+    const head=word('div','','wf-compare-panel-head');
+    const headings=word('div','','wf-panel-titles');
+    headings.append(word('h4',title),word('span',statusLabel(obj.status),'travel-search-state'),
+      word('p',obj.message));
+    head.append(headings);
+    const records=(obj.offers||[]).slice();
+    const list=word('div','','wf-comparison-list');
+    if(records.length){
+      const sortBox=word('label','','wf-sort-field');
+      const text=word('span',kind==='flight'?'SORT FLIGHTS':'SORT STAYS');
+      const select=document.createElement('select');
+      select.className='wf-sort-select';
+      select.setAttribute('aria-label',kind==='flight'?'Sort flight results':'Sort hotel results');
+      for(const [v,label] of (kind==='flight'?
+        [['price','Lowest group estimate'],['duration','Shortest listed duration'],['stops','Fewest stops']]:
+        [['price','Lowest displayed total'],['name','Hotel name A–Z']])){
+        const o=document.createElement('option');o.value=v;o.textContent=label;select.append(o);
+      }
+      sortBox.append(text,select);head.append(sortBox);
+      const render=()=>{
+        const sorted=[...records].sort((a,b)=>{
+          if(select.value==='name')return (a.name||'').localeCompare(b.name||'');
+          if(select.value==='duration')return (a.totalDurationMinutes??Infinity)-(b.totalDurationMinutes??Infinity)||
+            Number(a.estimatedGroup)-Number(b.estimatedGroup);
+          if(select.value==='stops')return (a.stopCount??Infinity)-(b.stopCount??Infinity)||
+            Number(a.estimatedGroup)-Number(b.estimatedGroup);
+          return Number(kind==='flight'?a.estimatedGroup:a.displayedTotal)-
+            Number(kind==='flight'?b.estimatedGroup:b.displayedTotal);
+        });
+        list.replaceChildren(...sorted.map((offer,i)=>kind==='flight'?
+          flightOfferCard(offer,i):hotelOfferCard(offer,i)));
+      };
+      select.addEventListener('change',render);
+      render();
+    }else list.append(word('p',obj.message||'No usable provider offers were returned. This does not mean sold out.','wf-compare-empty'));
+    article.append(head,word('p',records.length+' search result'+(records.length===1?'':'s')+
+      ' · no guaranteed inventory','wf-results-count'),list);
+    return article;
+  }
   function show(res){
     output.replaceChildren();
-    output.append(
-      panel('Flights · schedule & ticket research',res.flights,offer=>{
-        const times=(offer.segments||[]).map(s=>
-          [s.airline,s.number,'·',s.from,'→',s.to,'· depart',s.departureAt||'Time not supplied',
-           '· arrive',s.arrivalAt||'Time not supplied'].filter(Boolean).join(' ')
-        ).join(' / ');
-        const duration=Number.isFinite(offer.totalDurationMinutes)?' · '+Math.floor(offer.totalDurationMinutes/60)+'h '+(offer.totalDurationMinutes%60)+'m':'';
-        const stops=Number.isInteger(offer.stopCount)?' · '+(offer.stopCount===0?'Nonstop':offer.stopCount+' stop(s)'):'';
-        const card=itemCard(
-          money(offer.perAdult,offer.currency)+' per adult · '+money(offer.estimatedGroup,offer.currency)+' estimated group',
-          times+duration+stops,
-          budget(offer.budgetFit)+' · Ticket availability: NOT VERIFIED · Seats: unknown · Return selection: unconfirmed · Schedule/price indicative at search, not live operational status'
-        );
-        addSelection(card,offer.selection);
-        addExternalHandoff(card,
-          'Outbound: '+times+
-          ' | '+money(offer.perAdult,offer.currency)+' per adult (indicative)'+
-          ' | origin '+get('travel-origin')+' | arrival '+get('travel-arrival')+
-          ' | outbound '+get('check-in')+' | return '+get('check-out')+
-          ' | group: '+get('stay-adults')+' travelers | NOT a confirmed booking');
-        return card;
-      }),
-      panel('Accommodation · hotel search',res.hotels,offer=>itemCard(
-        offer.name+' · '+money(offer.displayedTotal,offer.currency),
-        (offer.checkIn||'')+' → '+(offer.checkOut||'')+' · '+budget(offer.budgetFit),
-        'Lowest displayed total search rate; final occupancy, taxes, fees and availability unverified'
-      )),
-      panel('Restaurants & meals',res.food,()=>itemCard('No price feed','Consult restaurant menus directly','No AI-generated menu prices')),
-      panel('Local transport',res.transport,()=>itemCard('No fare feed','Check the local operator','No invented transit fares'))
-    );
-    const foot=word('p','Search timestamp: '+localeTime(res.checkedAt)+' · '+res.note,'travel-search-foot');
-    output.append(foot);
+    const grid=word('div','','wf-comparison-grid');
+    grid.append(resultPanel('Flight comparison',res.flights,'flight'),
+      resultPanel('Hotel comparison',res.hotels,'hotel'));
+    output.append(grid);
+    const extras=word('div','','wf-other-research');
+    extras.append(panel('Restaurants & meals',res.food,()=>itemCard('No price feed',
+      'Consult restaurant menus directly','No AI-generated menu prices')),
+      panel('Local transport',res.transport,()=>itemCard('No fare feed',
+      'Check the local operator','No invented transit fares')));
+    output.append(extras);
+    output.append(word('p','Search timestamp: '+localeTime(res.checkedAt)+
+      ' · '+res.note,'travel-search-foot'));
   }
   form.addEventListener('submit',async event=>{
     event.preventDefault();if(!form.reportValidity())return;

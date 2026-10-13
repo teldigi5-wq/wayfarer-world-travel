@@ -95,6 +95,19 @@ The visitor enters the Wayfarer beta access code in Journey Studio. It is sent t
 
 **Agent responsibilities and limits:** agents can independently research and compose planning suggestions, validate their sources, check the group ground-budget *allocations*, and hand verified country/weather context into Arrival Companion. Airline fare searches, hotel research, seller checks and external ticket-booking links are explicit user-triggered actions to avoid silently spending quota or implying transactions. Wayfarer cannot independently buy tickets, book hotels, issue visas or verify seats without the appropriate authorized provider and user consent.
 
+### Professional travel comparisons — UI release candidate (October 2026)
+
+Journey Studio now displays legible flight and hotel comparison cards rather than long compact paragraphs. The changes are designed for real travel decisions, not visual spectacle:
+
+- Flights show the supplier-reported departure and arrival airport/time of each leg, connection airports where known, stops, supplier-reported total duration, indicative fare per adult, and an **estimated group flight budget** distinctly labeled. No timezone, seat count, confirmed booking or full return-itinerary price is invented.
+- Hotels show the **lowest displayed total search rate** (not nightly room price), check-in/check-out and night count, plus explicit occupancy/tax/availability caveats. The nightly rate, room inventory and exact seller checkout price remain unverified.
+- Flight comparison sorts by *lowest group estimate*, *listed duration* or *number of stops*. Hotel comparison sorts by *lowest displayed total* or *hotel name*. Sorting is entirely client-side and **does not spend another provider query credit**.
+- Search cards include clear price hierarchy, dark evergreen surfaces with warm ivory text, accessible keyboard sorting and practical mobile single-column layouts. They honor reduced-motion settings.
+- Every flight offers a new-tab Google Flights comparison link plus itinerary copy. Hotel cards link to Google Hotels in a separate tab. These **do not** transfer an exact bookable flight/room or reserve inventory.
+- Search timestamps and the limitations of live operational schedules, final checkout fares and unavailable provider details remain visible. Supplier content is rendered as text nodes rather than executable HTML.
+
+This feature is currently a stacked **draft Preview PR** on top of the resilient-agent branch. Verify the actual hosted browser rendering at mobile/desktop widths and complete integration tests before releasing it to Production. No payment system or new supplier integration has been activated.
+
 ### Design system and accessibility
 
 - **Legibility before decoration:** dark evergreen interactive cards (`#12362D`, `#194237`), warm ivory text (`#FAF6EB`), calm green secondary text (`#C4D5CA`), and restrained brass accents (`#E8C992`). The functional panel pairs pass WCAG AA contrast checks.
