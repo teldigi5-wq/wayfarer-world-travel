@@ -148,3 +148,15 @@ color:#f7e2b6;text-decoration:underline;text-underline-offset:4px}
 .wf-external-flight-handoff .wf-flight-handoff-note{flex:1 0 100%;margin:2px 0;color:#d6e5d9;font:.85rem/1.7 'DM Sans',sans-serif}
 @media(max-width:610px){.wf-flight-compare-link,.wf-flight-copy{width:100%;white-space:normal}}
 @media(prefers-reduced-motion:reduce){.wf-flight-compare-link,.wf-flight-copy{transition:none!important}}
+
+
+/* Evidence review and next steps: scannable, legible and compact on mobile. */
+#agent-log .agent-verification{margin-top:16px;padding:clamp(16px,2.5vw,24px);border:1px solid #e9cb9090;border-radius:13px;background:#16382f;color:#f0f5e9}
+#agent-log .agent-verification strong{display:block;color:#f2d29b;font:700 .85rem/1.5 'DM Sans',sans-serif;letter-spacing:.05em;margin:0 0 10px}
+#agent-log .agent-verification p,#agent-log .agent-next-steps{color:#e2e9dd;font:400 .92rem/1.65 'DM Sans',sans-serif}
+#agent-log .agent-verification p{margin:7px 0}
+#agent-log .agent-verification .agent-budget{padding:12px 14px;background:#244b3e;border-left:3px solid #eed09b;color:#fcf5e7;font-weight:600}
+#agent-log .agent-next-steps{margin:10px 0 0;padding-left:22px}
+#agent-log .agent-next-steps li{padding:5px 0;overflow-wrap:anywhere}
+@media(max-width:600px){#agent-log .agent-verification{padding:16px}#agent-log .agent-verification p,#agent-log .agent-next-steps{font-size:.9rem}}
+@media(prefers-reduced-motion:reduce){#agent-log .agent-verification{animation:none!important;transition:none!important}}
