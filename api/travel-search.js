@@ -67,10 +67,17 @@ function flightsFrom(data,t,checkedAt){
     return {currency:'USD',perAdult:money(perAdult),estimatedGroup:money(estimatedGroup),
       priceBasis:'Indicative search price per adult; full round trip not repriced',
       budgetFit:fit(estimatedGroup,t.flightBudget),flightBudgetUsd:t.flightBudget||null,
-      segments,bookableSeats:null,checkedAt};
+      segments,
+      totalDurationMinutes:Number.isFinite(item.total_duration)?item.total_duration:null,
+      stopCount:Math.max(0,segments.length-1),
+      ticketAvailability:'not_verified',
+      bookableSeats:null,
+      bookingLink:null,
+      operationalFlightStatus:'not_connected',
+      checkedAt};
   }).filter(Boolean).sort((a,b)=>Number(a.estimatedGroup)-Number(b.estimatedGroup)).slice(0,6);
   return state(offers.length?'search_results':'no_results',offers.length?
-    'Search prices only. Return-flight selection, seat counts, fares and final booking totals are not confirmed.':
+    'Flight times are provider-reported search schedule indications. Ticket availability, operating status, return-flight selection and final booking totals are not verified.':
     'No price found in this search; that does not mean flights are sold out.',offers);
 }
 function hotelsFrom(data,t,checkedAt){
