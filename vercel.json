@@ -3,28 +3,22 @@
   "cleanUrls": true,
   "functions": {
     "api/intelligence.js": {
-      "maxDuration": 30,
-      "memory": 1024
+      "maxDuration": 30
     },
     "api/explore.js": {
-      "maxDuration": 30,
-      "memory": 1024
+      "maxDuration": 30
     },
     "api/hotels.js": {
-      "maxDuration": 30,
-      "memory": 1024
+      "maxDuration": 30
     },
     "api/travel-search.js": {
-      "maxDuration": 30,
-      "memory": 1024
+      "maxDuration": 30
     },
     "api/ai-plan.mjs": {
-      "maxDuration": 30,
-      "memory": 1024
+      "maxDuration": 30
     },
     "api/travel-offers.mjs": {
-      "maxDuration": 30,
-      "memory": 1024
+      "maxDuration": 30
     }
   },
   "headers": [
