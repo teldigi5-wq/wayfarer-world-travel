@@ -244,6 +244,14 @@ The My Journeys section now includes an immediate, non-interactive first-paint e
 
 Release behind the stacked draft PR chain only after CI and real mobile/desktop keyboard and visual review. Do not enable metered APIs or promote automatically.
 
+### Stage 20 — Discover-to-Studio handoff and mobile navigation
+
+The ten-country detail pages, editorial destination cards, worldwide country directory and Explorer plan now **open the Journey Studio's Destinations tab before focusing World Explorer search**. Previously, those links changed the top-level screen but could leave the search field inside the hidden tab. Travelers must still choose a matching city from the search results; typing a country or place does not silently geocode it, reserve rooms, launch AI queries or imply booking inventory. Curated destinations with trusted bundled reference points retain the direct existing itinerary flow.
+
+The six mobile navigation destinations are shown in a balanced **3 × 2 bottom navigation grid** below 650px, with accessible touch sizes, safe-area support and additional bottom content clearance. The selected route's brass indicator remains exclusive to the active page. The Studio's Overview, Destinations and Flights & Stays panels enforce the `hidden` attribute even if legacy styles declare `display:grid`. Route focus management does not steal focus from a destination search that was intentionally focused during the handoff.
+
+See `tests/studio-mobile-handoff.test.mjs` for source integration, mobile layout, and a simulated route-focus regression. Automated checks and static Preview availability are release gates, not substitutes for human keyboard and device testing. The change adds no library, subscription, payment endpoint, background supplier request or mandatory cost.
+
 ## Run and test
 
 Install Node.js 20+ from its official distribution. No package install, API key, environment variable, card or build dependency is needed.
