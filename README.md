@@ -236,6 +236,14 @@ The My Journeys screen restores destination, duration, pace and budget without r
 
 Browser-stored journeys are validated as an array before use, so corrupted local storage will not crash the saved-trip view. Primary navigation now updates `aria-current="page"` for the active view. Regression coverage lives in `tests/journey-integrity.test.mjs`; `npm run check` syntax-checks the pure, no-network `journey-integrity.js` helper. These changes do not activate paid AI/supplier APIs, alter provider secrets or release automatically to Production.
 
+### Single-active navigation and Journeys empty state — October 2026
+
+A visual review showed **Discover** and **Journeys** both receiving similar highlighted treatments while the Journeys screen was visible. Navigation now has one authoritative state: the displayed `.view.active` determines both the highlighted `.active` button and its `aria-current="page"` marker. Hover is intentionally subtler than the selected route, with separate touch behavior and a restrained brass underline for the genuine selection. This avoids confusing desktop hover and sticky touch states.
+
+The My Journeys section now includes an immediate, non-interactive first-paint empty-state explanation. Client initialization replaces it with the existing fully interactive collection view, including the plan-first-journey action and valid saved cards. It does not sync local journeys to an account or imply any booking inventory. Regression checks cover all six routes, stale route classes, hover/touch styling and the empty collection.
+
+Release behind the stacked draft PR chain only after CI and real mobile/desktop keyboard and visual review. Do not enable metered APIs or promote automatically.
+
 ## Run and test
 
 Install Node.js 20+ from its official distribution. No package install, API key, environment variable, card or build dependency is needed.
