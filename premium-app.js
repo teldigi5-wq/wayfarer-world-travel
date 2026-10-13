@@ -98,5 +98,5 @@ function searchStays(){
  const arrival=document.getElementById('travel-arrival');if(arrival&&!arrival.value)arrival.focus({preventScroll:true});}
 }
 setStayDates();$('#search-stays').onclick=searchStays;
-renderDest();$$('.reveal').forEach(x=>ob.observe(x));build();arrival();
+renderDest();$('.reveal').forEach(x=>ob.observe(x));build();arrival();renderTrips();
 
