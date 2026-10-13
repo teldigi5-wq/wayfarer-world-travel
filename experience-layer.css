@@ -102,3 +102,68 @@ html{scroll-padding-top:105px}
 @media(max-width:385px){.nav-links button{font-size:10px}.ledger-facts dd{font-size:13px}.ledger-subline{font-size:11px}}
 @media(prefers-reduced-motion:reduce){.ledger-action,.travel-research-action button{transition:none}.ledger-action:hover{transform:none}.travel-research-action button[data-searching=true]:after{animation:none;border-top-color:transparent}}
 .motion-off .ledger-action:hover{transform:none}
+
+/* Destination reel layout repair: absolute images must be anchored, not statically positioned.
+   Previously the first painted pixels began halfway down the cards, leaving a large #223 block. */
+#reel { align-items:stretch; }
+#reel > .destination {
+  position:relative;
+  display:block;
+  height:100%;
+  min-width:0;
+  padding:0;
+  margin:0;
+  overflow:hidden;
+  isolation:isolate;
+  background:#152923;
+  text-align:left;
+  -webkit-appearance:none;
+  appearance:none;
+}
+#reel > .destination > img {
+  display:block;
+  position:absolute;
+  inset:0;
+  top:0;
+  right:0;
+  bottom:0;
+  left:0;
+  z-index:0;
+  width:100%;
+  height:100%;
+  max-width:none;
+  object-fit:cover;
+  object-position:center center;
+}
+#reel > .destination::after {
+  z-index:1;
+  pointer-events:none;
+  background:linear-gradient(180deg,transparent 38%,rgba(1,17,14,.16) 54%,rgba(1,17,14,.92) 100%);
+}
+#reel > .destination .dest-copy {z-index:2;}
+#reel > .destination .dest-copy h3 {line-height:1.12;text-wrap:balance;}
+#reel > .destination .dest-copy p {max-width:33ch;}
+#reel > .destination:focus-visible {outline:3px solid #b89455;outline-offset:4px;}
+/* Give navigation anchors room below the floating desktop header. */
+html {scroll-padding-top:110px;}
+#destinations, #method, #world-explorer, #wayfarer-travel-research {scroll-margin-top:112px;}
+@media (max-width:900px) and (min-width:651px) {
+  #reel {grid-auto-rows:minmax(350px,auto);align-items:stretch;}
+  #reel > .destination {min-height:350px;}
+}
+@media (max-width:650px) {
+  html {scroll-padding-top:18px;}
+  #destinations, #method, #world-explorer, #wayfarer-travel-research {scroll-margin-top:18px;}
+  #reel {height:430px;align-items:stretch;}
+  #reel > .destination,#reel > .destination:first-child {
+    flex:0 0 84vw;
+    min-width:84vw;
+    width:84vw;
+    height:100%;
+  }
+  #reel > .destination .dest-copy {left:21px;right:21px;bottom:23px;}
+}
+@media(prefers-reduced-motion:reduce) {
+  #reel > .destination > img {transition:none;transform:none;}
+}
+
