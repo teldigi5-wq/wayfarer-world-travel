@@ -35,6 +35,17 @@
     const root=$('destinations-page'),panel=$('wf-top10-detail');
     if(!root||!panel)return;
     nav('destinations-page');panel.hidden=false;panel.replaceChildren();
+    const back=element('button','wf-top10-return','← Back to country collection');back.type='button';
+    back.addEventListener('click',()=>{
+      panel.hidden=true;
+      nav('discover');
+      requestAnimationFrame(()=>{
+        const heading=$('wf-top10-heading');
+        if(heading){heading.setAttribute('tabindex','-1');heading.focus({preventScroll:true});}
+        $('wf-top10-atlas')?.scrollIntoView({behavior:reduced()?'instant':'smooth',block:'start'});
+      });
+    });
+    panel.append(back);
     const top=element('div','wf-top10-detail-hero');
     const visual=element('div','wf-top10-detail-photo');visual.append(picture(country,'Destination landscape from '+country.name));
     const intro=element('div','wf-top10-detail-intro');

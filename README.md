@@ -133,6 +133,19 @@ The collection includes Sri Lanka, Japan, Italy, Switzerland, France, Iceland, T
 - **Licensing and imagery:** The Sri Lanka Sigiriya image comes from a free-to-use Unsplash photograph; other curated destination images are requested from Unsplash. The site remains readable if any image fails. Do not mistake concept mockups for actual available rooms, ticket fares or endorsed travel plans.
 - **Deployment:** These changes are on `feat/top10-country-atlas-srilanka-20261013`, stacked on draft PR #13 (which builds on earlier flight-comparison and agent work). CI + protected Vercel Preview visual QA are mandatory before Production.
 
+### Branded loading screen and customer-clarity hardening (Preview candidate, October 2026)
+
+Wayfarer now has a short, cinematic first-visit entrance with the existing mountain-lake photo, evergreen overlay and ivory/gold wordmark. The intro is **decorative**, not a pretend progress indicator: it does **not** await Groq, SerpApi, images or other provider APIs.
+
+- The splash is initially `hidden` and appears only when the first-party `splash-screen.js` loads successfully. Without JavaScript, the page remains immediately accessible instead of displaying an infinite loading animation.
+- It dismisses automatically after **1,250 ms**, can be skipped immediately by clicking **Skip introduction**, closes with Escape, and is bypassed for `prefers-reduced-motion` and the site's saved **Motion off** preference. Session storage prevents repeating it in the same browser tab.
+- Its CSS has a 3-second visibility/pointer-event safety fallback and keyboard focus styling. It has **no vendor libraries, paid API calls, external audio or auto-play video**.
+- The homepage now explains the customer workflow in three readable steps: Discover → Plan → Verify. It clarifies that checkout remains on external providers. The former “Watch the story” button is now honestly labeled “How Wayfarer works”.
+- Country detail views include a functional **Back to country collection** control with keyboard focus restoration, preventing visitors from becoming stranded on an expanded destination guide.
+- Regression tests cover first-visit timeout, immediate skip, Escape, repeat visits, reduced motion, safe no-JS fallback, honest homepage copy and navigation.
+
+This is a **draft stacked Preview release**, not an assertion that all browser issues have been eliminated. Run the full CI suite, visually review desktop/mobile in the protected Vercel Preview, then merge the dependent PR chain only after release approval. Production stays unchanged during review.
+
 ### Design system and accessibility
 
 - **Legibility before decoration:** dark evergreen interactive cards (`#12362D`, `#194237`), warm ivory text (`#FAF6EB`), calm green secondary text (`#C4D5CA`), and restrained brass accents (`#E8C992`). The functional panel pairs pass WCAG AA contrast checks.

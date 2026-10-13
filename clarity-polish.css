@@ -1,0 +1,29 @@
+/* Customer clarity and responsive polish — restrained additions after prior design system. */
+#discover .wf-how-strip{
+  background:linear-gradient(135deg,#0b2d26,#103a30);
+  color:#f6efdf;border-block:1px solid rgba(237,207,155,.34);
+  padding:clamp(23px,3vw,42px) clamp(22px,4.2vw,70px);
+}
+.wf-how-inner{display:grid;grid-template-columns:minmax(210px,.82fr) minmax(0,2fr) auto;gap:clamp(20px,2.8vw,40px);align-items:center;max-width:1560px;margin:0 auto}
+.wf-how-kicker{font:700 .73rem/1.4 'DM Sans',sans-serif;letter-spacing:.13em;color:#f4d5a0}
+.wf-how-inner h2{font:500 clamp(1.95rem,2.5vw,3rem)/1.04 'Cormorant Garamond',Georgia,serif;letter-spacing:-.02em;color:#fff6e5;margin:8px 0 0}
+.wf-how-inner ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.wf-how-inner li{display:flex;flex-direction:column;gap:5px;border-left:1px solid rgba(233,210,165,.45);padding-left:17px;min-width:0}
+.wf-how-inner li strong{font:700 .83rem/1.4 'DM Sans',sans-serif;color:#f4d9a9}
+.wf-how-inner li span{font:500 .85rem/1.62 'DM Sans',sans-serif;color:#dfeadd}
+.wf-how-inner button{white-space:normal;min-height:47px;padding:11px 17px;border-radius:9px;border:1px solid #eed2a0;background:#eed2a0;color:#143629;font:700 .88rem/1.35 'DM Sans',sans-serif;cursor:pointer}
+.wf-how-inner button:hover{background:#fbe4ba}
+.wf-how-inner button:focus-visible{outline:3px solid #ffdfaa;outline-offset:3px}
+#wf-top10-detail .wf-top10-return{display:inline-flex;align-items:center;justify-content:center;min-height:44px;background:#123d31;border:1px solid #e9c9929c;border-radius:8px;padding:11px 16px;margin:0 0 24px;color:#f4d5a0;font:700 .86rem/1.3 'DM Sans',sans-serif;cursor:pointer}
+#wf-top10-detail .wf-top10-return:hover{background:#275445}
+#wf-top10-detail .wf-top10-return:focus-visible{outline:3px solid #ffdb9a;outline-offset:3px}
+#wf-top10-detail .wf-top10-detail-intro h2{text-wrap:balance}
+#wf-top10-detail .wf-top10-place-card p{font-size:.94rem;line-height:1.73}
+#wf-top10-atlas .wf-top10-card-copy p{line-height:1.62}
+.wf-editorial-page .wf-ed-dest-body>p{color:#e2ece1}
+.wf-editorial-page .wf-ed-guide-body p{color:#e0e9df}
+/* Avoid accidental empty vertical blocks if the hero photograph does not load. */
+#wf-top10-atlas .wf-top10-sri-photo img{object-fit:cover}
+@media(max-width:1150px){.wf-how-inner{grid-template-columns:1fr;gap:20px}.wf-how-inner ol{max-width:950px}.wf-how-inner>button{justify-self:start}}
+@media(max-width:690px){#discover .wf-how-strip{padding:25px 20px}.wf-how-inner ol{grid-template-columns:1fr;gap:11px}.wf-how-inner li{padding-left:14px}.wf-how-inner>button{width:100%}.wf-how-inner h2{font-size:2.35rem}}
+@media(prefers-reduced-motion:reduce){.wf-how-inner *{animation:none!important;transition:none!important}}
