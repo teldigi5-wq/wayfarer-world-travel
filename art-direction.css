@@ -10,7 +10,6 @@ button,a{transition:background-color .25s,border-color .25s,color .25s,box-shado
 .nav-links button{min-height:45px;padding:10px 20px;border-radius:9px;color:#e8efe9c9;font:600 12px/1.2 'DM Sans',sans-serif;letter-spacing:.02em}
 .nav-links button.active,.nav-links button:hover,.nav-links button[aria-current=page]{color:#fff8e8;background:rgba(247,236,212,.13);box-shadow:inset 0 0 0 1px #fbf2dd30}
 .nav-utility{display:flex;align-items:center;gap:16px}.nav-utility .live{font-size:9px;letter-spacing:.16em;color:#d9dccf}
-.nav .motion-toggle{border-radius:10px;padding:10px 13px;min-height:43px;border-color:#f0eadb3d}
 .view{background:var(--wf-night)}
 /* CINEMATIC HERO */
 #discover{background:var(--wf-night);overflow:hidden}
