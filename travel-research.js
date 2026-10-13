@@ -7,8 +7,8 @@
   const html = `
     <section class="travel-research" id="wayfarer-travel-research" aria-labelledby="travel-research-title">
       <div class="travel-research-head">
-        <div><span class="eyebrow">RESEARCH / PRIVATE PREVIEW</span>
-          <h3 id="travel-research-title">The journey, grounded in <em>real searches.</em></h3>
+        <div><span class="eyebrow">FLIGHTS / HOTELS · SOURCE-LED</span>
+          <h3 id="travel-research-title">See the routes. <em>Know what is verified.</em></h3>
           <p>Choose airports and your own spending limits. Wayfarer checks Google Travel search results through a protected server. Prices can change and do not confirm bookable seats or rooms.</p>
         </div><span class="travel-research-label">SEARCH DATA ≠ BOOKING</span>
       </div>
@@ -21,9 +21,9 @@
         <div class="travel-research-action"><button type="submit" class="light" id="travel-search-button">Compare travel searches ↗</button>
           <small id="travel-search-help">Uses the destination and dates above. Up to two search credits per check. Never paste provider API keys here.</small></div>
       </form>
-      <p class="travel-search-status" id="travel-search-status" role="status" aria-live="polite">Choose a destination from the World Index, then enter your airports and private beta code.</p>
+      <p class="travel-search-status" id="travel-search-status" role="status" aria-live="polite">Select your destination, departure and arrival airports, and private beta code. Flight times appear only when the connected provider returns them.</p>
       <div id="travel-search-output" class="travel-search-output" aria-live="polite"></div>
-      <p class="travel-search-disclaimer">Search-based research only. Real-time seat inventory, airline booking, hotel reservations, restaurant menu prices and local transit fares are not connected. All final details must be confirmed with the provider.</p>
+      <p class="travel-search-disclaimer">Flight departure and arrival times are provider-reported search schedules, not live flight status. Ticket inventory and final bookability are unknown. Hotel rooms, restaurant menu prices and transport fares require independent verification.</p>
     </section>`;
   root.insertAdjacentHTML('beforeend', html);
   const $ = id => document.getElementById(id);
@@ -49,11 +49,19 @@
   function show(res){
     output.replaceChildren();
     output.append(
-      panel('Flights · search fares',res.flights,offer=>itemCard(
-        money(offer.perAdult,offer.currency)+' per adult',
-        'Indicative group estimate '+money(offer.estimatedGroup,offer.currency)+' · '+budget(offer.budgetFit),
-        offer.segments?.map(s=>[s.from,'→',s.to,'·',s.airline,s.number,s.departureAt].filter(Boolean).join(' ')).join(' / ')+' · return flight and seat availability unverified'
-      )),
+      panel('Flights · schedule & ticket research',res.flights,offer=>{
+        const times=(offer.segments||[]).map(s=>
+          [s.airline,s.number,'·',s.from,'→',s.to,'· depart',s.departureAt||'Time not supplied',
+           '· arrive',s.arrivalAt||'Time not supplied'].filter(Boolean).join(' ')
+        ).join(' / ');
+        const duration=Number.isFinite(offer.totalDurationMinutes)?' · '+Math.floor(offer.totalDurationMinutes/60)+'h '+(offer.totalDurationMinutes%60)+'m':'';
+        const stops=Number.isInteger(offer.stopCount)?' · '+(offer.stopCount===0?'Nonstop':offer.stopCount+' stop(s)'):'';
+        return itemCard(
+          money(offer.perAdult,offer.currency)+' per adult · '+money(offer.estimatedGroup,offer.currency)+' estimated group',
+          times+duration+stops,
+          budget(offer.budgetFit)+' · Ticket availability: NOT VERIFIED · Seats: unknown · Return selection: unconfirmed · Schedule/price indicative at search, not live operational status'
+        );
+      }),
       panel('Accommodation · hotel search',res.hotels,offer=>itemCard(
         offer.name+' · '+money(offer.displayedTotal,offer.currency),
         (offer.checkIn||'')+' → '+(offer.checkOut||'')+' · '+budget(offer.budgetFit),
