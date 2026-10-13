@@ -8,10 +8,8 @@
   const skip=document.getElementById('wf-splash-skip');
   const main=document.getElementById('main-content');
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let motionOff=false;
-  try{motionOff=localStorage.getItem('wf-visual-motion-v1')==='off';}catch{}
-  if(reduced||motionOff){
-    // If users prefer less motion, the CSS already hides the splash on first paint.
+  if(reduced){
+    // The OS prefers-reduced-motion setting hides the splash from first paint.
     splash.remove();
     return;
   }
