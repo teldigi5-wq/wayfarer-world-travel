@@ -19,7 +19,7 @@ function parseTrip(req){
   if(!body||typeof body!=='object'||Array.isArray(body)||Buffer.byteLength(JSON.stringify(body))>BODY_MAX)throw Error('Invalid request body');
   const t=body.trip||{};
   const route={
-    from:clean(t.from,3).toUpperCase(),to:clean(t.to,3).toUpperCase(),
+    from:clean(t.from,12).toUpperCase(),to:clean(t.to,12).toUpperCase(),
     checkIn:clean(t.checkIn,10),checkOut:clean(t.checkOut,10),
     destination:clean(t.destination,90),adults:Number(t.adults),
     flightBudget:t.flightBudget==null||t.flightBudget===''?0:Number(t.flightBudget),
