@@ -85,3 +85,41 @@
  #discover .hero-media{transform:none!important;animation:none!important;}
  :is(.nav,.nav *,#discover .hero-copy *,#wf-top10-atlas *,#studio *){animation-duration:0s!important;transition-duration:0s!important;scroll-behavior:auto!important;}
 }
+
+/* Studio tab panels must honor the hidden attribute even when older layout CSS
+   declares display:grid/flex. A focused field must never sit in a hidden panel. */
+#studio .workspace[hidden],
+#studio .wf-provider-cards[hidden],
+#studio #world-explorer[hidden],
+#studio #wayfarer-travel-research[hidden]{display:none!important;}
+
+/* Six real routes are intentionally always reachable on mobile. The former
+   four-column / two-rows layout left two orphan buttons and clipped labels. */
+@media(max-width:650px){
+ .nav{
+  top:auto;bottom:max(8px,env(safe-area-inset-bottom));
+  width:calc(100% - 20px);max-width:520px;
+  height:auto;min-height:108px;padding:7px;
+  border-radius:17px;gap:0;
+ }
+ .nav .nav-links{
+  width:100%;height:auto;display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-template-rows:repeat(2,minmax(44px,1fr));
+  gap:4px;padding:0;margin:0;
+  background:transparent;border:0;
+ }
+ .nav .nav-links button{
+  min-width:0;min-height:44px!important;
+  max-width:100%;padding:5px 4px!important;
+  font-size:clamp(.65rem,2.85vw,.77rem)!important;
+  line-height:1.15!important;white-space:normal;
+  overflow-wrap:break-word;gap:3px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+ }
+ .nav .nav-links button svg{height:17px;width:17px;flex-shrink:0;}
+ .nav .nav-links button[aria-current="page"]::after{bottom:2px;}
+ /* Prevent the bottom sheet from covering controls at the end of every view. */
+ .view .app{padding-bottom:calc(158px + env(safe-area-inset-bottom));}
+ .wf-editorial-page,#discover{padding-bottom:calc(152px + env(safe-area-inset-bottom));}
+}
