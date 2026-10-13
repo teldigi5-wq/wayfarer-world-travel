@@ -116,6 +116,28 @@ test('no seller results do not become sold-out claims; disabled provider never m
     assert.match(empty.payload.message,/not proof.*sold out/i);
   }finally{globalThis.fetch=orig;}
 });
+test('separate-ticket seller pricing requires both outbound and return quotes',async()=>{
+  process.env.WAYFARER_AI_BETA_TOKEN=secret;
+  process.env.WAYFARER_TRAVEL_ENABLED='true';
+  process.env.SERPAPI_API_KEY='fixture-only';
+  const originalFetch=globalThis.fetch;
+  const booking=signSelection('booking',fake,trip,secret);
+  try{
+    globalThis.fetch=async()=>new Response(JSON.stringify({booking_options:[
+      {separate_tickets:true,departing:{book_with:'One-way Seller',price:320}},
+      {separate_tickets:true,departing:{book_with:'Outbound Seller',price:320},
+        returning:{book_with:'Return Seller',price:400}}
+    ]}),{status:200});
+    const found=await request(booking,{ip:'independent-separate-fares-test'});
+    assert.equal(found.statusCode,200);
+    assert.equal(found.payload.options.length,1);
+    assert.equal(found.payload.options[0].price,'720.00');
+    assert.equal(found.payload.options[0].separateTickets,true);
+    assert.match(found.payload.options[0].seller,/Outbound Seller.*Return Seller/);
+    assert.match(found.payload.options[0].priceBasis,/two separate purchases/i);
+    assert.equal(found.payload.options[0].seatInventoryVerified,false);
+  }finally{globalThis.fetch=originalFetch;}
+});
 test.after(()=>{
   for(const k of ['SERPAPI_API_KEY','WAYFARER_TRAVEL_ENABLED','WAYFARER_AI_BETA_TOKEN']){
     if(original[k]===undefined)delete process.env[k];else process.env[k]=original[k];
