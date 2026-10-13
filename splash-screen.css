@@ -25,11 +25,16 @@
 .wf-splash-skip:hover{background:rgba(44,82,67,.93);}
 .wf-splash-skip:focus-visible{outline:3px solid #ffdd99;outline-offset:4px;}
 #wf-splash.wf-splash-closing{opacity:0;visibility:hidden;pointer-events:none;}
-/* Hard CSS fallback in case the controller fails after displaying the overlay. */
+/* No-JavaScript safety fallback: splash is visible in initial HTML but cannot persist forever. */
 #wf-splash:not([hidden]){animation:wf-splash-safety-hide .01s linear 3s forwards;}
 @keyframes wf-splash-safety-hide{to{opacity:0;visibility:hidden;pointer-events:none;}}
 @keyframes wf-splash-travel{to{transform:translateX(0)}}
 @keyframes wf-splash-pulse{to{opacity:.64;transform:scale(.96)}}
 @media(max-width:600px){.wf-splash-inner{gap:11px}.wf-splash-monogram{width:56px;height:56px;font-size:2.9rem}.wf-splash-name{font-size:4.25rem}.wf-splash-route{letter-spacing:.1em}}
-@media(prefers-reduced-motion:reduce){#wf-splash,#wf-splash::before,.wf-splash-monogram,.wf-splash-rule::after{animation:none!important;transition:none!important;transform:none!important}}
+@media(prefers-reduced-motion:reduce){
+  /* With CSS but no JS, the overlay must NEVER obscure the homepage. */
+  #wf-splash{opacity:0!important;visibility:hidden!important;pointer-events:none!important;transition:none!important;animation:none!important}
+  #wf-splash::before,.wf-splash-monogram,.wf-splash-rule::after{animation:none!important;transform:none!important}
+}
+@media print{#wf-splash{display:none!important}}
 .motion-off #wf-splash,.motion-off .wf-splash-monogram,.motion-off .wf-splash-rule::after{animation:none!important;transition:none!important;transform:none!important}
