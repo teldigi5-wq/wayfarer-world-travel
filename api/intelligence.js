@@ -17,7 +17,7 @@ function tripQuery(query={}){
   const base=known[destination];
   const lat=query.lat===undefined||query.lat===null||String(query.lat).trim()===''?NaN:Number(query.lat);
   const lon=query.lon===undefined||query.lon===null||String(query.lon).trim()===''?NaN:Number(query.lon);
-  const countryCode=scrub(query.countryCode,2).toUpperCase()||base?.country||'';
+  const countryCode=scrub(query.countryCode,4).toUpperCase()||base?.country||'';
   const latitude=base?.lat??lat,longitude=base?.lon??lon;
   if(!destination||destination.length<2||!Number.isFinite(latitude)||
      !Number.isFinite(longitude)||latitude< -90||latitude>90||
