@@ -1,0 +1,104 @@
+/* Wayfarer product polish v2 — hierarchy, legibility and purposeful motion.
+   A presentation-only layer; it does not change API response interpretation. */
+:root{--experience-ink:#0d2921;--experience-parchment:#fcf9f2;--experience-border:#d9d0c2;--experience-accent:#a57e45}
+html{scroll-padding-top:105px}
+.view .app{min-height:100svh}
+.nav{z-index:100;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.nav-links button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding-inline:17px;font-size:12px}
+.nav-links button svg{width:17px;height:17px;flex-shrink:0;opacity:.83}
+.nav-links button.active svg{opacity:1}
+.nav-links button[aria-current=page]{box-shadow:inset 0 0 0 1px #ffffff1c}
+.app-head{max-width:1040px}
+.app-head p{font-size:clamp(14px,1.13vw,17px);line-height:1.72;color:#566b60}
+.wayfarer-ledger{display:grid;grid-template-columns:minmax(235px,.98fr) minmax(390px,1.35fr) auto;gap:25px;align-items:center;padding:24px clamp(22px,3vw,38px);margin-bottom:35px;background:linear-gradient(120deg,#faf7f0,#f0eadf);border:1px solid #d9ccbb;border-radius:14px;box-shadow:0 14px 35px rgba(28,37,23,.06)}
+.ledger-leading{display:grid;gap:7px;min-width:0}
+.ledger-topline{color:#795b36;letter-spacing:.16em;font-size:10px;font-weight:700}
+.ledger-leading strong{color:var(--experience-ink);font:500 clamp(19px,1.8vw,26px)/1.15 'Manrope',sans-serif;letter-spacing:-.055em}
+.ledger-subline{font-size:12px;color:#4a6257;line-height:1.5;max-width:300px}
+.ledger-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin:0}
+.ledger-facts div{min-width:0;padding:4px 18px;border-left:1px solid #d9d0c0}
+.ledger-facts dt{font-size:10px;text-transform:uppercase;letter-spacing:.11em;font-weight:700;color:#687366;margin-bottom:7px}
+.ledger-facts dd{margin:0;color:#152e25;font-size:clamp(14px,1.1vw,17px);font-weight:650;letter-spacing:-.025em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ledger-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.ledger-action{appearance:none;border:1px solid #c7bdad;background:transparent;color:#234135;padding:12px 14px;min-height:44px;border-radius:7px;font:600 11px/1.2 'Manrope',sans-serif;white-space:nowrap;transition:background .25s ease,color .25s ease,transform .25s ease}
+.ledger-action:hover{background:#e7e0d1;transform:translateY(-1px)}
+.ledger-action-accent{background:#14392d;color:#fdf9ee;border-color:#14392d}
+.ledger-action-accent:hover{background:#265644;color:white}
+/* Field surfaces become a cohesive functional workbench, not tiny decoration. */
+.world-explorer{border-radius:14px;box-shadow:0 18px 45px rgba(4,33,23,.12)}
+.world-head h2{max-width:660px;letter-spacing:-.06em;text-wrap:balance}
+.world-search{gap:9px}
+.world-results,.world-empty,.place-card,.stay-empty,.stay-results{overflow-wrap:anywhere}
+.world-explorer :is(input,select),.workspace :is(input,select){min-height:47px}
+.world-explorer :is(button,a),.workspace :is(button,a){min-height:44px}
+/* Research is an independent planning stage with high-contrast provider states. */
+.travel-research{position:relative;margin:28px 0 clamp(35px,5vw,66px);background:linear-gradient(142deg,#15392f 0%,#09241d 70%,#0a241f 100%);box-shadow:0 21px 56px #0b28241e;border:1px solid #2b5140;border-radius:14px;padding:clamp(23px,3.8vw,54px)}
+.travel-research:before{content:'02 / RESEARCH';display:block;color:#e0bd87;font-weight:700;font-size:10px;letter-spacing:.18em;margin-bottom:15px}
+.travel-research-head h3{font-family:'Manrope',sans-serif;font-weight:500;font-size:clamp(30px,3.45vw,52px);letter-spacing:-.065em;line-height:1.1;text-wrap:balance}
+.travel-research-head h3 em{font-family:'Playfair Display',Georgia,serif;letter-spacing:-.025em;color:#e7cfac}
+.travel-research-head p{font-size:14px;line-height:1.75;color:#dde7db;max-width:620px}
+.travel-research-label{background:#ffffff0b;color:#f6ddb1;border-color:#f5d6a64d;font-weight:650;letter-spacing:.09em;line-height:1.35}
+.travel-research-form{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 20px;margin-top:23px}
+.travel-research-form label span{font-size:11px;line-height:1.5;letter-spacing:.085em;color:#efecdf}
+.travel-research-form .field{font-size:15px;min-height:52px;padding:0 14px;box-shadow:inset 0 1px 1px #0a11050d}
+.travel-research-action{flex-direction:row;align-items:center;gap:24px;margin-top:9px;padding:15px 0;border-top:1px solid #ffffff23}
+.travel-research-action button{background:#f3e8d1;color:#13372c;border-radius:7px;padding:14px 22px;min-height:50px;font-size:13px;font-weight:700;box-shadow:0 9px 21px #0002}
+.travel-research-action button:hover:not(:disabled){background:#fff7e9;box-shadow:0 13px 24px #0003}
+.travel-research-action button[data-searching=true]{position:relative;padding-right:52px;cursor:wait}
+.travel-research-action button[data-searching=true]:after{content:'';position:absolute;right:18px;top:calc(50% - 7px);width:14px;height:14px;border:2px solid #14392b33;border-top-color:#14392b;border-radius:50%;animation:wayfarerSpin .75s linear infinite}
+@keyframes wayfarerSpin{to{transform:rotate(360deg)}}
+.travel-research-action small{max-width:375px;color:#e4e8e0;font-size:12px}
+.travel-search-status{background:#ffffff0a;border-color:#dbc097;color:#f5ecdb;font-size:13px;margin:20px 0 17px;padding:14px 16px}
+.travel-search-output{gap:16px}
+.travel-search-card{border-color:#e5e5da26;background:rgba(249,253,245,.065);border-radius:11px;padding:21px 22px}
+.travel-search-card h4{font:500 22px/1.2 'Manrope',sans-serif;letter-spacing:-.045em;color:#fcf5e4;margin:0 0 11px}
+.travel-search-card>p{color:#dde6db;font-size:13px;line-height:1.75}
+.travel-search-item{padding:15px 0}
+.travel-search-item strong{font-size:15px;line-height:1.45}
+.travel-search-item p{font-size:13px;line-height:1.75}
+.travel-search-item small{font-size:12px;color:#d3ded2;line-height:1.7}
+.travel-search-card>.travel-search-state{color:#ffe4b1;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.travel-search-foot,.travel-search-disclaimer{font-size:12px;line-height:1.75;color:#d7e1d8}
+/* Generous readable text for actual sources and itinerary data. */
+.stay-controls label span,.world-result span,.day span,.stay-card small{font-size:12px}
+.agent p,.agent-log,.world-note,.world-empty,.stay-intro p,.place-card span{font-size:13px;line-height:1.7}
+.day p,.console-head p,.section .head p{font-size:14px;line-height:1.7}
+@media(max-width:1200px){.wayfarer-ledger{grid-template-columns:1fr 1.3fr;gap:20px}.ledger-actions{grid-column:1/-1;justify-content:flex-start}.ledger-facts div{padding-inline:12px}.nav-links button{padding-inline:11px}}
+@media(max-width:850px){.wayfarer-ledger{grid-template-columns:1fr}.ledger-actions{grid-column:auto}.ledger-facts div:first-child{padding-left:0;border-left:0}.app{padding-top:120px}.nav{width:calc(100% - 24px)}}
+@media(max-width:650px){
+ html{scroll-padding-top:20px}
+ .nav{position:fixed;z-index:110;top:auto;bottom:max(9px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:calc(100% - 20px);max-width:520px;min-height:70px;height:auto;padding:5px 7px;border:1px solid #ffffff36;border-radius:13px;box-shadow:0 14px 32px #051b16aa;background:#071f1bfa}
+ .nav-links{width:100%;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px}
+ .nav-links button{display:flex;flex-direction:column;gap:3px;min-height:59px;min-width:0;padding:7px 2px;font-size:11px;font-weight:600;white-space:nowrap;line-height:1.1;border-radius:8px}
+ .nav-links button svg{height:20px;width:20px}
+ .nav-links button.active{background:#f0e4c922;color:#f7e9cd}
+ .app{padding:102px 16px calc(110px + env(safe-area-inset-bottom))}
+ .app-head{margin-bottom:20px}
+ .app-head h1{font-size:clamp(43px,10.5vw,59px)}
+ .app-head p{font-size:14px}
+ .wayfarer-ledger{padding:21px 18px;margin-bottom:25px;gap:18px}
+ .ledger-leading strong{font-size:21px}
+ .ledger-facts{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .ledger-facts div{padding:2px 8px;border-left:1px solid #ddd3c5}
+ .ledger-facts div:first-child{border-left:0;padding-left:0}
+ .ledger-facts dt{font-size:9px;letter-spacing:.05em}
+ .ledger-facts dd{font-size:14px;white-space:normal;overflow-wrap:anywhere;line-height:1.25}
+ .ledger-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+ .ledger-action{white-space:normal;font-size:11px}
+ .world-explorer{padding:22px 17px}
+ .travel-research{margin:20px 0 34px;padding:23px 17px;border-radius:13px}
+ .travel-research:before{font-size:10px}
+ .travel-research-head h3{font-size:clamp(30px,8vw,43px)}
+ .travel-research-head p{font-size:14px}
+ .travel-research-form{grid-template-columns:1fr;gap:17px}
+ .travel-research-action{flex-direction:column;align-items:stretch;gap:12px}
+ .travel-research-action button{width:100%;min-height:52px}
+ .travel-research-action small{font-size:12px}
+ .travel-search-card{padding:18px 16px}
+ .travel-search-card h4{font-size:21px}
+ .travel-search-card>p,.travel-search-item p{font-size:13px}
+ .travel-search-item small{font-size:12px}
+}
+@media(max-width:385px){.nav-links button{font-size:10px}.ledger-facts dd{font-size:13px}.ledger-subline{font-size:11px}}
+@media(prefers-reduced-motion:reduce){.ledger-action,.travel-research-action button{transition:none}.ledger-action:hover{transform:none}.travel-research-action button[data-searching=true]:after{animation:none;border-top-color:transparent}}
+.motion-off .ledger-action:hover{transform:none}
