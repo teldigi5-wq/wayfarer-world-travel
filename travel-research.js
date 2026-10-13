@@ -7,8 +7,8 @@
   const html = `
     <section class="travel-research" id="wayfarer-travel-research" aria-labelledby="travel-research-title">
       <div class="travel-research-head">
-        <div><span class="eyebrow">RESEARCH / PRIVATE PREVIEW</span>
-          <h3 id="travel-research-title">The journey, grounded in <em>real searches.</em></h3>
+        <div><span class="eyebrow">FLIGHTS / HOTELS · SOURCE-LED</span>
+          <h3 id="travel-research-title">See the routes. <em>Know what is verified.</em></h3>
           <p>Choose airports and your own spending limits. Wayfarer checks Google Travel search results through a protected server. Prices can change and do not confirm bookable seats or rooms.</p>
         </div><span class="travel-research-label">SEARCH DATA ≠ BOOKING</span>
       </div>
@@ -21,9 +21,9 @@
         <div class="travel-research-action"><button type="submit" class="light" id="travel-search-button">Compare travel searches ↗</button>
           <small id="travel-search-help">Uses the destination and dates above. Up to two search credits per check. Never paste provider API keys here.</small></div>
       </form>
-      <p class="travel-search-status" id="travel-search-status" role="status" aria-live="polite">Choose a destination from the World Index, then enter your airports and private beta code.</p>
+      <p class="travel-search-status" id="travel-search-status" role="status" aria-live="polite">Select your destination, departure and arrival airports, and private beta code. Flight times appear only when the connected provider returns them.</p>
       <div id="travel-search-output" class="travel-search-output" aria-live="polite"></div>
-      <p class="travel-search-disclaimer">Search-based research only. Real-time seat inventory, airline booking, hotel reservations, restaurant menu prices and local transit fares are not connected. All final details must be confirmed with the provider.</p>
+      <p class="travel-search-disclaimer">Flight departure and arrival times are provider-reported search schedules, not live flight status. Ticket inventory and final bookability are unknown. Hotel rooms, restaurant menu prices and transport fares require independent verification.</p>
     </section>`;
   root.insertAdjacentHTML('beforeend', html);
   const $ = id => document.getElementById(id);
@@ -46,14 +46,135 @@
     for(const offer of (obj.offers||[])) article.append(render(offer));
     return article;
   }
+  // Search handoff only: never suggest Google Flights will preselect this
+  // exact itinerary, guarantee a price, or preserve a seller quote.
+  function addExternalHandoff(card,details) {
+    const panel=word('div','', 'wf-external-flight-handoff');
+    const link=document.createElement('a');
+    link.href='https://www.google.com/travel/flights';
+    link.target='_blank';
+    link.rel='noopener noreferrer';
+    link.className='wf-flight-compare-link';
+    link.textContent='Compare tickets on Google Flights ↗';
+    const info=word('p',
+      'Opens a separate tab. Re-select the same dates and flights there; verify seats, baggage, and the final payable fare before purchasing.',
+      'wf-flight-handoff-note');
+    panel.append(link);
+    if(details) {
+      const copy=word('button','Copy flight details','wf-flight-copy');
+      copy.type='button';
+      copy.addEventListener('click',async()=>{
+        try {
+          if(!navigator.clipboard?.writeText)throw Error('Clipboard unavailable');
+          await navigator.clipboard.writeText(details);
+          copy.textContent='Flight details copied ✓';
+        }catch{
+          copy.textContent='Copy unavailable — refer to the details above';
+        }
+      });
+      panel.append(copy);
+    }
+    panel.append(info);
+    card.append(panel);
+  }
+  function addSelection(card,selection){
+    if(!selection || !['return','booking'].includes(selection.stage)||!selection.token)return;
+    const button=word('button',selection.stage==='return'?
+      'Choose this departure · See return flights ↗':'Check available booking sellers ↗','wf-supplier-select');
+    button.type='button';
+    button.setAttribute('aria-label',selection.stage==='return'?
+      'Request supplier return flight choices; uses a provider search credit':
+      'Request seller booking options; uses a provider search credit');
+    const area=word('div','','wf-supplier-options');
+    card.append(button,area);
+    let completed=false;
+    button.addEventListener('click',async()=>{
+      if(completed)return;
+      button.disabled=true;button.setAttribute('aria-busy','true');
+      area.replaceChildren(word('p','Checking the selected itinerary with the supplier…'));
+      const aborter=new AbortController();
+      const timeout=setTimeout(()=>aborter.abort(),22000);
+      try{
+        const resp=await fetch('/api/flight-selection',{
+          method:'POST',headers:{'Content-Type':'application/json',
+            'X-Wayfarer-Beta-Token':get('travel-beta-code')},
+          body:JSON.stringify({selectionToken:selection.token}),
+          signal:aborter.signal
+        });
+        const data=await resp.json();
+        if(!resp.ok||!data.ok)throw Error(data.error||'Provider unavailable');
+        area.replaceChildren(word('p',data.message,'wf-provider-message'));
+        if(data.stage==='return_flights'){
+          for(const choice of (data.options||[])){
+            const segments=(choice.segments||[]).map(x=>
+              [x.airline,x.flightNumber,x.from+' → '+x.to,
+               'depart '+(x.departureAt||'time unknown'),
+               'arrive '+(x.arrivalAt||'time unknown')].filter(Boolean).join(' · ')).join(' / ');
+            const result=itemCard(
+              'Return flight · '+money(choice.pricePerAdult,choice.currency)+' / adult',
+              segments+' · estimated group '+money(choice.estimatedGroup,choice.currency),
+              'Search itinerary only · Seats NOT VERIFIED');
+            addSelection(result,choice.selection);
+            addExternalHandoff(result,
+              'Return option: '+segments+' | '+money(choice.pricePerAdult,choice.currency)+
+              ' per adult | '+get('travel-origin')+' to '+get('travel-arrival')+
+              ' | dates: '+get('check-in')+' to '+get('check-out')+
+              ' | indicative only; verify directly with the seller');
+            area.append(result);
+          }
+        }else if(data.stage==='booking_options'){
+          for(const opt of (data.options||[])){
+            const sellerCard=itemCard(
+              opt.seller+' · '+money(opt.price,opt.currency),
+              opt.separateTickets?'Separate-ticket arrangement · confirm connection risks':
+                'Seller option listed by supplier at '+localeTime(data.checkedAt),
+              (opt.priceBasis||'Supplier search quote; final fare not confirmed')+' · SELLER LISTED · Seat inventory NOT VERIFIED · No ticket reserved'
+            );
+            addExternalHandoff(sellerCard,
+              'Seller: '+opt.seller+' | quoted price: '+money(opt.price,opt.currency)+
+              ' | origin: '+get('travel-origin')+' | destination: '+get('travel-arrival')+
+              ' | dates: '+get('check-in')+' to '+get('check-out')+
+              ' | quote not guaranteed; re-select and verify on the provider website');
+            area.append(sellerCard);
+          }
+          // Each seller card already includes its own external booking-research link.
+        }
+        if(data.limitations?.length)area.append(word('p',data.limitations.join(' '),'wf-provider-caveat'));
+        completed=true;
+        button.textContent='Supplier lookup completed · choose a different itinerary to compare';
+      }catch(error){
+        area.replaceChildren(word('p',error?.name==='AbortError'?
+          'Supplier request timed out. This is not evidence of sold-out tickets.':
+          'Supplier lookup unavailable: '+(error?.message||'Try another time.'),'wf-provider-caveat'));
+      }finally{
+        clearTimeout(timeout);button.disabled=completed;button.removeAttribute('aria-busy');
+      }
+    });
+  }
   function show(res){
     output.replaceChildren();
     output.append(
-      panel('Flights · search fares',res.flights,offer=>itemCard(
-        money(offer.perAdult,offer.currency)+' per adult',
-        'Indicative group estimate '+money(offer.estimatedGroup,offer.currency)+' · '+budget(offer.budgetFit),
-        offer.segments?.map(s=>[s.from,'→',s.to,'·',s.airline,s.number,s.departureAt].filter(Boolean).join(' ')).join(' / ')+' · return flight and seat availability unverified'
-      )),
+      panel('Flights · schedule & ticket research',res.flights,offer=>{
+        const times=(offer.segments||[]).map(s=>
+          [s.airline,s.number,'·',s.from,'→',s.to,'· depart',s.departureAt||'Time not supplied',
+           '· arrive',s.arrivalAt||'Time not supplied'].filter(Boolean).join(' ')
+        ).join(' / ');
+        const duration=Number.isFinite(offer.totalDurationMinutes)?' · '+Math.floor(offer.totalDurationMinutes/60)+'h '+(offer.totalDurationMinutes%60)+'m':'';
+        const stops=Number.isInteger(offer.stopCount)?' · '+(offer.stopCount===0?'Nonstop':offer.stopCount+' stop(s)'):'';
+        const card=itemCard(
+          money(offer.perAdult,offer.currency)+' per adult · '+money(offer.estimatedGroup,offer.currency)+' estimated group',
+          times+duration+stops,
+          budget(offer.budgetFit)+' · Ticket availability: NOT VERIFIED · Seats: unknown · Return selection: unconfirmed · Schedule/price indicative at search, not live operational status'
+        );
+        addSelection(card,offer.selection);
+        addExternalHandoff(card,
+          'Outbound: '+times+
+          ' | '+money(offer.perAdult,offer.currency)+' per adult (indicative)'+
+          ' | origin '+get('travel-origin')+' | arrival '+get('travel-arrival')+
+          ' | outbound '+get('check-in')+' | return '+get('check-out')+
+          ' | group: '+get('stay-adults')+' travelers | NOT a confirmed booking');
+        return card;
+      }),
       panel('Accommodation · hotel search',res.hotels,offer=>itemCard(
         offer.name+' · '+money(offer.displayedTotal,offer.currency),
         (offer.checkIn||'')+' → '+(offer.checkOut||'')+' · '+budget(offer.budgetFit),

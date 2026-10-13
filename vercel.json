@@ -19,6 +19,12 @@
     },
     "api/travel-offers.mjs": {
       "maxDuration": 30
+    },
+    "api/flight-selection.mjs": {
+      "maxDuration": 30
+    },
+    "api/airline-offers.mjs": {
+      "maxDuration": 30
     }
   },
   "headers": [

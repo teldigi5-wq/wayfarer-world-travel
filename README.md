@@ -6,6 +6,74 @@
 
 > Wayfarer brings **Discover → AI Journey Studio → Arrival Companion → My Journeys** into one premium, accessible travel-planning experience. The main domain points to Production; feature-branch changes are released only after Preview verification. Airline/hotel searches are indicative provider research, not guaranteed booking inventory.
 
+### Worldwide search, flight times and service plans (draft beta)
+
+**Public website:** https://wayfarer-world-travel.vercel.app/  
+**Source and release review:** https://github.com/teldigi5-wq/wayfarer-world-travel/pull/8
+
+- **Country atlas:** the Discover screen uses the existing searchable country/territory reference directory; selecting a country opens Journey Studio with its filter applied. The user still chooses a city and airports. All listed countries are discoverable; this **does not** imply every airport offers flights, that every city has complete attractions or that entry requirements have been verified.
+- **Supplier flight schedules:** with Preview-only `SERPAPI_API_KEY`, `WAYFARER_AI_BETA_TOKEN` and `WAYFARER_TRAVEL_ENABLED=true`, the server may retrieve Google Flights search fares, airline and flight numbers, provider-reported departure and arrival times, total duration and stop count. The UI explicitly displays **ticket availability: not verified**; `bookableSeats=null` and `operationalFlightStatus=not_connected`. These are not live flight movement/real-time delay, guaranteed seats or final bookable prices. A return itinerary and booking options require a separate authorized provider interaction. Search results may be cached.
+- **Hotel research:** where a provider returns an explicit total, the UI shows indicative total-rate search prices. Occupancy, room inventory, taxes, cancellation terms, payment and booking confirmation are not verified. Restaurant menu prices and worldwide transit fares are not connected.
+- **Service price concepts:** Explorer is **$0/month** and represents presently accessible functionality. Journey Plus is **proposed $9/month** (not on sale), and Wayfarer Partners is a future custom-quote concept. **No checkout, subscriptions, payment processing, entitlements or paid accounts are activated.** Do not use them for advertising as launched paid services.
+- **Motion system:** subtle editorial destination surfaces, refined card feedback, contrast-aware typography, accessible country-search controls, keyboard focus and reduced-motion support. It adds no WebGL or expensive motion libraries.
+
+#### Optional flight selection and booking-seller research
+
+A traveler can now explicitly select a Google Flights search result to investigate the next round-trip stage:
+
+1. **Search flights:** `POST /api/travel-search` returns search schedules/prices. Each eligible outbound option includes a server-signed, short-lived `selection` token only when the provider supplies a `departure_token`.
+2. **Select a return:** `POST /api/flight-selection` with the signed selection and private beta passcode performs a separate SerpApi Google Flights `departure_token` request. Returned return choices may include signed `booking` selections.
+3. **Check booking sellers:** A **second explicit click** uses the signed `booking_token` to retrieve a supplier's `booking_options` seller and indicative price, with the response labeled `availability: seller_option_listed` and `seatInventoryVerified:false`. No booking forms or payments are submitted.
+
+Each lookup may consume an additional search credit. The signed selection expires after **8 minutes** and binds stage, origin, destination, dates and traveler count. Signature tampering or expiration is rejected without a supplier request. The extra stage uses a **best-effort, in-memory per-IP throttle**, not a cross-region durable quota or abuse-proof authentication service. No additional API searches run automatically when the page loads. Browser UI uses safe text nodes for supplier content.
+
+**Do not claim actual seats are confirmed:** A displayed booking seller is not an airline reservation, an issued ticket, or guaranteed inventory. The user must inspect actual fare rules and checkout on an authorized provider site. No seller-specific checkout deep links are constructed or submitted. Search results and provider information may be cached or change before purchase.
+
+Provider reference: [SerpApi Google Flights Booking Options API](https://serpapi.com/google-flights-booking-options). A public commercial release still requires a suitable authorized booking/inventory provider, durable usage controls, explicit account/billing rules, monitoring and supplier terms review.
+
+#### Flight comparison and external booking — the no-checkout model
+
+Wayfarer is a **travel-research and referral website**, not an airline ticket seller. Customers can compare provider-returned schedules, indicative prices and booking-seller names, then choose **Compare tickets on Google Flights**. That link opens `https://www.google.com/travel/flights` in a **new browser tab** (`target="_blank" rel="noopener noreferrer"`); the Wayfarer tab stays open. Travelers may copy the itinerary reference and manually re-select it on Google Flights. **The link does not preselect or reserve the exact flight**, and no claim is made that a fare will be identical at checkout. Genuine airline or travel-agent specific deep links may be added only when a trusted provider returns an authorized, validated HTTPS checkout link.
+
+For accuracy, Wayfarer uses these terms:
+- `search_results`: provider-returned search schedule/price; **not guaranteed bookable**.
+- `seller_option_listed`: seller shown in a Google Flights research result; **not confirmed seat inventory**.
+- `no_results`: search found no usable offers; **not proof of sold-out tickets**.
+- `sandbox_offer`: illustrative Duffel test mode; **never display as a real live ticket**.
+- `supplier_offer_unbooked`: supplier live offer, where authorized; **may expire or reprice and is not reserved**.
+- `confirmed_booking`: **not implemented**—requires an actual completed supplier booking transaction.
+
+**Cost discipline:** SerpApi's current free tier offers a limited monthly search allowance; each fresh search and optional flight-selection call may count toward it. Duffel's test mode is free but has simulated prices. Live Duffel charges may apply for low booking conversion/excess searches and **is not necessary for our link-out-only MVP**. Do not enable Duffel live mode purely for outbound referral links. Provider limits, pricing and terms can change, so recheck supplier documents before launch.
+
+#### Optional airline-authorized offers — Duffel test mode (new)
+
+Wayfarer now includes an isolated `POST /api/airline-offers` supplier adapter and a Journey Studio airline-offer panel. **It is disabled by default** and is not connected to any actual airline account yet. The existing SerpApi Google Travel research remains separate.
+
+To test with **zero actual ticket purchases**, create a Duffel Developer **test** account/token through [Duffel's test mode documentation](https://duffel.com/docs/api/overview/test-mode), then configure the following as **Sensitive, Preview-only Vercel environment variables** in `wayfarer-world-travel`:
+
+```env
+DUFFEL_ACCESS_TOKEN=<private Duffel developer TEST token>
+DUFFEL_MODE=test
+WAYFARER_DUFFEL_ENABLED=true
+# WAYFARER_AI_BETA_TOKEN=<existing private beta code>
+```
+
+Do **not** put any Duffel or SerpApi keys in the website, GitHub, README, frontend code, or client-side storage. The existing private Wayfarer beta code authorizes requests from the browser; provider tokens stay server-side. Vercel env updates require a fresh Preview deployment. This adapter makes **one authorized offer search on explicit user request** and optionally **one refresh per user click**.
+
+- **Sandbox offers**: marked `SANDBOX — NOT REAL TICKETS`; `availabilityStatus=sandbox_offer`, `seatCountVerified=false` and `bookingConfirmed=false`. Duffel warns that sandbox prices and schedules are not realistic.
+- **Live mode**: the adapter can only be activated with a live Duffel credential, `DUFFEL_MODE=live`, and an additional explicit `WAYFARER_DUFFEL_LIVE_APPROVED=true` gate. **Do not enable this without account approval, supplier commercial terms, global cost controls and compliance review.** Live offers show `supplier_offer_unbooked`, never `confirmed_ticket`.
+- **Recheck**: a selected supplier offer is fetched again by its server-encrypted, 12-minute token. Quotes can expire, change or disappear before checkout; recheck remains informational and **cannot reserve seats**. No order, payment, passenger identity or ticket issuance endpoints exist.
+- **Safety**: short-lived AES-256-GCM encrypted provider selections; strict IATA/date/group validation; bounded supplier responses and timeouts; no raw supplier tokens or API secrets in the browser response. Current in-memory per-IP limiting is best-effort and **not sufficient for a public live release**.
+- **Pricing**: Duffel supplier offers display their original quoted currency and a total for all searched adult travelers; there is no invented FX conversion into USD. The independent ground budget and SerpApi estimates remain separate.
+
+**Truthful ticket states:** `no_results` does not mean sold out; `sandbox_results` does not mean real inventory; `supplier_offers` and `offer_refreshed` mean a supplier returned an expiring offer, **not a booked ticket or guaranteed seat**. Genuine confirmed ticket status needs an authorized provider's successful order/ticket confirmation, which this zero-cost beta intentionally does not perform.
+
+Relevant official references: [Duffel Offer Requests](https://duffel.com/docs/api/v2/offer-requests), [Duffel Offers](https://duffel.com/docs/api/v2/offers), [Duffel test mode](https://duffel.com/docs/api/overview/test-mode).
+
+#### Production readiness
+
+This feature is in a draft PR. Do **not** enable supplier credentials publicly by copying Preview secrets into Production without cost/quota protection, consent and booked-inventory verification. Automated tests use fixture data and consume **no** real SerpApi credits. Launch gates: Preview browser testing, security and accessibility checks, durable server-side per-user rate limiting, explicit provider quotas, privacy policy and source/provider terms. See the [SerpApi Google Flights API](https://serpapi.com/google-flights-api) and [Booking Options documentation](https://serpapi.com/google-flights-booking-options).
+
 ### Design system and accessibility
 
 - **Legibility before decoration:** dark evergreen interactive cards (`#12362D`, `#194237`), warm ivory text (`#FAF6EB`), calm green secondary text (`#C4D5CA`), and restrained brass accents (`#E8C992`). The functional panel pairs pass WCAG AA contrast checks.
