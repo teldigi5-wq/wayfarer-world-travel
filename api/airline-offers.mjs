@@ -27,7 +27,7 @@ function send(res,status,obj){
 function tripFrom(raw) {
   if(!raw||typeof raw!=='object'||Array.isArray(raw))throw Error('trip');
   const t={from:clean(raw.from,12).toUpperCase(),to:clean(raw.to,12).toUpperCase(),
-    checkIn:clean(raw.checkIn,10),checkOut:clean(raw.checkOut,10),
+    checkIn:clean(raw.checkIn,16),checkOut:clean(raw.checkOut,16),
     adults:Number(raw.adults)};
   const isDate=x=>dateRx.test(x)&&!Number.isNaN(Date.parse(x+'T00:00:00Z'))&&
     new Date(x+'T00:00:00Z').toISOString().slice(0,10)===x;
@@ -80,7 +80,7 @@ async function callDuffel(method,path,key,body){
   return json?.data;
 }
 function normalizeOffer(raw,t,config,secret,checkedAt){
-  if(!raw||!/^off_[A-Za-z0-9]{5,100}$/.test(raw.id||'')||
+  if(!raw||raw.partial===true||!/^off_[A-Za-z0-9]{5,100}$/.test(raw.id||'')||
      !money(raw.total_amount)||!/^[A-Z]{3}$/.test(raw.total_currency||'')||
      !Array.isArray(raw.slices)||raw.slices.length!==2)return null;
   const expiry=Date.parse(raw.expires_at);
