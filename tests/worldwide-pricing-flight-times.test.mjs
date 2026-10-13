@@ -18,27 +18,27 @@ test('worldwide discovery and pricing are real product components, not fake chec
   assert.match(client,/world-query/);
   assert.match(client,/countries & territories in the reference directory/);
   assert.match(client,/Explorer/);
-  assert.match(client,/\\$0/);
-  assert.match(client,/\\$9/);
+  assert.match(client,/\$0/);
+  assert.match(client,/\$9/);
   assert.match(client,/PROPOSED · NOT ON SALE/);
   assert.match(client,/No payments are taken/);
-  assert.doesNotMatch(client,/checkout\\.stripe\\.com|stripe\\.redirectToCheckout|paypal\\.com\\/checkout/);
+  assert.doesNotMatch(client,/checkout\.stripe\.com|stripe\.redirectToCheckout|paypal\.com\/checkout/);
 });
 test('premium motion is optional and the layout remains responsive and focusable',()=>{
-  assert.match(css,/@media\\(max-width:680px\\)/);
-  assert.match(css,/@media\\(prefers-reduced-motion:reduce\\)/);
-  assert.match(css,/\\.motion-off/);
+  assert.match(css,/@media\(max-width:680px\)/);
+  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
+  assert.match(css,/\.motion-off/);
   assert.match(css,/:focus-visible/);
   assert.match(css,/min-height:48px/);
   assert.match(css,/grid-template-columns:1fr/);
 });
 test('flight search includes both schedule times but never presents speculative seat availability as confirmed',()=>{
-  assert.match(backend,/arrivalAt:clean\\(f\\.arrival_airport\\?\\.time/);
+  assert.match(backend,/arrivalAt:clean\(f\.arrival_airport\?\.time/);
   assert.match(backend,/ticketAvailability:'not_verified'/);
   assert.match(backend,/bookableSeats:null/);
   assert.match(backend,/operationalFlightStatus:'not_connected'/);
   assert.match(flightsUI,/Ticket availability: NOT VERIFIED/);
-  assert.match(flightsUI,/s\\.arrivalAt/);
+  assert.match(flightsUI,/s\.arrivalAt/);
   assert.match(flightsUI,/totalDurationMinutes/);
 });
 const before={...process.env};
