@@ -38,6 +38,8 @@ function begin(destination){
    .find(el=>el.dataset.place===destination.curated);
  if(shortcut){shortcut.click();return}
  changeTab('studio');
+ // Search handoff must open the Studio Destinations panel, not its hidden Overview.
+ $('wf-tab-explore')?.click();
  const country=$('country-filter'),query=$('world-query');
  if(country){country.value=destination.code;country.dispatchEvent(new Event('change',{bubbles:true}));}
  if(query){query.value=destination.search;query.focus({preventScroll:true});}
