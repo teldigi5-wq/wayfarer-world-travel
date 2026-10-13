@@ -1,5 +1,8 @@
 # Wayfarer
 
+> **Premium Wayfarer integration (review branch; not production).** This branch adopts the recovered cinematic `wayfarer-journey-ai` homepage, Journey Studio and optional SerpApi travel research as the default frontend. All previous backend files, `n8n/` workflows and tests remain. The old static homepage is archived at `legacy/world-travel-original-home.html`, and the original live site remains unchanged. Please see [PREMIUM_INTEGRATION.md](PREMIUM_INTEGRATION.md) for compatibility checks, security/CSP decisions, and provider-key requirements. **Do not claim live confirmed seats, bookable hotels, or live menu/transit fares.**
+
+
 > **Flight + hotel search in draft PR only (October 2026).** The retired Amadeus Self-Service implementation has been removed from the travel offers endpoint. The replacement uses **SerpApi Google Flights and Google Hotels searches**, gated by separate server-side credentials and a private beta passcode. The currently published site has **no live pricing service**; this PR must pass credentialed preview tests before deployment. Search prices are indicative, may be cached and **do not verify seats, room availability, bookings or final checkout prices**. Food and transport pricing are not connected.
 
 > **Optional Groq/n8n AI beta (disabled by default).** Three model-backed n8n agents can propose destination guidance, flights/stays research and itineraries. They do not generate authoritative provider prices. See [n8n/README.md](n8n/README.md) for connection instructions.
