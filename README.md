@@ -335,6 +335,14 @@ The destination research service now coordinates only **public, source-backed** 
 
 Regression tests `tests/worldwide-source-coordinator.test.mjs` cover public query coalescing, cache isolation and expiry, bounded source overlap, fast OSM success, provider outages and no metered API interaction. Automated tests do **not** establish real browser Web Vitals. Before Production release verify multiple regions, provider/source policy, mobile UI and authorized supplier search separately.
 
+### Stage 28 — route reliability and geographically safe supplier results (draft)
+
+**Why this stage:** the established `premium-app.js` router incorrectly called `.forEach()` on a single element returned by `$()` rather than on a collection from `$()`. As a result, route changes could raise a browser `TypeError` even though isolated navigation simulations appeared to pass. The real router now uses the actual six-button collection. A new VM-based regression test executes the real handler and checks one active/accessible route across Discover, Destinations, Guides, Journey Studio, Arrival and Journeys.
+
+**Protecting worldwide flight/hotel results:** different countries and coordinates can have destinations with the same name (e.g., Paris, France vs Paris, Texas). The public discovery cache already separates those places. Now the paid-capable supplier handoff also captures the **exact geographic identity** (name, ISO country code, latitude, longitude) when a traveler explicitly searches. It will not show a late hotel/fare response if they change locations, airports, check-in/out dates, occupancy, or destination while the search is in flight. This avoids presenting an authorized source price under the wrong destination; no new supplier API calls, fake prices, or auto-booking links are added. The location identity remains browser-only and is **not sent to the supplier API**. Historic unit callers can still pass no explicit context; the real app always passes the captured source context.
+
+**Quality gates:** tests in `tests/real-navigation-and-quote-handoff.test.mjs` execute real router transitions and verify the actual protected form identity guard, and `tests/nearby-results.test.mjs` guards country/coordinate collisions for provider quotes. Run `npm run check && npm test`; then Vercel Preview and manual browser/mobile review are required before merging. PR remains draft stacked on Stage 27, Production remains unchanged, and no billing/secret changes are permitted.
+
 ## Run and test
 
 Install Node.js 20+ from its official distribution. No package install, API key, environment variable, card or build dependency is needed.

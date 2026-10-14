@@ -51,9 +51,20 @@
   };
   const selectedDates=()=>({checkIn:$('check-in')?.value||'',checkOut:$('check-out')?.value||'',
     adults:Number($('stay-adults')?.value||0)});
+  const locationIdentity=place=>place&&Number.isFinite(place.latitude)&&Number.isFinite(place.longitude)?
+    {name:String(place.name||''),countryCode:String(place.countryCode||'').toUpperCase(),
+      latitude:place.latitude,longitude:place.longitude}:null;
+  const isCurrentLocation=place=>{
+    const a=locationIdentity(chosen),b=locationIdentity(place);
+    return !!a&&!!b&&cleanName(a.name)===cleanName(b.name)&&
+      a.countryCode===b.countryCode&&
+      a.latitude.toFixed(5)===b.latitude.toFixed(5)&&
+      a.longitude.toFixed(5)===b.longitude.toFixed(5);
+  };
 
   function quoteFor(item,type) {
-    if(!chosen||!quotes?.payload||!quotes?.trip||quotes.payload.mode!=='search_only')return null;
+    if(!chosen||!quotes?.payload||!quotes?.trip||quotes.payload.mode!=='search_only'||
+      !isCurrentLocation(quotes.place))return null;
     const t=quotes.trip,dates=selectedDates();
     if(cleanName(t.destination)!==cleanName(chosen.name)||t.checkIn!==dates.checkIn||
       t.checkOut!==dates.checkOut||Number(t.adults)!==dates.adults)return null;
@@ -128,7 +139,7 @@
   function providerHotelCards(){
     // This uses an explicit user-authorized request, never a background lookup.
     // Supplier result names may have no map coordinates, so distance stays null.
-    if(!chosen||quotes?.payload?.mode!=='search_only')return [];
+    if(!chosen||quotes?.payload?.mode!=='search_only'||!isCurrentLocation(quotes.place))return [];
     const t=quotes.trip,dates=selectedDates();
     if(!t||cleanName(t.destination)!==cleanName(chosen.name)||
       t.checkIn!==dates.checkIn||t.checkOut!==dates.checkOut||
@@ -231,12 +242,19 @@
     if(seq===loadSeq)nearby.classList.remove('world-loading');
   }
 
-  function applyQuotes(payload,trip){
-    quotes={payload,trip};
+  function applyQuotes(payload,trip,placeAtSearch=chosen){
+    if(!isCurrentLocation(placeAtSearch)){
+      // A response for another city or previous trip must never be displayed
+      // against a new, same-name destination or reused in the local cache.
+      return false;
+    }
+    quotes={payload,trip,place:locationIdentity(placeAtSearch)};
     if(chosen)render();
+    return true;
   }
   for(const id of ['check-in','check-out','stay-adults']){
     $(id)?.addEventListener('change',()=>{if(chosen)render();});
   }
-  window.WayfarerNearby=Object.freeze({load,applyQuotes});
+  window.WayfarerNearby=Object.freeze({load,applyQuotes,
+    currentLocation:()=>locationIdentity(chosen),isCurrentLocation});
 })();

@@ -339,6 +339,19 @@
       groundBudget:Math.round(days*daily*100)/100,
       flightBudget:get('travel-airfare')===''?0:Number(get('travel-airfare'))
     };
+    // Bind this explicit provider request to the actual selected destination
+    // and form. Same-name cities and late responses must not cross over.
+    const locationAtSearch=window.WayfarerNearby?.currentLocation()??null;
+    const requestStillCurrent=()=>{
+      if(get('travel-origin').toUpperCase().trim()!==trip.from||
+         get('travel-arrival').toUpperCase().trim()!==trip.to||
+         (get('destination').trim()||get('world-query').trim())!==trip.destination||
+         get('check-in')!==trip.checkIn||get('check-out')!==trip.checkOut||
+         Number(get('stay-adults'))!==trip.adults)return false;
+      if(locationAtSearch&&window.WayfarerNearby?.isCurrentLocation)
+        return window.WayfarerNearby.isCurrentLocation(locationAtSearch);
+      return !window.WayfarerNearby?.currentLocation?.();
+    };
     try{
       const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),25000);
       let response;
@@ -346,11 +359,16 @@
       finally{clearTimeout(timer)}
       const payload=await response.json();
       if(!response.ok||!payload.ok)throw Error(payload.error||'Provider search unavailable');
+      if(!requestStillCurrent()){
+        status.textContent='Your destination or travel dates changed while providers were searching. Previous results were discarded. Search again for the current trip.';
+        output.replaceChildren();
+        return;
+      }
       status.textContent=payload.mode==='search_only'?'Google Travel search results · not confirmed inventory':'Search currently disabled · no real prices connected';
       show(payload);
       // Share ONLY actual, user-requested provider results with the existing map cards.
       // This does not start a supplier call and never invents a quote.
-      window.WayfarerNearby?.applyQuotes(payload,trip);
+      window.WayfarerNearby?.applyQuotes(payload,trip,locationAtSearch);
     }catch(err){status.textContent=err.name==='AbortError'?'Search timed out. No availability conclusion is possible.':err.message||'Search unavailable.';}
     finally{button.disabled=false;button.removeAttribute('aria-busy');}
   });
