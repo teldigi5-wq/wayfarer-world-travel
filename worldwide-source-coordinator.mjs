@@ -4,10 +4,12 @@ const memo=new Map(),MAX_ENTRIES=96;
 const copy=value=>JSON.parse(JSON.stringify(value));
 export async function cachedPublicNearby(key,loader,{now=()=>Date.now()}={}){
   const current=now(),old=memo.get(key);
-  if(old&&old.expiresAt>current)return copy(await old.promise);
+  if(old&&(old.pending||old.expiresAt>current))return copy(await old.promise);
   if(old)memo.delete(key);
   const promise=Promise.resolve().then(loader);
-  const record={expiresAt:current+120000,promise};
+  // Never start duplicate public lookups just because a slow in-flight request
+  // exceeds a provisional TTL; freshness begins at successful completion.
+  const record={pending:true,expiresAt:0,promise};
   if(memo.size>=MAX_ENTRIES)memo.delete(memo.keys().next().value);
   memo.set(key,record);
   try{
@@ -17,6 +19,7 @@ export async function cachedPublicNearby(key,loader,{now=()=>Date.now()}={}){
       return copy(result);
     }
     const hasEvidence=Array.isArray(result.body.hotels)&&result.body.hotels.length>0;
+    record.pending=false;
     record.expiresAt=now()+(hasEvidence?600000:45000);
     return copy(result);
   }catch(e){
@@ -41,6 +44,12 @@ export async function gatherPublicHotels(mapLoader,referenceLoader,{hedgeMs=850}
   const referenceTask=Promise.resolve().then(referenceLoader)
     .then(hotels=>({wikidataHotels:Array.isArray(hotels)?hotels:[],wikidataAvailable:true}))
     .catch(()=>({wikidataHotels:[],wikidataAvailable:false}));
-  const [map,reference]=await Promise.all([osmtask,referenceTask]);
+  // If OSM yields credible local hotels after the hedge began, do not make
+  // the customer wait for a slower independent reference service to time out.
+  // referenceTask handles its own rejection and cannot update this response.
+  const map=await osmtask;
+  if(map.mapAvailable&&map.mapped.some(x=>x.type==='hotel'))
+    return {...map,wikidataHotels:[],wikidataAvailable:false};
+  const reference=await referenceTask;
   return {...map,...reference};
 }
