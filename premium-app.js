@@ -190,12 +190,18 @@ function selectWorld(place){worldSelection=place;selected=place.name;$('#destina
 const worldHubs=[{"name":"Paris","country":"France","countryCode":"FR","latitude":48.8566,"longitude":2.3522,"airports":[["Charles de Gaulle Airport","CDG"],["Paris Orly Airport","ORY"]]},{"name":"London","country":"United Kingdom","countryCode":"GB","latitude":51.5072,"longitude":-0.1276,"airports":[["London Heathrow Airport","LHR"],["London Gatwick Airport","LGW"]]},{"name":"New York City","country":"United States","countryCode":"US","latitude":40.7128,"longitude":-74.006,"airports":[["John F. Kennedy International Airport","JFK"],["LaGuardia Airport","LGA"],["Newark Liberty International Airport","EWR"]]},{"name":"Tokyo","country":"Japan","countryCode":"JP","latitude":35.6762,"longitude":139.6503,"airports":[["Tokyo Haneda Airport","HND"],["Narita International Airport","NRT"]]},{"name":"Dubai","country":"United Arab Emirates","countryCode":"AE","latitude":25.2048,"longitude":55.2708,"airports":[["Dubai International Airport","DXB"],["Al Maktoum International Airport","DWC"]]},{"name":"Singapore","country":"Singapore","countryCode":"SG","latitude":1.3521,"longitude":103.8198,"airports":[["Singapore Changi Airport","SIN"]]},{"name":"Colombo","country":"Sri Lanka","countryCode":"LK","latitude":6.9271,"longitude":79.8612,"airports":[["Bandaranaike International Airport","CMB"]]},{"name":"Sydney","country":"Australia","countryCode":"AU","latitude":-33.8688,"longitude":151.2093,"airports":[["Sydney Airport","SYD"]]},{"name":"Cape Town","country":"South Africa","countryCode":"ZA","latitude":-33.9249,"longitude":18.4241,"airports":[["Cape Town International Airport","CPT"]]},{"name":"Rio de Janeiro","country":"Brazil","countryCode":"BR","latitude":-22.9068,"longitude":-43.1729,"airports":[["Rio de Janeiro–Galeão Airport","GIG"],["Santos Dumont Airport","SDU"]]},{"name":"Rome","country":"Italy","countryCode":"IT","latitude":41.9028,"longitude":12.4964,"airports":[["Rome Fiumicino Airport","FCO"],["Ciampino Airport","CIA"]]},{"name":"Barcelona","country":"Spain","countryCode":"ES","latitude":41.3874,"longitude":2.1686,"airports":[["Barcelona–El Prat Airport","BCN"]]},{"name":"Bangkok","country":"Thailand","countryCode":"TH","latitude":13.7563,"longitude":100.5018,"airports":[["Suvarnabhumi Airport","BKK"],["Don Mueang International Airport","DMK"]]},{"name":"Seoul","country":"South Korea","countryCode":"KR","latitude":37.5665,"longitude":126.978,"airports":[["Incheon International Airport","ICN"],["Gimpo International Airport","GMP"]]},{"name":"Istanbul","country":"Türkiye","countryCode":"TR","latitude":41.0082,"longitude":28.9784,"airports":[["Istanbul Airport","IST"],["Sabiha Gökçen Airport","SAW"]]},{"name":"Toronto","country":"Canada","countryCode":"CA","latitude":43.6532,"longitude":-79.3832,"airports":[["Toronto Pearson International Airport","YYZ"],["Billy Bishop Toronto City Airport","YTZ"]]},{"name":"Mexico City","country":"Mexico","countryCode":"MX","latitude":19.4326,"longitude":-99.1332,"airports":[["Mexico City International Airport","MEX"],["Felipe Ángeles International Airport","NLU"]]},{"name":"Mumbai","country":"India","countryCode":"IN","latitude":19.076,"longitude":72.8777,"airports":[["Chhatrapati Shivaji Maharaj International Airport","BOM"]]},{"name":"Cairo","country":"Egypt","countryCode":"EG","latitude":30.0444,"longitude":31.2357,"airports":[["Cairo International Airport","CAI"]]},{"name":"Nairobi","country":"Kenya","countryCode":"KE","latitude":-1.2921,"longitude":36.8219,"airports":[["Jomo Kenyatta International Airport","NBO"],["Wilson Airport","WIL"]]},{"name":"Buenos Aires","country":"Argentina","countryCode":"AR","latitude":-34.6037,"longitude":-58.3816,"airports":[["Ministro Pistarini International Airport","EZE"],["Aeroparque Jorge Newbery","AEP"]]},{"name":"Auckland","country":"New Zealand","countryCode":"NZ","latitude":-36.8509,"longitude":174.7645,"airports":[["Auckland Airport","AKL"]]},{"name":"Amsterdam","country":"Netherlands","countryCode":"NL","latitude":52.3676,"longitude":4.9041,"airports":[["Amsterdam Airport Schiphol","AMS"]]},{"name":"Berlin","country":"Germany","countryCode":"DE","latitude":52.52,"longitude":13.405,"airports":[["Berlin Brandenburg Airport","BER"]]}];
 const worldSearchCache=new Map();
 let activeWorldSearch=null,worldSearchSeq=0;
+const validWorldPlace=place=>place&&typeof place.name==='string'&&
+  !!place.name.trim()&&place.name.length<=120&&
+  typeof place.countryCode==='string'&&/^[A-Z]{2}$/.test(place.countryCode)&&
+  typeof place.latitude==='number'&&Number.isFinite(place.latitude)&&Math.abs(place.latitude)<=90&&
+  typeof place.longitude==='number'&&Number.isFinite(place.longitude)&&Math.abs(place.longitude)<=180;
 function invalidateWorldSearch(message){
   activeWorldSearch?.abort();
   activeWorldSearch=null;
   // Even an upstream response that ignores abort must not update this form.
   worldSearchSeq++;
   $('#world-results').replaceChildren();
+  $('#world-results').setAttribute('aria-busy','false');
   $('#world-search-feedback').textContent=message;
 }
 $('#world-form').onsubmit=async e=>{
@@ -208,36 +214,58 @@ $('#world-form').onsubmit=async e=>{
  const root=$('#world-results'),indicator=$('#world-search-feedback');
  activeWorldSearch?.abort();const ctrl=new AbortController();activeWorldSearch=ctrl;
  const seq=++worldSearchSeq,key=cc+'|'+q.toLocaleLowerCase('en'),cached=worldSearchCache.get(key);
- const show=(items,message)=>{
-   if(seq!==worldSearchSeq)return;
-   const found=Array.isArray(items)?items:[];
+ const show=(items,message,{origin='public',emptyMessage='No sourced destination matched. Check the spelling or choose another country.'}={})=>{
+   if(seq!==worldSearchSeq)return [];
+   // A valid API status alone is not a license to place unverified geometry
+   // into Journey Studio. Both public and bundled results cross this boundary.
+   const found=(Array.isArray(items)?items:[]).filter(validWorldPlace).slice(0,8);
+   const sourceLabel=origin==='bundled'?'BUNDLED PLACE REFERENCE · LIVE SEARCH UNAVAILABLE':
+     origin==='cached'?'CACHED PUBLIC LOCATION REFERENCE':'PUBLIC PLACE INDEX · LOCATION REFERENCE';
    indicator.textContent=message;
+   root.setAttribute('aria-busy','false');
    root.innerHTML=found.length?found.map(x=>
      '<button class="world-result" type="button" data-id="'+esc(x.id||x.name)+'"><b>'+esc(x.name)+'</b><span>'+
-     esc([x.admin,x.country].filter(Boolean).join(', '))+'</span></button>').join(''):
-     '<p class="world-empty">No sourced destination matched. Check the spelling or choose another country.</p>';
+     esc([x.admin,x.country].filter(Boolean).join(', '))+'</span><small class="wf-world-result-source">'+
+     esc(sourceLabel)+'</small></button>').join(''):
+     '<p class="world-empty">'+esc(emptyMessage)+'</p>';
    root.querySelectorAll('.world-result').forEach((button,i)=>button.onclick=()=>selectWorld(found[i]));
+   return found;
  };
- if(cached&&cached.until>Date.now()){show(cached.results,'Showing recent sourced destination results. Choose the matching place.');return;}
- indicator.textContent='Finding real places and coordinates…';
+ if(cached&&cached.until>Date.now()){
+   show(cached.results,cached.results.length?
+     'Showing recently cached public locations. Geography only; prices and schedules require separate research.':
+     'No matching public place was returned by the recent lookup. Try another spelling or country.',
+     {origin:'cached'});
+   return;
+ }
+ indicator.textContent='Finding named places and sourced coordinates…';
+ root.setAttribute('aria-busy','true');
  root.innerHTML='<p class="world-empty wf-world-pending"><span class="wf-search-pulse" aria-hidden="true"></span> Matching the destination to a place index…</p>';
  const timeout=setTimeout(()=>ctrl.abort(),5500);
  try{
    const qs=new URLSearchParams({mode:'search',q,countryCode:cc});
    const response=await fetch('/api/explore?'+qs,{signal:ctrl.signal});
    const payload=await response.json();
-   if(!response.ok||!payload.ok)throw Error('Destination lookup unavailable');
+   if(!response.ok||payload?.ok!==true||!Array.isArray(payload.results))
+     throw Error('Destination lookup unavailable');
    if(seq!==worldSearchSeq)return;
+   const verified=payload.results.filter(validWorldPlace).slice(0,8);
    if(worldSearchCache.size>=36)worldSearchCache.delete(worldSearchCache.keys().next().value);
-   worldSearchCache.set(key,{results:payload.results,until:Date.now()+300000});
-   show(payload.results,'Sourced places found · choose a result to view airports and stays.');
+   // Empty coverage can improve quickly; do not cache absence for five minutes.
+   worldSearchCache.set(key,{results:verified,until:Date.now()+(verified.length?300000:45000)});
+   show(verified,verified.length?
+     'Public location index · choose a mapped place to explore sourced airport and hotel references.':
+     'No matching location was returned by the public place index. Try another spelling or country.');
  }catch(err){
    if(seq!==worldSearchSeq)return;
    const needle=q.toLowerCase();
    const local=worldHubs.filter(x=>(!cc||x.countryCode===cc)&&
      (x.name.toLowerCase().includes(needle)||x.country.toLowerCase().includes(needle))).slice(0,8);
-   show(local,local.length?'Public destination search is unavailable. Showing clearly labeled bundled reference places.':
-     'The destination index is temporarily unavailable. Try again.');
+   show(local,local.length?
+     'The public destination index is unavailable. Showing bundled place references; these are not live search results.':
+     'The public destination index is temporarily unavailable. No matching bundled place reference was found. Retry later.',
+     {origin:'bundled',
+      emptyMessage:'Destination search is temporarily unavailable. No matching bundled reference; retry later.'});
  }finally{
    clearTimeout(timeout);
    if(activeWorldSearch===ctrl)activeWorldSearch=null;
