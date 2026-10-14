@@ -24,8 +24,17 @@
     const el=document.createElement(tag);if(cls)el.className=cls;
     if(content!==undefined)el.textContent=String(content);return el;
   };
-  const status=(root,message)=>{
+  const status=(root,message,externalHotelSearch=false)=>{
     root.replaceChildren(make('p','wf-nearby-status world-empty',message));
+    if(externalHotelSearch&&root===hotels&&Number.isFinite(chosen?.latitude)&&
+       Number.isFinite(chosen?.longitude)){
+      const link=make('a','wf-nearby-map wf-nearby-external-search','Research hotels near this location ↗');
+      const url=new URL('https://www.google.com/maps/search/');
+      url.searchParams.set('api','1');
+      url.searchParams.set('query','hotels near '+chosen.latitude.toFixed(5)+','+chosen.longitude.toFixed(5));
+      link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';
+      root.append(link);
+    }
   };
   let chosen=null,items={airports:[],hotels:[]},quotes=null,loadSeq=0,controller=null;
   const selectedDates=()=>({checkIn:$('check-in')?.value||'',checkOut:$('check-out')?.value||'',
@@ -68,8 +77,9 @@
     const source=String(item.source||'Map reference');
     const code=type==='airport'&&/^[A-Z]{3}$/.test(item.iata||'')?' · '+item.iata:'';
     const locality=[item.city,item.countryCode].filter(Boolean).join(', ');
+    const airportTier=type==='airport'&&item.referenceTier?' · '+item.referenceTier:'';
     facts.textContent=(Number.isFinite(distance)&&distance>=0?distance.toFixed(1)+' km straight-line':'Distance unavailable')+
-      code+(locality?' · '+locality:'')+' · '+source;
+      code+(locality?' · '+locality:'')+airportTier+' · '+source;
     if(type==='airport'&&code)card.dataset.airportIata=item.iata;
     content.append(heading,facts);top.append(content);
     const price=make('div','wf-nearby-price'),quote=quoteFor(item,type);
@@ -132,7 +142,7 @@
       const rows=type==='airport'?items.airports:[...items.hotels,...providerHotelCards()].slice(0,10);
       if(rows.length)root.replaceChildren(...rows.map(row=>renderCard(row,type)));
       else status(root,type==='airport'?'No named airport reference available nearby. Try a wider destination search.':
-        'No named hotels returned by public map data. A map search is available, but prices and rooms are not confirmed.');
+        'No named hotels returned by public map data. A map search is available, but prices and rooms are not confirmed.',true);
     }
   }
   async function load(place){
@@ -140,6 +150,7 @@
     controller?.abort();controller=new AbortController();
     chosen=Number.isFinite(place?.latitude)&&Number.isFinite(place?.longitude)?{...place}:null;
     window.WayfarerMap?.selectDestination(chosen);
+    window.WayfarerDestinationIntelligence?.choose(chosen);
     const label=$('nearby-context');
     if(label)label.textContent=chosen?
       'Showing location references near '+chosen.name+(chosen.country?', '+chosen.country:'')+'. Distances are straight-line estimates. Prices require a separate search.':
@@ -152,7 +163,8 @@
     status(hotels,'Researching sourced hotel locations…');
     const filter=(entries,max)=>Array.isArray(entries)?entries.filter(x=>x&&typeof x.name==='string'&&x.name.trim()
       &&Number.isFinite(x.distanceKm)&&x.distanceKm>=0).slice(0,max):[];
-    const coords={lat:chosen.latitude,lon:chosen.longitude};
+    const coords={lat:chosen.latitude,lon:chosen.longitude,
+      ...( /^[A-Z]{2}$/.test(chosen.countryCode||'')?{countryCode:chosen.countryCode}:{} )};
     let fullApplied=false;
     const quick=(async()=>{
       try{
@@ -161,6 +173,7 @@
         const d=await response.json();
         if(seq!==loadSeq||fullApplied||!d.ok)return;
         items.airports=filter(d.airports,8);
+        window.WayfarerDestinationIntelligence?.show(d);
         window.WayfarerMap?.setNearby(items);
         if(items.airports.length)airports.replaceChildren(...items.airports.map(x=>renderCard(x,'airport')));
         else status(airports,'No nearby coded airports found in the bundled reference.');
@@ -177,14 +190,15 @@
         if(seq!==loadSeq||!d.ok)return;
         fullApplied=true;
         items={airports:filter(d.airports,8),hotels:filter(d.hotels,10)};
+        window.WayfarerDestinationIntelligence?.show(d);
         window.WayfarerMap?.setNearby(items);
         render();
         if(!d.mapAvailable&&!items.hotels.length){
-          status(hotels,'Public hotel records are unavailable for this area. An optional protected supplier search may provide named stays.');
+          status(hotels,'Public hotel records are unavailable for this area. An optional protected supplier search may provide named stays.',true);
         }
       }catch(e){
         if(seq!==loadSeq||e.name==='AbortError')return;
-        status(hotels,'Hotel discovery temporarily unavailable. No names, prices or room availability have been inferred.');
+        status(hotels,'Hotel discovery temporarily unavailable. No names, prices or room availability have been inferred.',true);
       }
     })();
     await Promise.allSettled([quick,detailed]);

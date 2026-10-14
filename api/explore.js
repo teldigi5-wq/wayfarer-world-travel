@@ -1,6 +1,7 @@
 import airportData from '../data.json' with {type:'json'};
 import airportCatalog from '../airports-index.json' with {type:'json'};
 import {lookupWikidataHotels} from '../worldwide-hotel-sources.mjs';
+import {rankReferenceAirports,destinationIntelligence} from '../destination-intelligence.mjs';
 const timedFetch=(url,options={})=>fetch(url,{...options,signal:AbortSignal.timeout(12000)});
 const clean=(value,max=120)=>String(value??'').replace(/[\u0000-\u001f<>]/g,' ').trim().slice(0,max);
 const number=(value,min,max)=>{const n=Number(value);return Number.isFinite(n)&&n>=min&&n<=max?n:null};
@@ -42,21 +43,15 @@ const sigiriyaHotelReferences=Object.freeze([
 async function nearby(req,{airportsOnly=false}={}){
   const lat=number(req.query.lat,-90,90),lon=number(req.query.lon,-180,180);
   if(lat===null||lon===null)return {status:400,body:{ok:false,error:'Invalid coordinates'}};
+  const countryCode=clean(req.query.countryCode||'',2).toUpperCase();
+  if(countryCode&&!/^[A-Z]{2}$/.test(countryCode))return {status:400,body:{ok:false,error:'Invalid country filter'}};
 
   // Always provide sourced airport reference names, even if Overpass is rate limited.
   // The bundled OurAirports-based file is an airport index, not flight availability.
   const airportReferences=Array.isArray(airportCatalog.airports)&&airportCatalog.airports.length>=1000?
     airportCatalog.airports:airportData.airports;
-  const indexed=(Array.isArray(airportReferences)?airportReferences:[])
-    .filter(a=>Number.isFinite(a.lat)&&Number.isFinite(a.lon)&&/^[A-Z]{3}$/.test(a.iata||''))
-    .map(a=>({
-      type:'airport',name:clean(a.name),iata:a.iata,
-      city:clean(a.municipality||''),countryCode:clean(a.code,2),
-      latitude:a.lat,longitude:a.lon,
-      distanceKm:distance(lat,lon,a.lat,a.lon),source:'OurAirports reference',
-      url:/^https:\/\/ourairports\.com\/airports\//.test(a.source||'')?a.source:'https://ourairports.com',
-      price:null
-    })).filter(a=>a.name&&a.distanceKm<=550).sort((a,b)=>a.distanceKm-b.distanceKm).slice(0,12);
+  const ranked=rankReferenceAirports(airportReferences,lat,lon,{countryCode,limit:8,maxKm:550});
+  const indexed=ranked.nearby;
 
   if(airportsOnly){
     // Immediate locally indexed result. Does not wait on map providers.
@@ -71,6 +66,8 @@ async function nearby(req,{airportsOnly=false}={}){
       .filter(x=>{if(used.has(x.iata))return false;used.add(x.iata);return true}).slice(0,8);
     return {status:200,body:{ok:true,provider:'Bundled OurAirports reference',
       sourceUrl:'https://ourairports.com/data/',partial:true,airports,hotels:[],
+      intelligence:destinationIntelligence({lat,lon,countryCode,airports,gateways:ranked.gateways,
+        hotels:[],partial:true}),
       note:'Airport names and straight-line distances only; no operating routes or fares are verified.'}};
   }
 
@@ -139,6 +136,8 @@ async function nearby(req,{airportsOnly=false}={}){
     ok:true,provider:'OpenStreetMap and bundled OurAirports reference data',
     sourceUrl:'https://www.openstreetmap.org/copyright',
     mapAvailable,wikidataAvailable,airports,hotels,
+    intelligence:destinationIntelligence({lat,lon,countryCode,airports,gateways:ranked.gateways,
+      hotels,mapAvailable,wikidataAvailable}),
     note:mapAvailable?'OpenStreetMap locations and approximate straight-line distances; no fare or room prices supplied.':
       wikidataAvailable?'Public OpenStreetMap lookup unavailable. Where covered, named hotels come from CC0 Wikidata references; no room rates or availability verified.':
       'Public nearby-place providers unavailable. Airport and geographically bounded reference records may still be shown; no room rates verified.'
