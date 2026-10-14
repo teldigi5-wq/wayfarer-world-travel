@@ -37,9 +37,18 @@ test('every global airport candidate comes from a sourced IATA reference, never 
   assert.equal(brief.closestAirport.iata,'AAA');
   assert.equal(brief.gatewayCandidates[0].iata,'BBB');
   assert.equal(brief.hotelSourceStatus,'pending');
-  assert.ok(brief.guidance.some(x=>x.includes('not necessarily a passenger gateway')));
+  assert.ok(brief.guidance.some(x=>x.includes('not a verified scheduled airline gateway')));
   assert.ok(brief.guidance.some(x=>x.includes('pending')));
   assert.ok(!JSON.stringify(brief).includes('"fare":'));
+});
+
+test('seaplane nearest to Colombo never masquerades as the main airline booking gateway',async()=>{
+  const res=await call({mode:'airports',lat:'6.9271',lon:'79.8612',countryCode:'LK'});
+  const i=res.body.intelligence;
+  assert.equal(i.closestAirport.iata,'BYV');
+  assert.ok(i.guidance.some(x=>x.includes('seaplane reference')));
+  assert.ok(i.gatewayCandidates.some(x=>x.iata==='CMB'));
+  assert.ok(res.body.airports.every(x=>x.price===null));
 });
 
 test('global nearby airport and country facts work across widely separated countries without provider calls',async()=>{
