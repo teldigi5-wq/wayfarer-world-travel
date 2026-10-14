@@ -345,16 +345,22 @@
     showingSupplierResults=false;
     window.WayfarerNearby?.clearQuotes?.();
     const days=Number(get('days'))||3,daily=Number(get('budget'))||0;
+    // Snapshotted reference coordinates come from the selected mapped location.
+    // They scope an explicit search; they do not independently verify room addresses.
+    const locationAtSearch=window.WayfarerNearby?.currentLocation()??null;
     const trip={
       from:get('travel-origin').toUpperCase().trim(),to:get('travel-arrival').toUpperCase().trim(),
       destination:get('destination').trim()||get('world-query').trim(),
+      ...(locationAtSearch?{
+        countryCode:locationAtSearch.countryCode,
+        latitude:locationAtSearch.latitude,longitude:locationAtSearch.longitude
+      }:{}),
       checkIn:get('check-in'),checkOut:get('check-out'),
       adults:Number(get('stay-adults')),
       groundBudget:Math.round(days*daily*100)/100,
       flightBudget:get('travel-airfare')===''?0:Number(get('travel-airfare'))
     };
     // Bind the authorized search to exact trip details AND source location.
-    const locationAtSearch=window.WayfarerNearby?.currentLocation()??null;
     const requestStillCurrent=()=>{
       if(get('travel-origin').toUpperCase().trim()!==trip.from||
          get('travel-arrival').toUpperCase().trim()!==trip.to||
