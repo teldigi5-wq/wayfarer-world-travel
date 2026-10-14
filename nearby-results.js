@@ -94,9 +94,33 @@
     actions.append(button);card.append(actions);
     return card;
   }
+  function providerHotelCards(){
+    // This uses an explicit user-authorized request, never a background lookup.
+    // Supplier result names may have no map coordinates, so distance stays null.
+    if(!chosen||quotes?.payload?.mode!=='search_only')return [];
+    const t=quotes.trip,dates=selectedDates();
+    if(!t||cleanName(t.destination)!==cleanName(chosen.name)||
+      t.checkIn!==dates.checkIn||t.checkOut!==dates.checkOut||
+      Number(t.adults)!==dates.adults||!quotes.payload.checkedAt)return [];
+    const known=new Set(items.hotels.map(x=>cleanName(x.name)));
+    const source=quotes.payload.hotels?.offers;
+    if(!Array.isArray(source))return [];
+    const extra=[];
+    for(const offer of source){
+      if(typeof offer?.name!=='string'||offer.name.trim().length<2||offer.name.length>150||
+        offer.currency!=='USD'||!validMoney(offer.displayedTotal))continue;
+      const key=cleanName(offer.name);
+      if(known.has(key))continue;
+      known.add(key);
+      extra.push({type:'hotel',name:offer.name.trim(),distanceKm:null,
+        source:'Google Travel hotel search · provider supplied',url:null,price:null});
+      if(extra.length===8)break;
+    }
+    return extra;
+  }
   function render(){
     for(const [type,root] of [['airport',airports],['hotel',hotels]]){
-      const rows=type==='airport'?items.airports:items.hotels;
+      const rows=type==='airport'?items.airports:[...items.hotels,...providerHotelCards()].slice(0,10);
       if(rows.length)root.replaceChildren(...rows.map(row=>renderCard(row,type)));
       else status(root,type==='airport'?'No named airport reference available nearby. Try a wider destination search.':
         'No named hotels returned by public map data. A map search is available, but prices and rooms are not confirmed.');
