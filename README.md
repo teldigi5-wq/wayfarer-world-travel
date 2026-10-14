@@ -417,6 +417,18 @@ These checks are conservative: legitimate surface/self-transfer itineraries with
 
 `tests/airline-offer-route-validation.test.mjs` exercises the actual airline-offer API with a fully mocked Duffel sandbox boundary. It checks correct international two-leg routes, wrong outbound or return airports, broken connections, malformed/oversized legs, no encrypted offer token for rejected results, and fail-closed refresh after the supplier route changes. Require `npm run check && npm test`, an exact passing-head Preview, and a real desktop/mobile walkthrough before any Production release. This PR remains draft and stacked on Stage 35.
 
+### Stage 37 — luxury, source-grounded travel comparison at a glance (draft)
+
+Flight and hotel supplier comparison already has detailed per-offer sorting, but customers must scroll through separate lists to understand the available figures. This stage adds a deliberately restrained premium **Research Snapshot** directly above the existing flight and hotel cards, only after an explicit source-backed protected search result is returned. It reuses the current provider payload **entirely client-side** and makes **no additional API, AI, map, hotel or flight request**.
+
+Two independent summary facts are displayed: the **lowest returned outbound-only estimated group flight amount** and the **lowest returned displayed hotel stay total**. Each includes the number of corresponding provider search options. Missing results and disconnected sources show **Not available**, never a made-up estimate, zero-dollar fare or placeholder hotel quote. Malformed, non-USD or non-positive values are excluded from the displayed numeric minimum. These are not availability guarantees and might not include required taxes/fees.
+
+**Critically, Wayfarer never adds these two figures together or calls them a trip budget.** The outgoing-flight source figure does not verify a return ticket, baggage, seats, operation or the final charge. The hotel source figure is a search-total indication without confirmed room occupancy, payable price, cancellation policy or availability. Taxes, transfers and other expenses remain unverified. The visible copy says so directly.
+
+The new two-column forest/champagne editorial panel is responsive to narrow phones, respects reduced-motion preferences and uses plain-text headings plus an accessible summary region. Existing source and country-scope labels, explicit cancellation, sorting, provider authorizations and external-airline handoffs stay intact.
+
+`tests/travel-comparison-snapshot.test.mjs` runs the **actual summary and UI show() functions** in a DOM-style VM against valid, mixed-currency, unavailable and replaced response fixtures. It checks no imaginary combined fare and no additional fetch/paid API usage. Full GitHub CI, exact-HEAD free Preview, and hands-on visual/keyboard mobile and desktop review remain release gates before any Production merge. This PR is draft stacked on #36.
+
 ## Run and test
 
 Install Node.js 20+ from its official distribution. No package install, API key, environment variable, card or build dependency is needed.
