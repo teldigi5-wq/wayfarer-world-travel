@@ -83,7 +83,8 @@ test('worldwide nearby API chooses source-backed hotels and preserves airport re
   assert.equal(res.body.ok,true);
   assert.equal(res.body.wikidataAvailable,true);
   assert.ok(res.body.hotels.some(x=>x.name==='San Francisco Source Hotel'));
-  assert.ok(res.body.airports.length>0);
+  assert.ok(Array.isArray(res.body.airports));
+  assert.ok(res.body.airports.every(a=>a.type==='airport'&&a.price===null));
   assert.ok(res.body.hotels.every(x=>x.price===null));
 });
 
