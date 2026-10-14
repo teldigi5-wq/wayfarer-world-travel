@@ -6,8 +6,9 @@ const currentResearchBrief=()=>JSON.stringify({
   budget:$('#budget')?.value,pace:$('#pace')?.value,
   moods:[...document.querySelectorAll('.pref.on')].map(x=>x.textContent).join(', ')
 });
-function resetAgents(){
+function resetAgents(preserveContext=false){
  agentRunSerial++;
+ if(!preserveContext)agentData=null;
  agentRequestController?.abort();
  agentRequestController=null;
  const button=$('#run-agents');if(button){button.disabled=false;button.textContent='Run AI journey ↗';}const cancel=$('#cancel-agents');if(cancel)cancel.hidden=true;
@@ -18,7 +19,7 @@ function cancelAgentResearch(){
  // Cancellation must not relabel an older AI draft as a sample itinerary.
  const status=$('#plan-status'),source=$('#plan-source');
  const savedStatusClass=status.className,savedStatusText=status.textContent,savedSourceText=source.textContent;
- resetAgents();
+ resetAgents(true);
  status.className=savedStatusClass;status.textContent=savedStatusText;source.textContent=savedSourceText;
  $('#agent-ai').className='agent';
  $('#agent-ai p').textContent='Cancelled · no new itinerary applied';
@@ -27,7 +28,7 @@ function cancelAgentResearch(){
  toast('Research cancelled. Current journey preserved.');
  return true;
 }
-function build(){const d=destinations.find(x=>x.name===selected),n=Number($('#days').value),budget=Math.max(25,Number($('#budget').value)||180),moods=$$('.pref.on').map(x=>x.textContent).join(' · '),generic=['Arrive and find your bearings','Neighborhoods, culture and local flavor','A slower day beyond the obvious','Architecture, markets and public spaces','Nature at the city edge','Independent exploration','A final unhurried morning'];$('#itinerary-title').textContent=`${n} days in ${selected}`;$('#itinerary').innerHTML=Array.from({length:n},(_,i)=>`<article class="day"><span>DAY 0${i+1} · SAMPLE</span><h3>${d?.days[i]||generic[i]}</h3><p>${$('#pace').value}. ${moods||'Open discovery'}. $${budget}/day working budget—not a live price.</p></article>`).join('')}$('.pref').forEach(b=>b.onclick=()=>{b.classList.toggle('on');resetAgents();build()});['days','pace'].forEach(x=>$('#'+x).onchange=()=>{resetAgents();build()});$('#budget').oninput=()=>{if(agentRequestController)resetAgents()};$('#budget').onchange=()=>{resetAgents();if($('#budget').checkValidity())build()};$('#compose').onclick=()=>{if(!$('#budget').checkValidity())return $('#budget').reportValidity();resetAgents();build();toast('Sample itinerary recomposed.')};
+function build(){const d=destinations.find(x=>x.name===selected),n=Number($('#days').value),budget=Math.max(25,Number($('#budget').value)||180),moods=$$('.pref.on').map(x=>x.textContent).join(' · '),generic=['Arrive and find your bearings','Neighborhoods, culture and local flavor','A slower day beyond the obvious','Architecture, markets and public spaces','Nature at the city edge','Independent exploration','A final unhurried morning'];$('#itinerary-title').textContent=`${n} days in ${selected}`;$('#itinerary').innerHTML=Array.from({length:n},(_,i)=>`<article class="day"><span>DAY 0${i+1} · SAMPLE</span><h3>${d?.days[i]||generic[i]}</h3><p>${$('#pace').value}. ${moods||'Open discovery'}. $${budget}/day working budget—not a live price.</p></article>`).join('')}$('.pref').forEach(b=>b.onclick=()=>{b.classList.toggle('on');resetAgents();build()});['days','pace'].forEach(x=>$('#'+x).onchange=()=>{resetAgents();build()});$('#budget').oninput=()=>{resetAgents();if($('#budget').checkValidity())build();else{$('#itinerary').replaceChildren();$('#itinerary-title').textContent='Enter a valid daily budget';$('#plan-status').textContent='Budget needs attention';$('#plan-source').textContent='Enter a daily ground budget from USD 25 to USD 2,500 to compose a new sample.'}};$('#budget').onchange=()=>{resetAgents();if($('#budget').checkValidity())build()};$('#compose').onclick=()=>{if(!$('#budget').checkValidity())return $('#budget').reportValidity();resetAgents();build();toast('Sample itinerary recomposed.')};
 const esc=v=>String(v??'—').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));async function runAgents(){
  if(agentRequestController)return false;
  const serial=++agentRunSerial;
@@ -85,7 +86,7 @@ $('#save-trip').onclick=()=>{trips=trips.filter(x=>x.destination!==selected);tri
  }
  area.append(document.createTextNode('Visa, safety and transport schedules are not connected.'));
 }
-$('#refresh').onclick=async()=>{view('studio');if(await runAgents())view('arrival')};$('#maps').onclick=()=>open('https://www.openstreetmap.org/search?query='+encodeURIComponent(selected),'_blank');$('#arrival-edit-trip').onclick=()=>view('studio');$('#arrival-journeys-link').onclick=()=>view('trips');$('#arrival-map-secondary').onclick=()=>$('#maps').click();$('#journey-create').onclick=()=>view('studio');$('#download').onclick=()=>{const text=`WAYFARER · ${selected}\n\nSAMPLE ITINERARY\n${$('#itinerary').innerText}\n\nARRIVAL\n${$('#arr-tip').textContent}\n\nVerify current routes, rules, hours and prices.`;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/plain'}));a.download='wayfarer-'+selected.toLowerCase()+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)};
+$('#refresh').onclick=async()=>{view('studio');if(await runAgents())view('arrival')};$('#maps').onclick=()=>open('https://www.openstreetmap.org/search?query='+encodeURIComponent(selected),'_blank');$('#arrival-edit-trip').onclick=()=>view('studio');$('#arrival-journeys-link').onclick=()=>view('trips');$('#arrival-map-secondary').onclick=()=>$('#maps').click();$('#journey-create').onclick=()=>view('studio');$('#download').onclick=()=>{const aiDraft=$('#plan-status').textContent==='Groq AI itinerary';const provenance=aiDraft?'AI-GENERATED DRAFT · VERIFY BEFORE TRAVEL':'ILLUSTRATIVE SAMPLE · NOT LIVE BOOKINGS';const text=`WAYFARER · ${selected}\n\n${provenance}\n${$('#itinerary').innerText}\n\nSOURCE & LIMITATIONS\n${$('#plan-source').textContent}\n\nARRIVAL\n${$('#arr-tip').textContent}\n\nVerify current routes, rules, hours and prices.`;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/plain'}));a.download='wayfarer-'+selected.toLowerCase()+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)};
 function renderTrips(){
  const root=$('#saved'),query=($('#journey-search')?.value||'').trim().toLocaleLowerCase('en');
  const valid=Array.isArray(trips)?trips.filter(t=>t&&typeof t.destination==='string'&&t.destination.length<120):[];
