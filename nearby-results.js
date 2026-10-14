@@ -24,8 +24,17 @@
     const el=document.createElement(tag);if(cls)el.className=cls;
     if(content!==undefined)el.textContent=String(content);return el;
   };
-  const status=(root,message)=>{
+  const status=(root,message,externalHotelSearch=false)=>{
     root.replaceChildren(make('p','wf-nearby-status world-empty',message));
+    if(externalHotelSearch&&root===hotels&&Number.isFinite(chosen?.latitude)&&
+       Number.isFinite(chosen?.longitude)){
+      const link=make('a','wf-nearby-map wf-nearby-external-search','Research hotels near this location ↗');
+      const url=new URL('https://www.google.com/maps/search/');
+      url.searchParams.set('api','1');
+      url.searchParams.set('query','hotels near '+chosen.latitude.toFixed(5)+','+chosen.longitude.toFixed(5));
+      link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';
+      root.append(link);
+    }
   };
   let chosen=null,items={airports:[],hotels:[]},quotes=null,loadSeq=0,controller=null;
   const selectedDates=()=>({checkIn:$('check-in')?.value||'',checkOut:$('check-out')?.value||'',
@@ -133,7 +142,7 @@
       const rows=type==='airport'?items.airports:[...items.hotels,...providerHotelCards()].slice(0,10);
       if(rows.length)root.replaceChildren(...rows.map(row=>renderCard(row,type)));
       else status(root,type==='airport'?'No named airport reference available nearby. Try a wider destination search.':
-        'No named hotels returned by public map data. A map search is available, but prices and rooms are not confirmed.');
+        'No named hotels returned by public map data. A map search is available, but prices and rooms are not confirmed.',true);
     }
   }
   async function load(place){
@@ -185,11 +194,11 @@
         window.WayfarerMap?.setNearby(items);
         render();
         if(!d.mapAvailable&&!items.hotels.length){
-          status(hotels,'Public hotel records are unavailable for this area. An optional protected supplier search may provide named stays.');
+          status(hotels,'Public hotel records are unavailable for this area. An optional protected supplier search may provide named stays.',true);
         }
       }catch(e){
         if(seq!==loadSeq||e.name==='AbortError')return;
-        status(hotels,'Hotel discovery temporarily unavailable. No names, prices or room availability have been inferred.');
+        status(hotels,'Hotel discovery temporarily unavailable. No names, prices or room availability have been inferred.',true);
       }
     })();
     await Promise.allSettled([quick,detailed]);
