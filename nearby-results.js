@@ -76,6 +76,7 @@
       price.append(make('strong','',type==='hotel'?money.format(quote.total)+' total':money.format(quote.perAdult)+' / adult'));
       price.append(make('small','',type==='hotel'?money.format(quote.perNight)+' / night average · indicative':
         'Indicative flight search · route not guaranteed'));
+      price.append(make('small','', 'Google Travel search · indicative, not confirmed'));
       const time=new Date(quote.checkedAt);
       if(Number.isFinite(time.valueOf()))price.append(make('small','','Checked '+time.toLocaleString()));
     }else{
