@@ -41,6 +41,6 @@
   document.addEventListener('visibilitychange',onVisibility);
   // Always show first on each FULL navigation/reload; internal tabs never replay it.
   // The CSS contains a separate 3-second no-JS visibility fail-safe.
-  dismissTimer=setTimeout(finish,1350);
+  dismissTimer=setTimeout(finish,850);
   try{skip?.focus({preventScroll:true});}catch{}
 })();
