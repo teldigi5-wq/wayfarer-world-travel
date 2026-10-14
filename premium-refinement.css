@@ -233,6 +233,12 @@
 #studio #world-results .world-result:focus-visible{outline:3px solid #e3c18c;outline-offset:2px;}
 #studio #world-results .world-result b{color:#fffaf0;font-size:1.04rem;}
 #studio #world-results .world-result span{color:#cadbd0;font-size:.78rem;line-height:1.55;}
+#studio #world-results .wf-world-result-source{
+ display:block;margin-top:9px;color:#e6d1aa;font:600 .63rem/1.5 'DM Sans',sans-serif;
+ letter-spacing:.08em;text-transform:uppercase;
+}
+#studio #world-results .world-empty{line-height:1.65;}
+
 #studio #world-results .wf-world-pending{
  grid-column:1/-1;display:flex;gap:10px;align-items:center;min-height:58px;
  background:rgba(255,251,240,.06);padding:12px 16px;border-radius:10px;
