@@ -6,6 +6,11 @@
   const airports=$('airport-list'),hotels=$('hotel-list'),nearby=$('nearby');
   if(!airports||!hotels||!nearby)return;
   const money=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2});
+  const validMappedPlace=place=>place&&typeof place.name==='string'&&
+    place.name.trim().length>0&&place.name.length<=120&&
+    typeof place.latitude==='number'&&Number.isFinite(place.latitude)&&
+    Math.abs(place.latitude)<=90&&typeof place.longitude==='number'&&
+    Number.isFinite(place.longitude)&&Math.abs(place.longitude)<=180;
   const cleanName=value=>String(value||'').normalize('NFKD').toLowerCase()
     .replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
   const safeUrl=value=>{
@@ -26,8 +31,7 @@
   };
   const status=(root,message,externalHotelSearch=false)=>{
     root.replaceChildren(make('p','wf-nearby-status world-empty',message));
-    if(externalHotelSearch&&root===hotels&&Number.isFinite(chosen?.latitude)&&
-       Number.isFinite(chosen?.longitude)){
+    if(externalHotelSearch&&root===hotels&&validMappedPlace(chosen)){
       const link=make('a','wf-nearby-map wf-nearby-external-search','Research hotels near this location ↗');
       const url=new URL('https://www.google.com/maps/search/');
       url.searchParams.set('api','1');
@@ -51,7 +55,7 @@
   };
   const selectedDates=()=>({checkIn:$('check-in')?.value||'',checkOut:$('check-out')?.value||'',
     adults:Number($('stay-adults')?.value||0)});
-  const locationIdentity=place=>place&&Number.isFinite(place.latitude)&&Number.isFinite(place.longitude)?
+  const locationIdentity=place=>validMappedPlace(place)?
     {name:String(place.name||''),countryCode:String(place.countryCode||'').toUpperCase(),
       latitude:place.latitude,longitude:place.longitude}:null;
   const isCurrentLocation=place=>{
@@ -187,7 +191,7 @@
     const seq=++loadSeq;
     controller?.abort();controller=new AbortController();
     window.dispatchEvent?.(new Event('wayfarer:location-changed'));
-    chosen=Number.isFinite(place?.latitude)&&Number.isFinite(place?.longitude)?{...place}:null;
+    chosen=validMappedPlace(place)?{...place}:null;
     window.WayfarerMap?.selectDestination(chosen);
     window.WayfarerDestinationIntelligence?.choose(chosen);
     const label=$('nearby-context');
@@ -195,8 +199,14 @@
       'Showing location references near '+chosen.name+(chosen.country?', '+chosen.country:'')+'. Distances are straight-line estimates. Prices require a separate search.':
       'Select a mapped destination to see available regional references.';
     quotes=null;items={airports:[],hotels:[]};
-    if(!chosen){status(airports,'Select a destination with verified map coordinates.');
-      status(hotels,'Choose a mapped destination to discover nearby stays.');return;}
+    if(!chosen){
+      // A previously loading place has been abandoned. Leave neither stale
+      // cards nor a permanent spinner while the old responses are settling.
+      nearby.classList.remove('world-loading');
+      status(airports,'Choose a mapped destination with valid coordinates to find airport references.');
+      status(hotels,'Choose a mapped destination with valid coordinates to discover stays.');
+      return;
+    }
     nearby.classList.add('world-loading');
     const publicKey=publicPlaceKey(chosen),previous=publicPlaceCache.get(publicKey);
     if(previous&&previous.until>Date.now()){
