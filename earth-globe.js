@@ -9,6 +9,9 @@
   const fallback=$('wf-earth-fallback'),status=$('wf-earth-status'),caption=$('wf-earth-caption');
   if(!root||!open||!close||!stage||!canvas||!fallback||!status)return;
   const IMAGE='https://svs.gsfc.nasa.gov/vis/a000000/a002900/a002915/bluemarble-1024.png';
+  // Public GitHub-hosted resize of NASA Blue Marble used only when the NASA
+  // image endpoint cannot be used as a cross-origin WebGL texture.
+  const MIRROR='https://raw.githubusercontent.com/MaxwellLee/physics-lab/main/assets/textures/earth_2048.jpg';
   const DEG=Math.PI/180;
   const valid=(lat,lon)=>typeof lat==='number'&&Number.isFinite(lat)&&Math.abs(lat)<=90&&
     typeof lon==='number'&&Number.isFinite(lon)&&Math.abs(lon)<=180;
@@ -115,7 +118,7 @@
     canvas.hidden=true;fallback.hidden=false;
     root.querySelectorAll('[data-earth-direction]').forEach(button=>{button.disabled=true;});
     fallback.alt='NASA Blue Marble satellite world mosaic in flat equirectangular projection';
-    if(!fallback.getAttribute('src'))fallback.src=IMAGE;
+    if(!fallback.getAttribute('src'))fallback.src=image?.src===MIRROR?MIRROR:IMAGE;
     status.textContent=message+' Use the interactive OpenStreetMap for mapped destination coordinates.';
   }
   function show(){
@@ -128,7 +131,11 @@
       try{initialize(image);}catch{showStatic('The projected globe is unavailable; showing the flat NASA mosaic.');}
       return;
     }
-    if(image){fallback.hidden=false;return;}
+    if(image){
+      if(image.complete&&image.naturalWidth===0)
+        showStatic('The photographic source was unavailable; the world search remains available.');
+      return;
+    }
     pending=true;
     status.textContent='Loading one public NASA Blue Marble image on request. No map SDK or paid search.';
     image=new Image();image.crossOrigin='anonymous';image.decoding='async';
@@ -139,8 +146,12 @@
       }
     };
     image.onerror=()=>{
+      if(image.src===IMAGE){
+        status.textContent='Primary NASA image access unavailable. Trying a source-attributed Blue Marble mirror.';
+        image.src=MIRROR;return;
+      }
       pending=false;
-      if(active)showStatic('The browser blocked projected Earth imagery; attempting a static NASA reference image.');
+      if(active)showStatic('The browser blocked both projected Earth images; attempting a static NASA reference.');
     };
     image.src=IMAGE;
   }
