@@ -102,6 +102,29 @@ test('canonical bundled Kyoto fallback works only for its correct country when c
     assert.equal(calls.weatherUrls.length,1);
   }finally{globalThis.fetch=originalFetch;}
 });
+test('agent geography rejects nondecimal, coerced and incomplete query coordinates before research',async()=>{
+  const before=globalThis.fetch;
+  let calls=0;globalThis.fetch=async()=>{calls++;throw Error('Must never research malformed locations');};
+  try{
+    for(const coordinates of [
+      {lat:'0x10',lon:'70'},
+      {lat:'',lon:'70'},
+      {lat:'12',lon:''},
+      {lat:'90.0001',lon:'10'},
+      {lat:'3',lon:'-180.0001'},
+      {lat:'Infinity',lon:'0'},
+      {lat:'2e1000',lon:'0'},
+      {lat:true,lon:'70'},
+      {lat:[],lon:'70'},
+      {lat:{value:1},lon:'70'}
+    ]){
+      const r=await invoke({destination:'Osaka',countryCode:'JP',days:'3',budget:'180',
+        ...coordinates});
+      assert.equal(r.statusCode,400,'Unsupported coordinate pair '+JSON.stringify(coordinates));
+    }
+    assert.equal(calls,0);
+  }finally{globalThis.fetch=before;}
+});
 test('contradictory Wikipedia coordinates are rejected and cannot contaminate the paid AI prompt',async()=>{
   process.env.WAYFARER_INTELLIGENCE_AI_ENABLED='true';
   process.env.WAYFARER_AI_BETA_TOKEN=ACCESS;
