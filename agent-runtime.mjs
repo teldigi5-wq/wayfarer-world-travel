@@ -65,6 +65,8 @@ export function verificationSummary({weather,place,country,ai,days,dailyBudget})
   if(!weather?.ok)flags.push('Current weather could not be retrieved.');
   else flags.push('Weather describes current conditions, not the weather on future travel dates.');
   if(!place?.ok)flags.push('Destination encyclopedia context could not be verified.');
+  else if(place.geographyVerified!==true)
+    flags.push('Encyclopedia article is a name-only reference; its coordinates were not independently matched to the selected place. Do not infer specific nearby venues from it.');
   if(!country?.ok)flags.push('Country currency, language and timezone reference is unavailable.');
   if(!ai?.ok)flags.push('The AI itinerary was unavailable; the local sample remains in place.');
   else flags.push('AI itinerary is a draft; venues, opening hours and routes are not verified.');

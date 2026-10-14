@@ -8,6 +8,20 @@ const known={
   Switzerland:{lat:46.6863,lon:7.8632,wiki:'Switzerland',country:'CH'}
 };
 const MODEL='openai/gpt-oss-120b';
+const parseCoordinate=value=>{
+  if(typeof value!=='number'&&typeof value!=='string')return NaN;
+  if(typeof value==='string'&&(
+    value.length>48||!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(value.trim())
+  ))return NaN;
+  return Number(value);
+};
+const validWorldCoordinates=(lat,lon)=>Number.isFinite(lat)&&Math.abs(lat)<=90&&
+  Number.isFinite(lon)&&Math.abs(lon)<=180;
+const distanceKm=(a,b,c,d)=>{
+  const r=Math.PI/180,dl=(c-a)*r,doLon=(d-b)*r;
+  const h=Math.sin(dl/2)**2+Math.cos(a*r)*Math.cos(c*r)*Math.sin(doLon/2)**2;
+  return 6371*2*Math.atan2(Math.sqrt(Math.min(1,h)),Math.sqrt(Math.max(0,1-h)));
+};
 const sourceFail=message=>({ok:false,error:message,sourceUrl:null});
 const int=(value,min,max,fallback)=>{
   const n=Number(value);
@@ -16,13 +30,22 @@ const int=(value,min,max,fallback)=>{
 function tripQuery(query={}){
   const destination=scrub(query.destination,80);
   const base=known[destination];
-  const lat=query.lat===undefined||query.lat===null||String(query.lat).trim()===''?NaN:Number(query.lat);
-  const lon=query.lon===undefined||query.lon===null||String(query.lon).trim()===''?NaN:Number(query.lon);
-  const countryCode=scrub(query.countryCode,4).toUpperCase()||base?.country||'';
-  const latitude=base?.lat??lat,longitude=base?.lon??lon;
-  if(!destination||destination.length<2||!Number.isFinite(latitude)||
-     !Number.isFinite(longitude)||latitude< -90||latitude>90||
-     longitude< -180||longitude>180|| (countryCode&&!/^[A-Z]{2}$/.test(countryCode)))
+  // An explicit World Explorer coordinate pair always wins over legacy
+  // curated hubs. Never silently replace a same-name selected location.
+  const latProvided=query.lat!==undefined&&query.lat!==null&&String(query.lat).trim()!=='';
+  const lonProvided=query.lon!==undefined&&query.lon!==null&&String(query.lon).trim()!=='';
+  if(latProvided!==lonProvided)return null;
+  const lat=latProvided?parseCoordinate(query.lat):NaN;
+  const lon=lonProvided?parseCoordinate(query.lon):NaN;
+  const usesSelected=latProvided&&lonProvided;
+  const latitude=usesSelected?lat:base?.lat,longitude=usesSelected?lon:base?.lon;
+  const declaredCountry=scrub(query.countryCode,4).toUpperCase();
+  const fitsCurated=!!base&&validWorldCoordinates(latitude,longitude)&&
+    distanceKm(latitude,longitude,base.lat,base.lon)<75;
+  if(!usesSelected&&declaredCountry&&base?.country!==declaredCountry)return null;
+  const countryCode=declaredCountry||(fitsCurated?base.country:'');
+  if(!destination||destination.length<2||!validWorldCoordinates(latitude,longitude)||
+     (countryCode&&!/^[A-Z]{2}$/.test(countryCode)))
     return null;
   const days=int(query.days,3,7,3);
   const rawBudget=Number(query.budget);
@@ -30,7 +53,10 @@ function tripQuery(query={}){
   const paceMap={'Slow & considered':'Slow',Balanced:'Balanced','Full & energetic':'Active',Slow:'Slow',Active:'Active'};
   const pace=Object.hasOwn(paceMap,query.pace)?paceMap[query.pace]:'Balanced';
   const moods=scrub(query.moods,120)||'Culture';
-  return {destination,p:{lat:latitude,lon:longitude,wiki:base?.wiki||destination,country:countryCode},
+  const sourceMatchesCurated=!base||(fitsCurated&&(!countryCode||countryCode===base.country));
+  return {destination,p:{lat:latitude,lon:longitude,
+    wiki:sourceMatchesCurated?(base?.wiki||destination):null,
+    country:countryCode,locationBasis:usesSelected?'selected-map-coordinates':'bundled-curated-reference'},
     days,budget,pace,moods};
 }
 async function weather(p){
@@ -49,15 +75,23 @@ async function weather(p){
   }catch{return sourceFail('Current weather temporarily unavailable.');}
 }
 async function place(p){
+  if(!p.wiki)return sourceFail('Name-only encyclopedia context does not match this mapped geographic location.');
   try{
     const wiki=scrub(p.wiki,80).replace(/\s+/g,'_');
     const d=await getJson('https://en.wikipedia.org/api/rest_v1/page/summary/'+encodeURIComponent(wiki),{
       timeoutMs:4500,retries:0,maxBytes:110000,cacheTtlMs:43200000,headers:{'User-Agent':'Wayfarer/1.0 (source-only research)'}});
     const extract=scrub(d?.extract,650);
     if(!extract)throw Error('No encyclopedia summary');
+    const geo=d?.coordinates;
+    const hasCoordinates=validWorldCoordinates(geo?.lat,geo?.lon);
+    // Wikipedia name lookup is not geographic evidence by itself. Reject
+    // contradictory coordinates rather than passing another city's facts.
+    if(hasCoordinates&&distanceKm(p.lat,p.lon,geo.lat,geo.lon)>75)
+      return sourceFail('Encyclopedia article coordinates do not match the selected place.');
     const sourceUrl=validHttpsSource(d?.content_urls?.desktop?.page,
       ['wikipedia.org'])||'https://en.wikipedia.org/wiki/'+encodeURIComponent(wiki);
-    return {ok:true,extract,sourceUrl};
+    return {ok:true,extract,sourceUrl,geographyVerified:hasCoordinates,
+      geographyBasis:hasCoordinates?'article-coordinate-cross-check':'article-name-only'};
   }catch{return sourceFail('Encyclopedia destination context temporarily unavailable.');}
 }
 function countryReference(code){
@@ -162,7 +196,10 @@ export default async function handler(req,res){
     const ai=permitted?await compose(brief,{
       weather:w.ok?{temperature:w.temperature,wind:w.wind,observedAt:w.observedAt,
         sourceUrl:w.sourceUrl,currentOnly:true}:null,
-      destination:pl.ok?{summary:pl.extract,sourceUrl:pl.sourceUrl}:null,
+      destination:pl.ok?{summary:pl.geographyVerified?pl.extract:null,
+        sourceUrl:pl.sourceUrl,geographyVerified:pl.geographyVerified===true,
+        limitation:pl.geographyVerified?null:
+          'Article name matched but source coordinates were not available. Do not claim verified local attractions.'}:null,
       country:c.ok?{currencyCode:c.currencyCode,language:c.language,
         timezone:c.primaryTimezone,sourceUrl:c.sourceUrl}:null
     }):{ok:false,error:'AI composer requires private beta access. Source research remains available.',model:MODEL};
@@ -171,6 +208,8 @@ export default async function handler(req,res){
     });
     return res.status(200).json({
       ok:true,destination:trip.destination,retrieved:new Date().toISOString(),
+      location:{latitude:trip.p.lat,longitude:trip.p.lon,countryCode:trip.p.country,
+        basis:trip.p.locationBasis},
       weather:w,place:pl,country:c,ai,verification,
       timings:{publicSourcesMs:sourceElapsedMs,composerMs:Date.now()-aiStarted},
       agentWorkflow:{mode:'source-grounded',retryPolicy:'public GET bounded and temporarily cached; AI no retry',
@@ -181,6 +220,8 @@ export default async function handler(req,res){
     // Last-resort guardrail: malformed provider responses must not crash the UI.
     return res.status(200).json({
       ok:true,destination:trip.destination,retrieved:new Date().toISOString(),
+      location:{latitude:trip.p.lat,longitude:trip.p.lon,countryCode:trip.p.country,
+        basis:trip.p.locationBasis},
       weather:sourceFail('Weather temporarily unavailable.'),
       place:sourceFail('Destination research temporarily unavailable.'),
       country:sourceFail('Country reference temporarily unavailable.'),
