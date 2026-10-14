@@ -18,7 +18,7 @@
         <label><span>Optional group flight budget · USD</span><input class="field" id="travel-airfare" name="flightBudget" type="number" min="0" max="1000000" step="1" placeholder="Excludes ground costs"></label>
         <label><span>Private beta access code</span><input class="field" id="travel-beta-code" type="password" required minlength="24" autocomplete="off" placeholder="Not your SerpApi key"></label>
         <datalist id="travel-airport-options"><option value="CMB" label="Colombo, Sri Lanka"></option><option value="HND" label="Tokyo Haneda"></option><option value="NRT" label="Tokyo Narita"></option><option value="LHR" label="London Heathrow"></option><option value="DXB" label="Dubai"></option><option value="SIN" label="Singapore Changi"></option><option value="BKK" label="Bangkok"></option><option value="CDG" label="Paris CDG"></option><option value="JFK" label="New York JFK"></option><option value="LAX" label="Los Angeles"></option><option value="SYD" label="Sydney"></option><option value="KUL" label="Kuala Lumpur"></option><option value="DPS" label="Bali"></option><option value="KIX" label="Osaka Kansai"></option></datalist>
-        <div class="travel-research-action"><button type="submit" class="light" id="travel-search-button">Compare travel searches ↗</button>
+        <div class="travel-research-action"><button type="submit" class="light" id="travel-search-button">Compare travel searches ↗</button><button type="button" id="travel-cancel-button" class="light wf-travel-cancel" hidden>Cancel search</button>
           <small id="travel-search-help">Uses the destination and dates above. Up to two search credits per check. Never paste provider API keys here.</small></div>
       </form>
       <p class="travel-search-status" id="travel-search-status" role="status" aria-live="polite">Select your destination, departure and arrival airports, and private beta code. Flight times appear only when the connected provider returns them.</p>
@@ -326,10 +326,21 @@
     output.append(word('p','Search timestamp: '+localeTime(res.checkedAt)+
       ' · '+res.note,'travel-search-foot'));
   }
-  let showingSupplierResults=false;
+  let showingSupplierResults=false,supplierRequestSerial=0,activeSupplierRequest=null;
+  const resetSupplierControls=()=>{
+    const button=$('travel-search-button');
+    button.disabled=false;button.removeAttribute('aria-busy');
+    $('travel-cancel-button').hidden=true;
+  };
   form.addEventListener('submit',async event=>{
-    event.preventDefault();if(!form.reportValidity())return;
-    const button=$('travel-search-button');button.disabled=true;button.setAttribute('aria-busy','true');
+    event.preventDefault();
+    // A repeated click while an authorized paid-capable search runs must
+    // never start another request or consume an additional provider credit.
+    if(activeSupplierRequest||!form.reportValidity())return;
+    const serial=++supplierRequestSerial;
+    const button=$('travel-search-button');
+    button.disabled=true;button.setAttribute('aria-busy','true');
+    $('travel-cancel-button').hidden=false;
     status.textContent='Searching connected travel providers…';output.replaceChildren();
     showingSupplierResults=false;
     window.WayfarerNearby?.clearQuotes?.();
@@ -342,50 +353,82 @@
       groundBudget:Math.round(days*daily*100)/100,
       flightBudget:get('travel-airfare')===''?0:Number(get('travel-airfare'))
     };
-    // Bind this explicit provider request to the actual selected destination
-    // and form. Same-name cities and late responses must not cross over.
+    // Bind the authorized search to exact trip details AND source location.
     const locationAtSearch=window.WayfarerNearby?.currentLocation()??null;
     const requestStillCurrent=()=>{
       if(get('travel-origin').toUpperCase().trim()!==trip.from||
          get('travel-arrival').toUpperCase().trim()!==trip.to||
          (get('destination').trim()||get('world-query').trim())!==trip.destination||
          get('check-in')!==trip.checkIn||get('check-out')!==trip.checkOut||
-         Number(get('stay-adults'))!==trip.adults)return false;
+         Number(get('stay-adults'))!==trip.adults||
+         (get('travel-airfare')===''?0:Number(get('travel-airfare')))!==trip.flightBudget||
+         Math.round(((Number(get('days'))||3)*(Number(get('budget'))||0))*100)/100!==trip.groundBudget)
+        return false;
       if(locationAtSearch&&window.WayfarerNearby?.isCurrentLocation)
         return window.WayfarerNearby.isCurrentLocation(locationAtSearch);
       return !window.WayfarerNearby?.currentLocation?.();
     };
     try{
-      const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),25000);
-      let response;
-      try{response=await fetch('/api/travel-search',{method:'POST',headers:{'Content-Type':'application/json','X-Wayfarer-Beta-Token':get('travel-beta-code')},body:JSON.stringify({trip}),signal:ctrl.signal});}
-      finally{clearTimeout(timer)}
-      const payload=await response.json();
+      const ctrl=new AbortController();activeSupplierRequest=ctrl;
+      const timer=setTimeout(()=>ctrl.abort(),25000);
+      let response,payload;
+      try{
+        response=await fetch('/api/travel-search',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','X-Wayfarer-Beta-Token':get('travel-beta-code')},
+          body:JSON.stringify({trip}),signal:ctrl.signal
+        });
+        payload=await response.json();
+      }finally{clearTimeout(timer)}
+      // A request is obsolete even if the user restores the SAME values.
+      // Ignore late responses and don't disturb any newer search.
+      if(serial!==supplierRequestSerial)return;
       if(!response.ok||!payload.ok)throw Error(payload.error||'Provider search unavailable');
       if(!requestStillCurrent()){
-        status.textContent='Your destination or travel dates changed while providers were searching. Previous results were discarded. Search again for the current trip.';
+        status.textContent='Your travel details changed during research. Previous results were discarded. Search again for the current trip.';
         output.replaceChildren();
         return;
       }
-      status.textContent=payload.mode==='search_only'?'Google Travel search results · not confirmed inventory':'Search currently disabled · no real prices connected';
+      status.textContent=payload.mode==='search_only'?
+        'Google Travel search results · not confirmed inventory':
+        'Search currently disabled · no real prices connected';
       show(payload);
       showingSupplierResults=true;
-      // Share ONLY actual, user-requested provider results with the existing map cards.
-      // This does not start a supplier call and never invents a quote.
+      // Only actual explicit provider results may appear on nearby cards.
       window.WayfarerNearby?.applyQuotes(payload,trip,locationAtSearch);
-    }catch(err){status.textContent=err.name==='AbortError'?'Search timed out. No availability conclusion is possible.':err.message||'Search unavailable.';}
-    finally{button.disabled=false;button.removeAttribute('aria-busy');}
+    }catch(err){
+      if(serial!==supplierRequestSerial)return;
+      status.textContent=err.name==='AbortError'?
+        'Search timed out. No availability conclusion is possible.':
+        err.message||'Search unavailable.';
+    }finally{
+      if(serial===supplierRequestSerial){
+        activeSupplierRequest=null;resetSupplierControls();
+      }
+    }
   });
-  // A completed supplier quote belongs to one exact travel form. Editing
-  // it cannot leave an old price visible or silently initiate a paid lookup.
+  // Editing ANY material field or changing the mapped destination invalidates
+  // even an in-flight response. Abort client delivery; provider-side processing
+  // may already have started and cannot be guaranteed cancelled.
   const invalidateSupplierView=()=>{
-    if(!showingSupplierResults)return;
+    if(!showingSupplierResults&&!activeSupplierRequest)return false;
+    const interrupted=!!activeSupplierRequest;
+    supplierRequestSerial++;
+    activeSupplierRequest?.abort();activeSupplierRequest=null;
     showingSupplierResults=false;output.replaceChildren();
     window.WayfarerNearby?.clearQuotes?.();
-    status.textContent='Trip details changed. Previous search prices were cleared. Run a new explicit search to compare current options.';
+    resetSupplierControls();
+    status.textContent=interrupted?
+      'Trip details changed. The browser request was stopped, but the provider may already be processing it. Search again for the current trip.':
+      'Trip details changed. Previous search prices were cleared. Run a new explicit search to compare current options.';
+    return true;
   };
+  $('travel-cancel-button').addEventListener('click',()=>{
+    if(invalidateSupplierView())
+      status.textContent='Travel search cancelled in this browser. The provider may already be processing the request; no booking was created.';
+  });
   for(const id of ['travel-origin','travel-arrival','travel-airfare','check-in',
-    'check-out','stay-adults','days','budget']){
+    'check-out','stay-adults','days','budget','destination','world-query']){
     $(id)?.addEventListener('input',invalidateSupplierView);
     $(id)?.addEventListener('change',invalidateSupplierView);
   }
