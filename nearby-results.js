@@ -10,7 +10,7 @@
     .replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
   const safeUrl=value=>{
     try{const url=new URL(value);return url.protocol==='https:'&&
-      ['www.openstreetmap.org','ourairports.com','www.ourairports.com'].includes(url.hostname)?url.href:null;
+      ['www.openstreetmap.org','ourairports.com','www.ourairports.com','www.wikidata.org'].includes(url.hostname)?url.href:null;
     }catch{return null;}
   };
   const validMoney=value=>typeof value==='number'||typeof value==='string'
@@ -67,8 +67,9 @@
     const distance=Number(item.distanceKm);
     const source=String(item.source||'Map reference');
     const code=type==='airport'&&/^[A-Z]{3}$/.test(item.iata||'')?' · '+item.iata:'';
+    const locality=[item.city,item.countryCode].filter(Boolean).join(', ');
     facts.textContent=(Number.isFinite(distance)&&distance>=0?distance.toFixed(1)+' km straight-line':'Distance unavailable')+
-      code+' · '+source;
+      code+(locality?' · '+locality:'')+' · '+source;
     if(type==='airport'&&code)card.dataset.airportIata=item.iata;
     content.append(heading,facts);top.append(content);
     const price=make('div','wf-nearby-price'),quote=quoteFor(item,type);
@@ -86,7 +87,7 @@
     card.append(top,price);
     const actions=make('div','wf-nearby-actions');
     const details=safeUrl(item.url);
-    if(details){const link=make('a','wf-nearby-map','View location ↗');link.href=details;
+    if(details){const link=make('a','wf-nearby-map',details.includes('wikidata.org')?'View source ↗':'View location ↗');link.href=details;
       link.target='_blank';link.rel='noopener noreferrer';actions.append(link);}
     const button=make('button','wf-nearby-compare',type==='hotel'?'Compare stay prices ↗':'Compare flights ↗');
     button.type='button';button.addEventListener('click',()=>navResearch(type==='airport'?item.iata:null));
@@ -105,6 +106,10 @@
     const seq=++loadSeq;
     controller?.abort();controller=new AbortController();
     chosen=Number.isFinite(place?.latitude)&&Number.isFinite(place?.longitude)?{...place}:null;
+    const locationLabel=$('nearby-context');
+    if(locationLabel)locationLabel.textContent=chosen?
+      'Showing location references near '+chosen.name+(chosen.country?', '+chosen.country:'')+'. Distances are straight-line estimates. Prices require a separate search.':
+      'Select a mapped destination to see available regional references.';
     quotes=null;items={airports:[],hotels:[]};
     if(!chosen){status(airports,'Select a destination with verified map coordinates.');
       status(hotels,'Choose a mapped destination to discover nearby stays.');return;}
