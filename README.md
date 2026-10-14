@@ -262,6 +262,22 @@ Hotel/airline prices **are never generated from maps, fixed sample rates, or the
 
 Code: `nearby-results.js`, `api/explore.js`, `premium-app.js`, `travel-research.js`, `premium-refinement.css`. Regression cases: `tests/nearby-results.test.mjs`. **Provider search quota and private-beta gates are unchanged; zero mandatory-cost MVP, no automatic supplier calls, no deployment to Production without approval.**
 
+### Stage 22 — Worldwide named destination, airport and stay references (draft)
+
+The existing directory contains **250 country/territory records** and **1,000 bundled airport references representing 233 country/territory codes**. This update preserves searchable worldwide countries, real selected-destination coordinates and source labels. Nearby airports use actual geographic distance from public OurAirports references and OpenStreetMap where available; the Vercel build runs `npm run build` to refresh the public-domain, IATA-coded airport index from the full OurAirports CSV. If upstream retrieval fails, the checked-in 1,000-airport fallback remains intact. A current complete index can include thousands of additional airports, including cities absent from the fallback; there is no implication of scheduled flights, ground transfer times, or IATA validation beyond the contributed reference.
+
+The worldwide hotel discovery pipeline now has three **independent and source-transparent** paths:
+
+1. **OpenStreetMap Overpass** public map geometry and named hotel records (best effort; can be rate limited).
+2. **Wikidata CC0 hotel entities** within a 25 km geographic search when public Overpass does not return named hotels. Only geographically located items explicitly typed as a hotel are accepted. Place labels, approximate straight-line distances and Wikidata source links are shown, not invented reviews or inventory. Lookups time out and are cached in memory for up to 24 hours to avoid repeated public-endpoint demand.
+3. Narrow dated **Sigiriya OpenStreetMap snapshot** already approved for user-visible fallback. Never displayed outside the Sigiriya region.
+
+These sources do **not** guarantee a hotel listing in every city. In areas without source records, the UI states that data is unavailable rather than fabricating hotel names. Public provider usage is best-effort and not an operational SLA. A production-scale, high-throughput commercial service should use a licensed supplier or self-hosted map extract rather than rely on open community query endpoints.
+
+Airport cards now label available municipality and ISO country code, while the discovery header shows the user's selected destination and country. Wikidata details open HTTPS WikiData URLs using the existing safe-link allowlist. After a traveler **explicitly authorizes** a protected hotel-price search, returned valid provider hotel names can appear as separate named cards even if no OpenStreetMap hotel record is available. Those supplier-only cards show **Distance unavailable** (not fabricated map coordinates), supplier source and checked price totals, and automatically disappear or lose their quotes if the destination, dates, or guest count changes. No automatic billing/booking calls are introduced. The existing supplier search remains beta-authenticated and explicit, and only valid matched fares/totals appear after a real provider response. `tests/worldwide-hotel-sources.test.mjs` covers Paris, Tokyo, Cape Town, Sydney and San Francisco plus bad data, geometry validation and cross-source fallback.
+
+**Limitations:** all countries can be *searched*, but complete hotel names, price quotes, live routes, local services, photos, restaurant menus and availability worldwide cannot be guaranteed at zero operating cost. Do not present source-backed reference records as confirmed rates or real-time inventory.
+
 ## Run and test
 
 Install Node.js 20+ from its official distribution. No package install, API key, environment variable, card or build dependency is needed.
