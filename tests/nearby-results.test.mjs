@@ -613,6 +613,8 @@ test('warm cached references show explicit public cache provenance with no extra
 
 test('actual DOM declares one polite nearby progress region and sensible initial loading semantics',()=>{
   assert.match(html,/id="nearby-progress"[^>]+role="status" aria-live="polite" aria-atomic="true"/);
+  assert.ok(html.indexOf('id="nearby-progress"')<html.indexOf('id="nearby" aria-busy="false"'),
+    'Live status belongs outside busy results to announce incremental airport and hotel progress');
   assert.match(html,/id="airport-list" aria-busy="false"/);
   assert.match(html,/id="hotel-list" aria-busy="false"/);
   assert.match(css,/\.wf-nearby-progress/);
