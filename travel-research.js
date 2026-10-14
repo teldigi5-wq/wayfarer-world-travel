@@ -270,6 +270,32 @@
     handoff.append(hotelLink,note);card.append(handoff);
     return card;
   }
+  // Only source-returned, positive, USD-denominated quoted totals are comparable.
+  // Unknown currency, missing values and invalid amounts sort after real quotes.
+  const comparableQuote=(offer,kind)=>{
+    const value=offer?.[kind==='flight'?'estimatedGroup':'displayedTotal'];
+    if(offer?.currency!=='USD'||typeof value!=='string'||
+      !/^\d+\.\d{2}$/.test(value))return null;
+    const amount=Number(value);
+    return Number.isFinite(amount)&&amount>0&&amount<10000000?amount:null;
+  };
+  function sortSourceOffers(offers,kind,sortKey='price'){
+    const rows=Array.isArray(offers)?offers.slice():[];
+    const number=x=>comparableQuote(x,kind)??Infinity;
+    const diff=(x,y)=>Number.isNaN(x-y)?0:x-y;
+    const metric=(x,k)=>Number.isFinite(x?.[k])&&x[k]>=0?x[k]:Infinity;
+    return rows.sort((a,b)=>{
+      if(sortKey==='name'&&kind==='hotel')
+        return String(a?.name||'').localeCompare(String(b?.name||''));
+      if(sortKey==='duration'&&kind==='flight')
+        return diff(metric(a,'totalDurationMinutes'),metric(b,'totalDurationMinutes'))||
+          diff(number(a),number(b));
+      if(sortKey==='stops'&&kind==='flight')
+        return diff(metric(a,'stopCount'),metric(b,'stopCount'))||
+          diff(number(a),number(b));
+      return diff(number(a),number(b));
+    });
+  }
   function resultPanel(title,obj,kind){
     const article=word('section','','travel-search-card wf-compare-panel');
     const head=word('div','','wf-compare-panel-head');
@@ -292,15 +318,7 @@
       }
       sortBox.append(text,select);head.append(sortBox);
       const render=()=>{
-        const sorted=[...records].sort((a,b)=>{
-          if(select.value==='name')return (a.name||'').localeCompare(b.name||'');
-          if(select.value==='duration')return (a.totalDurationMinutes??Infinity)-(b.totalDurationMinutes??Infinity)||
-            Number(a.estimatedGroup)-Number(b.estimatedGroup);
-          if(select.value==='stops')return (a.stopCount??Infinity)-(b.stopCount??Infinity)||
-            Number(a.estimatedGroup)-Number(b.estimatedGroup);
-          return Number(kind==='flight'?a.estimatedGroup:a.displayedTotal)-
-            Number(kind==='flight'?b.estimatedGroup:b.displayedTotal);
-        });
+        const sorted=sortSourceOffers(records,kind,select.value);
         list.replaceChildren(...sorted.map((offer,i)=>kind==='flight'?
           flightOfferCard(offer,i):hotelOfferCard(offer,i)));
       };
@@ -315,18 +333,16 @@
   // options. Flight quotes here are outbound group estimates; hotel quotes
   // are stay search totals. Combining them would imply a fictitious trip fare.
   function researchSnapshot(res){
-    const summarize=(panel,field)=>{
+    const summarize=(panel,kind)=>{
       const offers=panel?.status==='search_results'&&Array.isArray(panel.offers)?
         panel.offers:[];
-      const amounts=offers.filter(x=>x?.currency==='USD'&&
-        typeof x[field]==='string'&&/^\d+\.\d{2}$/.test(x[field]))
-        .map(x=>Number(x[field]))
-        .filter(x=>Number.isFinite(x)&&x>0&&x<10000000);
-      return {count:offers.length,lowest:amounts.length?Math.min(...amounts):null};
+      const amounts=offers.map(x=>comparableQuote(x,kind)).filter(x=>x!==null);
+      return {count:amounts.length,returned:offers.length,
+        lowest:amounts.length?Math.min(...amounts):null};
     };
     return {
-      outbound:summarize(res?.flights,'estimatedGroup'),
-      stays:summarize(res?.hotels,'displayedTotal'),
+      outbound:summarize(res?.flights,'flight'),
+      stays:summarize(res?.hotels,'hotel'),
       checkedAt:res?.checkedAt||null,
       source:res?.source||'Provider source not supplied'
     };
