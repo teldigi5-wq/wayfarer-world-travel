@@ -351,6 +351,16 @@ Regression tests `tests/worldwide-source-coordinator.test.mjs` cover public quer
 
 **QA:** `tests/journey-integrity.test.mjs` checks preserving distinct worldwide journeys and replacing the exact same place. `tests/nearby-results.test.mjs` checks removal of stale indicative flight/hotel prices and destination-change invalidation. Release requires green GitHub checks, an exact-commit Vercel Preview, and manual 390/768/1440px navigation, saved-trip resume and quote-change QA before any Production promotion.
 
+### Stage 30 — geographically isolated Arrival readiness and truthful completion (draft)
+
+The Arrival Companion's original private checklist was stored using only `destination + ':' + checklistItem`. This could mistakenly show personal preparation as complete when the traveler moved from **Paris, France to Paris, Texas**, or between two cities with the same name in one country. Source-backed global travel must never reuse such completion across different places.
+
+`journey-integrity.js` now owns `checklistKey()` and `checklistChecked()`. Readiness state is namespaced by the same canonical **name + country + verified coordinates** identity used for saved trips, with a `arrival-v3:` prefix inside existing local-only `wf-checks-v2` storage. Local progress is not uploaded. Legacy city-name-only values are accepted **only for the original curated Kyoto, Bali and Switzerland references** when their country and static geocoordinates match; ambiguous worldwide cities are deliberately not migrated. Values must be boolean `true`, and unrecognized checklist item names cannot generate arbitrary keys.
+
+The 100% status explicitly describes **four personal preparation reminders marked**, not that visas, entry clearance, reservations, transfers or payments have been verified. Underlying checklist items and their user-controlled semantics are unchanged.
+
+`tests/arrival-checklist-geography.test.mjs` runs real Arrival UI logic in a browser-style VM with 0→25→100% checks and switching between same-name destinations; it also covers legacy migration, invalid keys and source-truthful copy. CI, real-browser focus/responsive checks and an exact-head Vercel Preview remain required before any Production release. This is a draft stacked on Stage 29; no paid APIs, secrets or Production deployment.
+
 ## Run and test
 
 Install Node.js 20+ from its official distribution. No package install, API key, environment variable, card or build dependency is needed.
