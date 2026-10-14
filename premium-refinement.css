@@ -399,3 +399,23 @@
  #studio .wf-map-studio *,#studio .wf-map-studio *:before,#studio .wf-map-studio *:after{
  transition:none!important;animation:none!important;}
 }
+
+#studio .wf-map-insights{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+ gap:8px;margin:0 2px 10px;}
+#studio .wf-map-insight{display:flex;flex-direction:column;gap:5px;min-width:0;
+ background:rgba(245,242,227,.055);border:1px solid rgba(237,218,181,.15);
+ padding:11px;border-radius:8px;}
+#studio .wf-map-insight span{font:700 .6rem/1.5 'DM Sans',sans-serif;
+ letter-spacing:.08em;color:#e9c996;}
+#studio .wf-map-insight strong{font:600 .76rem/1.45 'DM Sans',sans-serif;
+ color:#f4f2e8;overflow-wrap:anywhere;}
+#studio .wf-airline-direct{display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+ padding:13px 16px;margin:12px 0;background:rgba(242,230,200,.08);
+ border:1px solid rgba(229,206,168,.28);border-radius:10px;}
+#studio .wf-airline-direct-title{color:#f2e3c6;font-weight:700;}
+#studio .wf-airline-direct-link{display:inline-flex;align-items:center;justify-content:center;
+ min-height:44px;padding:8px 14px;border-radius:8px;text-decoration:none;
+ color:#142e23;background:#e6ca99;font-weight:700;}
+#studio .wf-airline-direct-link:focus-visible{outline:3px solid #e6c692;outline-offset:3px;}
+#studio .wf-airline-direct-note{flex:1 1 100%;font-size:.77rem;line-height:1.65;color:#d4e3d6;}
+@media(max-width:750px){#studio .wf-map-insights{grid-template-columns:minmax(0,1fr)}}
