@@ -264,7 +264,7 @@ Code: `nearby-results.js`, `api/explore.js`, `premium-app.js`, `travel-research.
 
 ### Stage 22 — Worldwide named destination, airport and stay references (draft)
 
-The existing directory contains **250 country/territory records** and **1,000 bundled airport references representing 233 country/territory codes**. This update preserves searchable worldwide countries, real selected-destination coordinates and source labels. Nearby airports use actual geographic distance from public OurAirports references and OpenStreetMap where available; there is no implication of scheduled flights, ground transfer times, or IATA validation beyond the contributed reference.
+The existing directory contains **250 country/territory records** and **1,000 bundled airport references representing 233 country/territory codes**. This update preserves searchable worldwide countries, real selected-destination coordinates and source labels. Nearby airports use actual geographic distance from public OurAirports references and OpenStreetMap where available; the Vercel build runs `npm run build` to refresh the public-domain, IATA-coded airport index from the full OurAirports CSV. If upstream retrieval fails, the checked-in 1,000-airport fallback remains intact. A current complete index can include thousands of additional airports, including cities absent from the fallback; there is no implication of scheduled flights, ground transfer times, or IATA validation beyond the contributed reference.
 
 The worldwide hotel discovery pipeline now has three **independent and source-transparent** paths:
 
