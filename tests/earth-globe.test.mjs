@@ -138,7 +138,7 @@ test('CORS/load failures retain the existing World Explorer and do not trigger a
   assert.equal(f.ids['wf-earth-fallback'].hidden,true,'Try the public CORS mirror before using a flat fallback');
   f.images[0].onerror();
   assert.equal(f.ids['wf-earth-fallback'].hidden,false);
-  assert.match(f.ids['wf-earth-status'].textContent,/browser blocked projected Earth/);
+  assert.match(f.ids['wf-earth-status'].textContent,/blocked both projected Earth images/);
   assert.equal(f.images.length,1,'Fallback image belongs to the local DOM, not another Image-loader');
   const cfg=JSON.parse(read('vercel.json'));
   const policy=cfg.headers[0].headers.find(x=>x.key==='Content-Security-Policy').value;
