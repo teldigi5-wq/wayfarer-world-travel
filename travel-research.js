@@ -317,6 +317,16 @@
     grid.append(resultPanel('Flight comparison',res.flights,'flight'),
       resultPanel('Hotel comparison',res.hotels,'hotel'));
     output.append(grid);
+    const area=res.hotelSearchContext;
+    if(area&&typeof area.destination==='string'){
+      const scoped=area.countryName?
+        area.destination+', '+area.countryName:
+        area.destination+' (country not selected)';
+      output.append(word('p','HOTEL SEARCH AREA · '+scoped+
+        (area.coordinateScoped?' · mapped coordinates included':' · geographic precision unverified')+
+        '. This is a provider search hint, not independent verification of hotel addresses, availability or rates.',
+        'wf-hotel-search-context'));
+    }
     const extras=word('div','','wf-other-research');
     extras.append(panel('Restaurants & meals',res.food,()=>itemCard('No price feed',
       'Consult restaurant menus directly','No AI-generated menu prices')),
