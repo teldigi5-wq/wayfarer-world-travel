@@ -130,35 +130,55 @@
     const seq=++loadSeq;
     controller?.abort();controller=new AbortController();
     chosen=Number.isFinite(place?.latitude)&&Number.isFinite(place?.longitude)?{...place}:null;
-    const locationLabel=$('nearby-context');
-    if(locationLabel)locationLabel.textContent=chosen?
+    const label=$('nearby-context');
+    if(label)label.textContent=chosen?
       'Showing location references near '+chosen.name+(chosen.country?', '+chosen.country:'')+'. Distances are straight-line estimates. Prices require a separate search.':
       'Select a mapped destination to see available regional references.';
     quotes=null;items={airports:[],hotels:[]};
     if(!chosen){status(airports,'Select a destination with verified map coordinates.');
       status(hotels,'Choose a mapped destination to discover nearby stays.');return;}
     nearby.classList.add('world-loading');
-    status(airports,'Finding named airports and their distances…');
-    status(hotels,'Finding mapped hotels around '+chosen.name+'…');
-    try{
-      const q=new URLSearchParams({mode:'nearby',lat:chosen.latitude,lon:chosen.longitude});
-      const response=await fetch('/api/explore?'+q,{signal:controller.signal});
-      const payload=await response.json();
-      if(!response.ok||!payload.ok)throw Error('Nearby map lookup unavailable');
-      if(seq!==loadSeq)return;
-      const filter=(entries,max)=>Array.isArray(entries)?entries.filter(x=>x&&typeof x.name==='string'&&x.name.trim()
-        &&Number.isFinite(x.distanceKm)&&x.distanceKm>=0).slice(0,max):[];
-      items={airports:filter(payload.airports,8),hotels:filter(payload.hotels,10)};
-      render();
-      if(!payload.mapAvailable&&!items.hotels.length){
-        status(hotels,'The public hotel map service is temporarily unavailable. Hotel names and prices cannot be verified here.');
+    status(airports,'Preparing nearby airport references…');
+    status(hotels,'Researching sourced hotel locations…');
+    const filter=(entries,max)=>Array.isArray(entries)?entries.filter(x=>x&&typeof x.name==='string'&&x.name.trim()
+      &&Number.isFinite(x.distanceKm)&&x.distanceKm>=0).slice(0,max):[];
+    const coords={lat:chosen.latitude,lon:chosen.longitude};
+    let fullApplied=false;
+    const quick=(async()=>{
+      try{
+        const response=await fetch('/api/explore?'+new URLSearchParams({mode:'airports',...coords}),{signal:controller.signal});
+        if(!response.ok)throw Error('Airport reference failed');
+        const d=await response.json();
+        if(seq!==loadSeq||fullApplied||!d.ok)return;
+        items.airports=filter(d.airports,8);
+        if(items.airports.length)airports.replaceChildren(...items.airports.map(x=>renderCard(x,'airport')));
+        else status(airports,'No nearby coded airports found in the bundled reference.');
+      }catch(e){
+        if(seq===loadSeq&&!fullApplied&&e.name!=='AbortError')
+          status(airports,'Checking regional airport references…');
       }
-    }catch(err){
-      if(seq!==loadSeq||err.name==='AbortError')return;
-      status(airports,'Airport references are temporarily unavailable; use the travel-search workspace to compare routes.');
-      status(hotels,'Hotel map data is temporarily unavailable. Prices and room availability cannot be assumed.');
-    }finally{if(seq===loadSeq)nearby.classList.remove('world-loading');}
+    })();
+    const detailed=(async()=>{
+      try{
+        const response=await fetch('/api/explore?'+new URLSearchParams({mode:'nearby',...coords}),{signal:controller.signal});
+        if(!response.ok)throw Error('Nearby discovery unavailable');
+        const d=await response.json();
+        if(seq!==loadSeq||!d.ok)return;
+        fullApplied=true;
+        items={airports:filter(d.airports,8),hotels:filter(d.hotels,10)};
+        render();
+        if(!d.mapAvailable&&!items.hotels.length){
+          status(hotels,'Public hotel records are unavailable for this area. An optional protected supplier search may provide named stays.');
+        }
+      }catch(e){
+        if(seq!==loadSeq||e.name==='AbortError')return;
+        status(hotels,'Hotel discovery temporarily unavailable. No names, prices or room availability have been inferred.');
+      }
+    })();
+    await Promise.allSettled([quick,detailed]);
+    if(seq===loadSeq)nearby.classList.remove('world-loading');
   }
+
   function applyQuotes(payload,trip){
     quotes={payload,trip};
     if(chosen)render();
