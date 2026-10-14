@@ -120,9 +120,18 @@ function renderTrips(){
   const prepare=document.createElement('button');prepare.type='button';prepare.className='wf-trip-action';prepare.textContent='Arrival plan →';
   const remove=document.createElement('button');remove.type='button';remove.className='wf-trip-action remove';remove.textContent='Remove';
   const resumeTrip=(goToArrival=false)=>{
-    $('#days').value=String(Math.max(1,Math.min(30,Number(t.days)||3)));
-    $('#budget').value=String(Math.max(25,Math.min(1000000,Number(t.budget)||180)));
-    $('#pace').value=['balanced','slow','active'].includes(t.pace)?t.pace:$('#pace').value;
+    // Older saves may predate the current 3/5/7-day and USD 25–2,500 planner.
+    // Restore only supported values rather than leaving dropdowns blank.
+    const savedDays=Number(t.days),lengths=[3,5,7];
+    const days=lengths.reduce((best,n)=>Math.abs(n-savedDays)<Math.abs(best-savedDays)?n:best,3);
+    const savedBudget=Number(t.budget),budget=Number.isFinite(savedBudget)&&savedBudget>0?
+      Math.max(25,Math.min(2500,savedBudget)):180;
+    $('#days').value=String(days);
+    $('#budget').value=String(budget);
+    const paceMap={'Slow & considered':'Slow & considered','Balanced':'Balanced',
+      'Full & energetic':'Full & energetic',slow:'Slow & considered',balanced:'Balanced',
+      active:'Full & energetic',Slow:'Slow & considered',Active:'Full & energetic'};
+    $('#pace').value=paceMap[t.pace]||'Balanced';
     worldSelection=globalThis.WayfarerJourneyIntegrity?.resolveSavedWorldPlace(t)??null;
     if(!Number.isFinite(worldSelection?.latitude)||!Number.isFinite(worldSelection?.longitude)){
       const info=document.createElement('p');info.className='world-empty';
