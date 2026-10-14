@@ -419,3 +419,65 @@
 #studio .wf-airline-direct-link:focus-visible{outline:3px solid #e6c692;outline-offset:3px;}
 #studio .wf-airline-direct-note{flex:1 1 100%;font-size:.77rem;line-height:1.65;color:#d4e3d6;}
 @media(max-width:750px){#studio .wf-map-insights{grid-template-columns:minmax(0,1fr)}}
+
+/* Stage 26 — worldwide source-backed destination intelligence */
+#studio #wf-destination-intelligence[hidden]{display:none!important;}
+#studio .wf-intelligence{
+ margin:23px 0 27px;padding:clamp(18px,2.7vw,32px);color:#f8f4e9;
+ background:linear-gradient(135deg,#0b3028,#124538 70%,#0a3229);
+ border:1px solid rgba(221,196,146,.3);border-radius:17px;
+ box-shadow:0 15px 45px rgba(5,34,25,.1);
+}
+#studio .wf-intelligence-heading{display:flex;align-items:center;justify-content:space-between;
+ gap:18px;margin-bottom:18px;}
+#studio .wf-intelligence-heading h3{margin:8px 0;color:#fff7e9;
+ font:500 clamp(1.9rem,3vw,2.8rem)/1.13 'Cormorant Garamond',Georgia,serif;
+ letter-spacing:-.03em;max-width:22ch;}
+#studio .wf-intelligence-heading p{font:.85rem/1.68 'DM Sans',sans-serif;color:#cedfd5;max-width:54ch;}
+#studio .wf-intelligence-label{color:#ead1a1;font:700 .64rem/1.5 'DM Sans',sans-serif;
+ letter-spacing:.09em;min-width:165px;text-align:right;}
+#studio .wf-intelligence-facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;}
+#studio .wf-intelligence-fact{display:flex;flex-direction:column;gap:7px;
+ padding:14px;background:rgba(253,250,239,.075);border:1px solid rgba(237,223,194,.19);
+ border-radius:10px;min-height:101px;min-width:0;}
+#studio .wf-intelligence-fact>span{color:#eccf9d;font:700 .64rem/1.5 'DM Sans',sans-serif;
+ letter-spacing:.08em;}
+#studio .wf-intelligence-fact strong{color:#fff6e8;font:600 .85rem/1.55 'DM Sans',sans-serif;
+ overflow-wrap:anywhere;}
+#studio .wf-intelligence-content{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+ gap:22px;margin-top:25px;}
+#studio .wf-intelligence-content h4{margin:0 0 12px;color:#f8edda;font:700 1.01rem 'DM Sans',sans-serif;}
+#studio .wf-intelligence-gateways{display:grid;gap:8px;}
+#studio .wf-intelligence-gateway{display:flex;justify-content:space-between;align-items:center;
+ gap:10px;padding:13px;background:rgba(5,30,23,.32);border:1px solid rgba(229,207,164,.21);
+ border-radius:10px;}
+#studio .wf-intelligence-gateway>div{display:flex;flex-direction:column;gap:5px;min-width:0;}
+#studio .wf-intelligence-gateway strong{font:600 .83rem/1.35 'DM Sans',sans-serif;color:#fff7ec;
+ overflow-wrap:anywhere;}
+#studio .wf-intelligence-gateway small{font:.73rem/1.4 'DM Sans',sans-serif;color:#c9ddd0;}
+#studio .wf-intelligence-compare{flex-shrink:0;min-height:44px;max-width:160px;
+ color:#173d2f;background:#e5cc9f;border:1px solid #e5cc9f;
+ border-radius:8px;padding:8px 11px;font:700 .75rem/1.4 'DM Sans',sans-serif;}
+#studio .wf-intelligence-compare:hover{background:#f4dfbb;}
+#studio .wf-intelligence-compare:focus-visible{outline:3px solid #f4dfbb;outline-offset:3px;}
+#studio .wf-intelligence-guidance{display:grid;gap:8px;}
+#studio .wf-intelligence-guidance p{margin:0;padding:9px 0 9px 13px;
+ border-left:2px solid rgba(224,200,155,.65);
+ color:#d7e4da;font:.79rem/1.65 'DM Sans',sans-serif;}
+#studio .wf-intelligence-foot{margin:17px 0 0;padding-top:12px;border-top:1px solid rgba(232,213,175,.22);
+ color:#bacfc2;font:.72rem/1.6 'DM Sans',sans-serif;}
+#studio .wf-intelligence-pending{color:#e3d8bd;}
+@media(max-width:850px){
+ #studio .wf-intelligence-facts{grid-template-columns:repeat(2,minmax(0,1fr));}
+ #studio .wf-intelligence-content{grid-template-columns:minmax(0,1fr);}
+ #studio .wf-intelligence-heading{flex-direction:column;align-items:flex-start;}
+ #studio .wf-intelligence-label{min-width:0;text-align:left;}
+}
+@media(max-width:560px){
+ #studio .wf-intelligence-facts{grid-template-columns:minmax(0,1fr);}
+ #studio .wf-intelligence-gateway{flex-wrap:wrap;}
+ #studio .wf-intelligence-compare{max-width:none;width:100%;}
+}
+@media(prefers-reduced-motion:reduce){
+ #studio .wf-intelligence *{transition:none!important;animation:none!important;}
+}
