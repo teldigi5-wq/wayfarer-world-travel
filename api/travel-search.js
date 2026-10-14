@@ -80,7 +80,7 @@ function fit(total,budget){return !budget?'budget_not_set':total<=budget?'within
 function flightsFrom(data,t,checkedAt,secret){
   const entries=[...(Array.isArray(data.best_flights)?data.best_flights:[]),...(Array.isArray(data.other_flights)?data.other_flights:[])];
   const offers=entries.slice(0,12).map(item=>{
-    if(!numMoney(item.price)||!Array.isArray(item.flights)||item.flights.length<1||item.flights.length>6)return null;
+    if(!numMoney(item.price)||!Array.isArray(item.flights)||item.flights.length<1||item.flights.length>6||item.flights.some(x=>!x||typeof x!=='object'))return null;
     const segments=item.flights.slice(0,6).map(f=>({
       airline:clean(f.airline,70),number:clean(f.flight_number,20),
       from:clean(f.departure_airport?.id,3),to:clean(f.arrival_airport?.id,3),
