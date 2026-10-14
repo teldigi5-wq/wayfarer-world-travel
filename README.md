@@ -379,6 +379,14 @@ The implementation changes only the first-party browser script `travel-research.
 
 Release gating: full GitHub CI must pass, a Vercel Preview must be built from the exact passing SHA, then the controls and disclosures need mobile/desktop keyboard and screen-reader QA. No Production merge or supplier search without explicit approval.
 
+### Stage 33 — local travel dates and source-fresh Arrival Companion (draft)
+
+World travelers must not see the wrong checkout date or expired source readings. The planner previously formatted hotel check-in/out defaults with `Date.toISOString().slice(0,10)`, which formats in **UTC**, not the visitor's local calendar. Near midnight, this can place a traveler on the wrong day depending on timezone. Stage 33 uses native local year/month/day fields, a local-noon checkout increment for daylight-saving safety, and updates the minimum checkout date when the traveler changes check-in. If the earlier checkout is no longer valid it is clamped to the next local day. Client-side controls remain subject to the existing server-side strict ISO date validation and explicit, beta-protected supplier search.
+
+Arrival's public weather and country facts now carry a **destination/source-freshness identity**, including city, ISO country/label and map coordinates. The existing destination switch already reset research, but if a tab remained open for a long period it could continue to display increasingly aged weather. Accepted source research is now attributed to the current geographic identity and shown in Arrival only for up to **30 minutes** from this browser's accepted response. After that it shows an explicit **refresh needed** state rather than old conditions as current. It never refreshes automatically (no extra LLM/paid/provider calls), does not assert visas, flight operations, booking availability, or taxes are verified, and does not persist source readings to local storage. Intentional cancellation of a repeat research run keeps still-fresh previous context; changing the journey invalidates readings immediately.
+
+`tests/arrival-source-and-local-dates.test.mjs` executes actual Arrival functions in VM and tests different-country same-name cities, expiry, invalidation and preservation on cancel; separate subprocesses under **Pacific/Kiritimati** and **America/Los_Angeles** validate date defaults near UTC midnight and checkout day constraints. All normal GitHub checks plus a matching Vercel Preview and manual mobile/desktop browser review are mandatory before any Production promotion. This is a stacked draft, no subscriptions, billing or new provider keys.
+
 ## Run and test
 
 Install Node.js 20+ from its official distribution. No package install, API key, environment variable, card or build dependency is needed.
