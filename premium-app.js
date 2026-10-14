@@ -53,6 +53,21 @@ const esc=v=>String(v??'—').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>'
    $('#agent-log').textContent='Your travel brief changed while research was running. The earlier result was discarded; run research again for the new details.';
    return false;
  }
+ // Stage 48: an upstream briefing reporting a different mapped location
+ // must never contaminate this trip's Arrival Companion or exported draft.
+ // Older responses without the new provenance envelope remain supported.
+ if(d.location){
+   const loc=d.location,selectedPlace=worldSelection;
+   const validReported=typeof loc.latitude==='number'&&
+     Number.isFinite(loc.latitude)&&typeof loc.longitude==='number'&&
+     Number.isFinite(loc.longitude);
+   if(!validReported||!selectedPlace||
+      !Number.isFinite(selectedPlace.latitude)||!Number.isFinite(selectedPlace.longitude)||
+      Math.abs(loc.latitude-selectedPlace.latitude)>0.00001||
+      Math.abs(loc.longitude-selectedPlace.longitude)>0.00001||
+      (selectedPlace.countryCode&&loc.countryCode!==selectedPlace.countryCode))
+     throw Error('The source response belongs to a different mapped location. Refresh the selected destination.');
+ }
  agentData=d;arrivalResearchIdentity=currentArrivalIdentity();arrivalResearchAt=Date.now();[['place','place'],['climate','weather'],['country','country']].forEach(([widget,key])=>{const ok=d[key]?.ok===true;$('#agent-'+widget).className=ok?'agent done':'agent';$('#agent-'+widget+' p').textContent=ok?(widget==='place'&&d.place?.geographyVerified!==true?
   'Name-only source · geographic identity unverified':'Sourced context received'):
   'Source unavailable · continuing with other agents';});$('#agent-ai').className=d.ai?.ok?'agent done':'agent';$('#agent-ai p').textContent=d.ai?.ok?'AI draft created · verify before use':(d.ai?.error||'AI unavailable · local plan retained');const w=d.weather||{},p=d.place||{},c=d.country||{};$('#agent-log').innerHTML=`<div><strong>Climate Agent</strong>${w.ok?`${esc(w.temperature)} °C · wind ${esc(w.wind)} km/h<br><a href="${esc(w.sourceUrl)}" target="_blank">Open-Meteo ↗</a>`:'Unavailable'}</div><div><strong>Destination Agent</strong>${p.ok?`${esc(p.extract)}<br><a href="${esc(p.sourceUrl)}" target="_blank">Wikipedia ↗</a>`:'Unavailable'}</div><div><strong>Country Agent</strong>${c.ok?`${esc(c.currency)} · ${esc(c.language)}<br><a href="${esc(c.sourceUrl)}" target="_blank">REST Countries ↗</a>`:'Unavailable'}</div>`;
@@ -88,7 +103,38 @@ $('#agent-log').append(note)}if(d.ai?.ok&&Array.isArray(d.ai.days)){const days=d
      agentRequestController=null;btn.disabled=false;btn.textContent='Run AI journey ↗';$('#cancel-agents').hidden=true;
    }
  }}$('#run-agents').onclick=runAgents;$('#cancel-agents').onclick=cancelAgentResearch;
-$('#save-trip').onclick=()=>{trips=globalThis.WayfarerJourneyIntegrity.upsertJourney(trips,{destination:selected,country:worldSelection?.country||'',worldPlace:worldSelection?.name===selected?{name:worldSelection.name,country:worldSelection.country,countryCode:worldSelection.countryCode,latitude:worldSelection.latitude,longitude:worldSelection.longitude}:null,days:Number($('#days').value),budget:Number($('#budget').value),pace:$('#pace').value,savedAt:new Date().toISOString()});store('wf-trips-v2',trips);toast('Journey saved on this device.')};const arrivalChecklistTrip=()=>({destination:selected,country:worldSelection?.name===selected?worldSelection.country:'',worldPlace:worldSelection?.name===selected?worldSelection:null});function arrival(){const d=destinations.find(x=>x.name===selected),fallback=destinations[0];$('#arrival-image').src=d?.arrival||'wayfarer-hero-v3.jpg';$('#arrival-image').alt='Illustrative travel scene for '+selected;$('#arrival-title').textContent='Welcome to '+selected+'.';const country=worldSelection?.name===selected?worldSelection.country:(d?.country||'');$('#arrival-context-destination').textContent=selected+(country&&country!==selected?', '+country:'');$('#arrival-context-duration').textContent=(Number($('#days').value)||3)+' days';$('#arrival-context-budget').textContent='USD '+((Number($('#days').value)||3)*(Number($('#budget').value)||180)).toLocaleString('en-US',{maximumFractionDigits:0})+' planned';$('#arr-tip').textContent=d?.tip||'Confirm local customs, entry requirements and transport details with official sources before travel.';$$('[data-check]').forEach(c=>c.checked=!!globalThis.WayfarerJourneyIntegrity?.checklistChecked(checks,arrivalChecklistTrip(),c.dataset.check));readiness();
+function captureItineraryDraft(){
+ const root=$('#itinerary');
+ const days=[...root.querySelectorAll('article.day')].map(day=>({
+   title:day.querySelector('h3')?.textContent||'',
+   summary:day.querySelector('p')?.textContent||''
+ }));
+ const status=$('#plan-status').textContent;
+ return globalThis.WayfarerJourneyIntegrity?.normalizeItineraryDraft({
+   basis:status==='Groq AI itinerary'||status==='Saved AI draft'?'ai-draft':'sample',
+   title:$('#itinerary-title').textContent,days
+ },Number($('#days').value))??null;
+}
+function restoreItineraryDraft(saved,expectedDays){
+ const draft=globalThis.WayfarerJourneyIntegrity?.normalizeItineraryDraft(saved,expectedDays);
+ if(!draft)return false;
+ const root=$('#itinerary');root.replaceChildren();
+ draft.days.forEach((day,index)=>{
+   const article=document.createElement('article');article.className='day';
+   const badge=document.createElement('span');
+   badge.textContent='DAY '+String(index+1).padStart(2,'0')+
+     (draft.basis==='ai-draft'?' · SAVED AI DRAFT':' · SAVED SAMPLE');
+   const title=document.createElement('h3');title.textContent=day.title;
+   const summary=document.createElement('p');summary.textContent=day.summary;
+   article.append(badge,title,summary);root.append(article);
+ });
+ $('#itinerary-title').textContent=draft.title;
+ $('#plan-status').className='micro wait';
+ $('#plan-status').textContent=draft.basis==='ai-draft'?'Saved AI draft':'Saved sample itinerary';
+ $('#plan-source').textContent='Restored from this browser. Historical draft only: provider sources, availability, pricing, routes and opening hours have not been rechecked.';
+ return true;
+}
+$('#save-trip').onclick=()=>{trips=globalThis.WayfarerJourneyIntegrity.upsertJourney(trips,{destination:selected,country:worldSelection?.country||'',worldPlace:worldSelection?.name===selected?{name:worldSelection.name,country:worldSelection.country,countryCode:worldSelection.countryCode,latitude:worldSelection.latitude,longitude:worldSelection.longitude}:null,days:Number($('#days').value),budget:Number($('#budget').value),pace:$('#pace').value,moods:$$('.pref.on').map(x=>x.textContent.trim()).filter(x=>x.length>0&&x.length<=80).slice(0,8),itineraryDraft:captureItineraryDraft(),savedAt:new Date().toISOString()});store('wf-trips-v2',trips);toast('Journey and draft saved on this device.')};const arrivalChecklistTrip=()=>({destination:selected,country:worldSelection?.name===selected?worldSelection.country:'',worldPlace:worldSelection?.name===selected?worldSelection:null});function arrival(){const d=destinations.find(x=>x.name===selected),fallback=destinations[0];$('#arrival-image').src=d?.arrival||'wayfarer-hero-v3.jpg';$('#arrival-image').alt='Illustrative travel scene for '+selected;$('#arrival-title').textContent='Welcome to '+selected+'.';const country=worldSelection?.name===selected?worldSelection.country:(d?.country||'');$('#arrival-context-destination').textContent=selected+(country&&country!==selected?', '+country:'');$('#arrival-context-duration').textContent=(Number($('#days').value)||3)+' days';$('#arrival-context-budget').textContent='USD '+((Number($('#days').value)||3)*(Number($('#budget').value)||180)).toLocaleString('en-US',{maximumFractionDigits:0})+' planned';$('#arr-tip').textContent=d?.tip||'Confirm local customs, entry requirements and transport details with official sources before travel.';$$('[data-check]').forEach(c=>c.checked=!!globalThis.WayfarerJourneyIntegrity?.checklistChecked(checks,arrivalChecklistTrip(),c.dataset.check));readiness();
 const fresh=agentData&&arrivalResearchIdentity===currentArrivalIdentity()&&
   arrivalResearchAt>0&&Date.now()-arrivalResearchAt<=ARRIVAL_SOURCE_MAX_AGE_MS;
 if(fresh)applyData(agentData);
@@ -122,7 +168,7 @@ $('#refresh').onclick=async()=>{view('studio');if(await runAgents())view('arriva
       encodeURIComponent(selected+(worldSelection?.country?', '+worldSelection.country:''));
     open(link,'_blank','noopener,noreferrer');
   }
-};$('#arrival-edit-trip').onclick=()=>view('studio');$('#arrival-journeys-link').onclick=()=>view('trips');$('#arrival-map-secondary').onclick=()=>$('#maps').click();$('#journey-create').onclick=()=>view('studio');$('#download').onclick=()=>{const aiDraft=$('#plan-status').textContent==='Groq AI itinerary';const provenance=aiDraft?'AI-GENERATED DRAFT · VERIFY BEFORE TRAVEL':'ILLUSTRATIVE SAMPLE · NOT LIVE BOOKINGS';const text=`WAYFARER · ${selected}\n\n${provenance}\n${$('#itinerary').innerText}\n\nSOURCE & LIMITATIONS\n${$('#plan-source').textContent}\n\nARRIVAL\n${$('#arr-tip').textContent}\n\nVerify current routes, rules, hours and prices.`;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/plain'}));a.download='wayfarer-'+selected.toLowerCase()+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)};
+};$('#arrival-edit-trip').onclick=()=>view('studio');$('#arrival-journeys-link').onclick=()=>view('trips');$('#arrival-map-secondary').onclick=()=>$('#maps').click();$('#journey-create').onclick=()=>view('studio');$('#download').onclick=()=>{const aiDraft=['Groq AI itinerary','Saved AI draft'].includes($('#plan-status').textContent);const provenance=aiDraft?'AI-GENERATED DRAFT · VERIFY BEFORE TRAVEL':'ILLUSTRATIVE SAMPLE · NOT LIVE BOOKINGS';const text=`WAYFARER · ${selected}\n\n${provenance}\n${$('#itinerary').innerText}\n\nSOURCE & LIMITATIONS\n${$('#plan-source').textContent}\n\nARRIVAL\n${$('#arr-tip').textContent}\n\nVerify current routes, rules, hours and prices.`;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/plain'}));a.download='wayfarer-'+selected.toLowerCase()+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)};
 function renderTrips(){
  const root=$('#saved'),query=($('#journey-search')?.value||'').trim().toLocaleLowerCase('en');
  const valid=Array.isArray(trips)?trips.filter(t=>t&&typeof t.destination==='string'&&t.destination.length<120):[];
@@ -150,7 +196,13 @@ function renderTrips(){
   for(const [label,value] of [['DURATION',String(t.days||'—')+' days'],['GROUND PLAN','USD '+(Number(t.days||0)*Number(t.budget||0)).toLocaleString('en-US',{maximumFractionDigits:0})]]){
     const cell=document.createElement('div'),key=document.createElement('span'),amount=document.createElement('strong');key.textContent=label;amount.textContent=value;cell.append(key,amount);stats.append(cell);
   }
-  const pace=document.createElement('p');pace.className='wf-trip-pace';pace.textContent='Pace: '+(t.pace||'Balanced')+' · Illustrative planning allocations, not live prices.';
+  const pace=document.createElement('p');pace.className='wf-trip-pace';
+  const storedDraft=globalThis.WayfarerJourneyIntegrity?.normalizeItineraryDraft(
+    t.itineraryDraft,Number(t.days));
+  pace.textContent='Pace: '+(t.pace||'Balanced')+
+    (storedDraft?' · Saved '+(storedDraft.basis==='ai-draft'?'AI draft':'sample itinerary')+
+      ' · Not reverified.':' · No saved itinerary content; sample will be rebuilt.')+
+    ' · Planning allocations only, not live prices.';
   const actions=document.createElement('div');actions.className='wf-trip-actions';
   const resume=document.createElement('button');resume.type='button';resume.className='wf-trip-action primary';resume.textContent='Continue planning ↗';
   const prepare=document.createElement('button');prepare.type='button';prepare.className='wf-trip-action';prepare.textContent='Arrival plan →';
@@ -168,6 +220,11 @@ function renderTrips(){
       'Full & energetic':'Full & energetic',slow:'Slow & considered',balanced:'Balanced',
       active:'Full & energetic',Slow:'Slow & considered',Active:'Full & energetic'};
     $('#pace').value=paceMap[t.pace]||'Balanced';
+    if(Array.isArray(t.moods)&&t.moods.length<=8&&
+      t.moods.every(x=>typeof x==='string'&&x.length<=80)){
+      const savedMoods=new Set(t.moods);
+      $$('.pref').forEach(x=>x.classList.toggle('on',savedMoods.has(x.textContent.trim())));
+    }
     worldSelection=globalThis.WayfarerJourneyIntegrity?.resolveSavedWorldPlace(t)??null;
     window.WayfarerMap?.selectDestination(worldSelection);
     nearbyPlaces(worldSelection);
@@ -176,7 +233,10 @@ function renderTrips(){
       info.textContent='Saved destination restored without map coordinates. Search World Explorer and select the matching place before running location-based research.';
       $('#world-results')?.replaceChildren(info);
     }
-    selected=t.destination;$('#destination').value=selected;agentData=null;resetAgents();build();arrival();view(goToArrival?'arrival':'studio');
+    selected=t.destination;$('#destination').value=selected;agentData=null;
+    resetAgents();build();
+    restoreItineraryDraft(t.itineraryDraft,days);
+    arrival();view(goToArrival?'arrival':'studio');
   };
   resume.onclick=()=>resumeTrip();prepare.onclick=()=>resumeTrip(true);
   remove.onclick=()=>{

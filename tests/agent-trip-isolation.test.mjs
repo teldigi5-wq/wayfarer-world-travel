@@ -30,6 +30,7 @@ function fixture(payloadOverride={}){
   const promise=new Promise(resolve=>{resolveNetwork=resolve;});
   let applied=0;
   const context=vm.createContext({
+    agentData:null,
     selected:'Kyoto',
     worldSelection:{name:'Kyoto',country:'Japan',countryCode:'JP',latitude:35.0116,longitude:135.7681},
     $:element,$$:()=>[{textContent:'Culture'}],
@@ -85,6 +86,33 @@ test('the real Journey Studio labels name-only Wikipedia context as geographical
     /Wikipedia article matched by name only/.test(x.textContent)),
     'The source caveat must appear beside the actual agent results');
   assert.equal(f.applied,1);
+});
+
+test('Arrival rejects a successful agent response that belongs to a different mapped country or city',async()=>{
+  for(const location of [
+    {latitude:48.8566,longitude:2.3522,countryCode:'FR'},
+    {latitude:35.0116,longitude:135.7681,countryCode:'US'},
+    {latitude:35.0116,longitude:135.7681,countryCode:'JP',basis:'selected-map-coordinates',
+      extra:'ok',longitude:135.7683},
+    {latitude:NaN,longitude:135.7681,countryCode:'JP'}
+  ]){
+    const f=fixture({location});
+    const pending=f.run();await f.finish();
+    assert.equal(await pending,false,'Reject conflicting source location '+JSON.stringify(location));
+    assert.equal(f.applied,0,'Conflicting response must not apply sourced weather or country facts');
+    assert.equal(vm.runInContext('agentData',f.context),null);
+    assert.match(f.element('#agent-log').textContent,/current itinerary and saved journeys are unchanged/);
+    assert.equal(f.element('#run-agents').disabled,false);
+  }
+});
+
+test('Arrival accepts server provenance when map coordinates and country code match the selected destination',async()=>{
+  const f=fixture({location:{latitude:35.0116,longitude:135.7681,
+    countryCode:'JP',basis:'selected-map-coordinates'}});
+  const pending=f.run();await f.finish();
+  assert.equal(await pending,true);
+  assert.equal(f.applied,1);
+  assert.equal(vm.runInContext('agentData.location.countryCode',f.context),'JP');
 });
 
 test('matching journey brief accepts grounded research response',async()=>{
