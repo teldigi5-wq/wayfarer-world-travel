@@ -10,7 +10,7 @@ const clean=(value,max=120)=>String(value??'').replace(/[\u0000-\u001f<>]/g,' ')
 const number=(value,min,max)=>{
   if(typeof value!=='number'&&typeof value!=='string')return null;
   if(typeof value==='string'&&(
-    value.length>48||!/^[+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?$/.test(value.trim())
+    value.length>48||!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(value.trim())
   ))return null;
   const n=Number(value);
   return Number.isFinite(n)&&n>=min&&n<=max?n:null;
