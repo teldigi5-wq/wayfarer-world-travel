@@ -4,7 +4,7 @@ const currentResearchBrief=()=>JSON.stringify({
   destination:selected,latitude:worldSelection?.latitude,longitude:worldSelection?.longitude,
   countryCode:worldSelection?.countryCode,days:$('#days')?.value,
   budget:$('#budget')?.value,pace:$('#pace')?.value,
-  moods:$('.pref.on').map(x=>x.textContent).join(', ')
+  moods:[...document.querySelectorAll('.pref.on')].map(x=>x.textContent).join(', ')
 });
 function resetAgents(){
  agentRunSerial++;
