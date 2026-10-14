@@ -14,7 +14,7 @@ const runStart=script.indexOf('async function runAgents(){');
 const runEnd=script.indexOf("$('#run-agents').onclick=runAgents;",runStart);
 assert.ok(headerStart>=0&&headerEnd>headerStart&&resetStart>=0&&cancelStart>resetStart&&cancelEnd>cancelStart&&runStart>=0&&runEnd>runStart);
 
-function fixture(){
+function fixture(payloadOverride={}){
   const elements=new Map();
   const element=selector=>{
     if(!elements.has(selector))elements.set(selector,{
@@ -44,7 +44,7 @@ function fixture(){
   const finish=async()=>{
     resolveNetwork({ok:true,json:async()=>({
       ok:true,destination:'Kyoto',weather:{ok:false},place:{ok:false},
-      country:{ok:false},ai:{ok:false,error:'Private beta access required'}
+      country:{ok:false},ai:{ok:false,error:'Private beta access required'},...payloadOverride
     })});
     await Promise.resolve();
   };
@@ -71,6 +71,20 @@ test('switching destinations invalidates the old research request',async()=>{
   assert.match(script,/function resetAgents\(preserveContext=false\)\{\s*agentRunSerial\+\+;/);
   assert.match(script,/agentRequestController\?\.abort\(\)/);
   assert.match(script,/if\(await runAgents\(\)\)view\('arrival'\)/);
+});
+
+test('the real Journey Studio labels name-only Wikipedia context as geographically unverified',async()=>{
+  const f=fixture({place:{ok:true,extract:'Illustrative article with ambiguous geography.',
+    sourceUrl:'https://en.wikipedia.org/wiki/Kyoto',geographyVerified:false}});
+  const task=f.run();
+  await f.finish();
+  assert.equal(await task,true);
+  assert.match(f.element('#agent-place p').textContent,/Name-only source/);
+  assert.match(f.element('#agent-place p').textContent,/unverified/);
+  assert.ok(f.element('#agent-log').children.some(x=>
+    /Wikipedia article matched by name only/.test(x.textContent)),
+    'The source caveat must appear beside the actual agent results');
+  assert.equal(f.applied,1);
 });
 
 test('matching journey brief accepts grounded research response',async()=>{
