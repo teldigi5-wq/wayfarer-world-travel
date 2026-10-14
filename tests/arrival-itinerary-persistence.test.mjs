@@ -41,9 +41,17 @@ function fixture(){
   $('#itinerary-title').textContent='My private Tokyo journey';
   $('#plan-status').textContent='Groq AI itinerary';
   $('#days').value='3';$('#budget').value='190';$('#pace').value='Balanced';
+  const preferences=['Culture','Architecture','Nature'].map((label,i)=>({
+    textContent:label,on:i!==2,
+    classList:{toggle(name,value){if(name==='on')this.owner.on=value;},
+      contains(name){return name==='on'&&this.owner.on;}}
+  }));
+  preferences.forEach(p=>{p.classList.owner=p;});
+  const $=selector=>selector==='.pref.on'?preferences.filter(p=>p.on):
+    selector==='.pref'?preferences:[];
   const storeCalls=[],mapCalls=[],nearbyCalls=[],viewCalls=[];
   const c=vm.createContext({
-    $,trips:[],selected:'Tokyo',
+    $,$,trips:[],selected:'Tokyo',
     worldSelection:{name:'Tokyo',country:'Japan',countryCode:'JP',latitude:35.6762,longitude:139.6503},
     destinations:[],agentData:{ok:true},Number,String,Array,Date,Math,
     document:{createElement:tag=>new Element(tag)},
@@ -62,7 +70,7 @@ function fixture(){
   });
   vm.runInContext(helper,c,{timeout:1000});
   vm.runInContext(snippet,c,{timeout:1000});
-  return {c,$,day,storeCalls,mapCalls,nearbyCalls,viewCalls,
+  return {c,$,day,preferences,storeCalls,mapCalls,nearbyCalls,viewCalls,
     save:()=>vm.runInContext("$('#save-trip').onclick()",c),
     render:()=>vm.runInContext('renderTrips()',c)};
 }
@@ -105,6 +113,19 @@ test('resume restores text-only saved AI days after sample reset and preserves s
   assert.equal(f.viewCalls.at(-1),'arrival');
   assert.equal(f.$('#itinerary').children.length,3);
 });
+test('saving and reopening a draft restores interests as well as pace, daily budget and itinerary',()=>{
+  const f=fixture();f.save();f.render();
+  assert.deepEqual(JSON.parse(JSON.stringify(vm.runInContext('trips[0].moods',f.c))),['Culture','Architecture']);
+  f.preferences[0].on=false;f.preferences[1].on=false;f.preferences[2].on=true;
+  f.$('#pace').value='Full & energetic';
+  f.$('#budget').value='500';
+  findButtons(f.$('#saved').children[0])[0].onclick();
+  assert.equal(f.$('#pace').value,'Balanced');
+  assert.equal(f.$('#budget').value,'190');
+  assert.deepEqual(f.preferences.map(p=>p.on),[true,true,false]);
+  assert.equal(f.$('#itinerary-title').textContent,'My private Tokyo journey');
+});
+
 test('saved HTML-like text is never executed or inserted as trusted markup',()=>{
   const f=fixture();
   const attack='<img src=x onerror=alert(1)>';
