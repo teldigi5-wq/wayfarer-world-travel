@@ -361,6 +361,14 @@ The 100% status explicitly describes **four personal preparation reminders marke
 
 `tests/arrival-checklist-geography.test.mjs` runs real Arrival UI logic in a browser-style VM with 0→25→100% checks and switching between same-name destinations; it also covers legacy migration, invalid keys and source-truthful copy. CI, real-browser focus/responsive checks and an exact-head Vercel Preview remain required before any Production release. This is a draft stacked on Stage 29; no paid APIs, secrets or Production deployment.
 
+### Stage 31 — actual app bootstrap and worldwide Studio heading hardening (draft)
+
+During end-to-end review, two real startup-time JavaScript exceptions were found in `premium-app.js`: the preference button listener and final destination-image observer incorrectly called `.forEach()` on `$()` (`document.querySelector`, a single element) instead of `$()` (`querySelectorAll`, an array). These errors can prevent further app initialization, including Journey Studio, Arrival Companion and My Journeys functionality, despite passing syntax-only tests. Both now use the correct collection helper; the Stage 28 primary navigation fix remains in effect.
+
+Journey Studio also had a static hero label `Your journey to Kyoto` for every worldwide location. `build()` now updates `#studio-target` to the actual selected destination every time the local plan is composed, including mapped worldwide places and resumed saved journeys. It remains a **sample itinerary** unless explicitly verified AI output is available; the change does not claim new live inventory.
+
+New `tests/studio-actual-bootstrap.test.mjs` evaluates the actual preference wiring and last-stage reveal observer bootstrap in Node VM, checks the heading changes Paris→Sydney→Nairobi without Kyoto text, and guards every `$()` reference against illegal array-like methods. These are source-level runtime harness tests, not an actual browser screenshot or guarantee of mobile visual quality. Full CI plus a matching Vercel Preview and interactive keyboard/mobile walkthrough are still release gates. No paid API access, user data migration, secrets or Production changes.
+
 ## Run and test
 
 Install Node.js 20+ from its official distribution. No package install, API key, environment variable, card or build dependency is needed.
