@@ -27,7 +27,8 @@ function tripQuery(query={}){
   const days=int(query.days,3,7,3);
   const rawBudget=Number(query.budget);
   const budget=Number.isFinite(rawBudget)&&rawBudget>=25&&rawBudget<=2500?rawBudget:180;
-  const pace=['Slow','Balanced','Active'].includes(query.pace)?query.pace:'Balanced';
+  const paceMap={'Slow & considered':'Slow',Balanced:'Balanced','Full & energetic':'Active',Slow:'Slow',Active:'Active'};
+  const pace=Object.hasOwn(paceMap,query.pace)?paceMap[query.pace]:'Balanced';
   const moods=scrub(query.moods,120)||'Culture';
   return {destination,p:{lat:latitude,lon:longitude,wiki:base?.wiki||destination,country:countryCode},
     days,budget,pace,moods};
