@@ -58,7 +58,7 @@ async function nearby(req){
   const uniq=(entries,limit)=>{
     const names=new Set(),codes=new Set();
     return entries.filter(a=>{
-      const key=a.name.toLocaleLowerCase('en').replace(/\\s+/g,' ').trim();
+      const key=a.name.toLocaleLowerCase('en').replace(/\s+/g,' ').trim();
       if(names.has(key)||(a.iata&&codes.has(a.iata)))return false;
       names.add(key);if(a.iata)codes.add(a.iata);return true;
     }).slice(0,limit);
