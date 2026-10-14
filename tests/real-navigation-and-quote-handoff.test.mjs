@@ -62,7 +62,7 @@ function guardFixture(){
     'travel-origin':'CMB','travel-arrival':'ORY',
     'destination':'Paris','world-query':'Paris',
     'check-in':'2026-11-12','check-out':'2026-11-15',
-    'stay-adults':'2'
+    'stay-adults':'2','travel-airfare':'','days':'3','budget':'180'
   };
   let place={name:'Paris',latitude:48.8566,longitude:2.3522,countryCode:'FR'};
   const env={Number,window:{WayfarerNearby:{
@@ -71,7 +71,8 @@ function guardFixture(){
       old.longitude===place.longitude&&old.countryCode===place.countryCode
   }},get:id=>values[id],
   trip:{from:'CMB',to:'ORY',destination:'Paris',
-    checkIn:'2026-11-12',checkOut:'2026-11-15',adults:2}};
+    checkIn:'2026-11-12',checkOut:'2026-11-15',adults:2,
+    flightBudget:0,groundBudget:540}};
   vm.runInNewContext(research.slice(a,b)+'\nthis.requestStillCurrent=requestStillCurrent;',env,
     {timeout:1000});
   return {env,values,changePlace:x=>{place=x}};
