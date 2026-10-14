@@ -13,6 +13,18 @@ async function search(req){
   return {status:200,body:{ok:true,provider:'Wikipedia place index',sourceUrl:'https://www.mediawiki.org/wiki/API:Search',results}};
 }
 
+// Limited, auditable 2026-10-14 OpenStreetMap reference snapshot for the
+// Sigiriya region. It is NOT a hotel availability/rate inventory; entries can go
+// stale. Coordinates and OSM element IDs were cross-checked against public maps.
+const sigiriyaHotelReferences=Object.freeze([
+  {name:'Hotel Sigiriya',lat:7.94991,lon:80.76315,url:'https://www.openstreetmap.org/way/732409914'},
+  {name:'Sigiriya Village',lat:7.94959,lon:80.76132,url:'https://www.openstreetmap.org/way/1308624588'},
+  {name:'Jetwing Vil Uyana',lat:7.95096,lon:80.74434,url:'https://www.openstreetmap.org/node/2051260971'},
+  {name:'Aliya Resort & Spa',lat:7.99946,lon:80.73537,url:'https://www.openstreetmap.org/node/4516650287'},
+  {name:'Water Garden Sigiriya',lat:7.99227,lon:80.74532,url:'https://www.openstreetmap.org/node/4516651490'},
+  {name:'Sigiriya Water Cottages',lat:7.94452,lon:80.73179,url:'https://www.openstreetmap.org/node/9624421417'}
+]);
+
 async function nearby(req){
   const lat=number(req.query.lat,-90,90),lon=number(req.query.lon,-180,180);
   if(lat===null||lon===null)return {status:400,body:{ok:false,error:'Invalid coordinates'}};
@@ -65,14 +77,19 @@ async function nearby(req){
   };
   const airports=uniq([...mapped.filter(a=>a.type==='airport'),...indexed]
     .sort((a,b)=>a.distanceKm-b.distanceKm),8);
-  const hotels=uniq(mapped.filter(a=>a.type==='hotel')
+  const nearbySigiriya=distance(lat,lon,7.9498,80.7463)<=25;
+  const referenceHotels=nearbySigiriya?sigiriyaHotelReferences.map(h=>({
+    type:'hotel',name:h.name,iata:'',distanceKm:distance(lat,lon,h.lat,h.lon),
+    source:'OpenStreetMap reference snapshot · 2026-10-14',url:h.url,price:null
+  })).filter(h=>h.distanceKm<=35):[];
+  const hotels=uniq([...mapped.filter(a=>a.type==='hotel'),...referenceHotels]
     .sort((a,b)=>a.distanceKm-b.distanceKm),10);
   return {status:200,body:{
     ok:true,provider:'OpenStreetMap and bundled OurAirports reference data',
     sourceUrl:'https://www.openstreetmap.org/copyright',
     mapAvailable,airports,hotels,
     note:mapAvailable?'Locations and straight-line distances only; no fare or room prices supplied.':
-      'OpenStreetMap nearby service unavailable. Airport reference names may still be shown; hotels and prices are not inferred.'
+      'Live OpenStreetMap lookup unavailable. Limited reference snapshots may be shown for mapped places; neither operating status nor room prices are verified.'
   }};
 }
 
