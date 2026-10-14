@@ -311,8 +311,58 @@
       ' · no guaranteed inventory','wf-results-count'),list);
     return article;
   }
+  // Derive only an at-a-glance summary of ACTUAL provider-returned
+  // options. Flight quotes here are outbound group estimates; hotel quotes
+  // are stay search totals. Combining them would imply a fictitious trip fare.
+  function researchSnapshot(res){
+    const summarize=(panel,field)=>{
+      const offers=panel?.status==='search_results'&&Array.isArray(panel.offers)?
+        panel.offers:[];
+      const amounts=offers.filter(x=>x?.currency==='USD'&&
+        typeof x[field]==='string'&&/^\d+\.\d{2}$/.test(x[field]))
+        .map(x=>Number(x[field]))
+        .filter(x=>Number.isFinite(x)&&x>0&&x<10000000);
+      return {count:offers.length,lowest:amounts.length?Math.min(...amounts):null};
+    };
+    return {
+      outbound:summarize(res?.flights,'estimatedGroup'),
+      stays:summarize(res?.hotels,'displayedTotal'),
+      checkedAt:res?.checkedAt||null,
+      source:res?.source||'Provider source not supplied'
+    };
+  }
+  function researchSnapshotPanel(res){
+    const summary=researchSnapshot(res);
+    const section=word('section','','wf-research-snapshot');
+    section.setAttribute('aria-label','Travel research summary');
+    const heading=word('div','','wf-research-snapshot-heading');
+    heading.append(word('span','WAYFARER / RESEARCH SNAPSHOT','wf-result-eyebrow'),
+      word('h4','Understand the options before you compare'));
+    section.append(heading);
+    const facts=word('div','','wf-research-snapshot-facts');
+    const evidence=(label,lowest,count,description)=>{
+      const fact=word('div','','wf-research-snapshot-fact');
+      fact.append(word('span',label,'wf-detail-label'),
+        word('strong',lowest===null?'Not available':money(lowest.toFixed(2),'USD'),
+          'wf-research-snapshot-value'),
+        word('small',count+' usable source option'+(count===1?'':'s')+' · '+description));
+      return fact;
+    };
+    facts.append(
+      evidence('LOWEST OUTBOUND GROUP ESTIMATE',summary.outbound.lowest,
+        summary.outbound.count,'Not a round-trip ticket total'),
+      evidence('LOWEST DISPLAYED STAY TOTAL',summary.stays.lowest,
+        summary.stays.count,'Not a confirmed payable room price'));
+    section.append(facts);
+    section.append(word('p',
+      'These are separate indicative searches—not an added-up trip price. '+
+      'Return flights, taxes, room availability, baggage and transfers require separate verification. '+
+      'No seats or rooms have been reserved.','wf-research-snapshot-caveat'));
+    return section;
+  }
   function show(res){
     output.replaceChildren();
+    output.append(researchSnapshotPanel(res));
     const grid=word('div','','wf-comparison-grid');
     grid.append(resultPanel('Flight comparison',res.flights,'flight'),
       resultPanel('Hotel comparison',res.hotels,'hotel'));
