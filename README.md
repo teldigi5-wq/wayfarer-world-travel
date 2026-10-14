@@ -439,6 +439,16 @@ Detailed flight and stay sorting uses the same source-amount validation, placing
 
 `tests/travel-comparison-snapshot.test.mjs` now evaluates both the actual quote predicate/sort and first-party summary renderer with mixed currencies, invalid/zero figures, missing stop counts/durations, no-price states and old-result replacement. No API, AI, geocoder, subscription or paid provider calls were introduced. Full GitHub CI, a matching free Vercel Preview and real-browser visual/accessibility checks are required before merging this stacked draft into Production.
 
+### Stage 39 — worldwide destination search results cannot cross queries (draft)
+
+A customer-facing race was found in World Explorer: if a traveler submitted a public destination search and then **edited the input**, the in-flight response could still populate result buttons under the new text. Submitting an empty or one-character new query returned early without cancelling older research. A successful result could therefore point at the *wrong country or place*, despite the location coordinates being source-backed for the previous query.
+
+The World Explorer form now uses one `invalidateWorldSearch` path for three cases: **typing a new query**, **changing the country filter**, and **submitting a query shorter than two characters**. It aborts the previous browser request, increments the research sequence so even a provider response that ignores browser cancellation cannot render old results, clears stale destination buttons and updates the existing `role=status`/live-region guidance. Pressing Explore with a valid new query starts a new lookup, or safely restores a short-lived cached public result for that exact query and country. No extra request is triggered on each keystroke; results are never fabricated, and the optional bundled reference fallback still applies only to the current valid search. All functionality remains keyless/free and none of the protected supplier/AI services is invoked by these UI changes.
+
+`tests/world-search-race-integrity.test.mjs` executes the **actual World Explorer onsubmit and input/change handlers** under Node VM against deliberately delayed/cancel-ignoring network replies. It checks a late Paris result cannot appear under Tokyo, a one-letter new search suppresses old results without another API call, a changed country blocks the wrong country's results, late provider errors cannot insert stale bundled suggestions, and public cache reuse still works only under exact query/country identity.
+
+Stage 39 remains a draft PR stacked on Stage 38. Release requires full GitHub CI, Vercel Preview built from the exact passing head within free quota, and browser keyboard/mobile checking before any merge or Production deployment. There are no billing, provider credential or paid API changes.
+
 ## Run and test
 
 Install Node.js 20+ from its official distribution. No package install, API key, environment variable, card or build dependency is needed.
