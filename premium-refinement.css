@@ -481,3 +481,26 @@
 @media(prefers-reduced-motion:reduce){
  #studio .wf-intelligence *{transition:none!important;animation:none!important;}
 }
+
+/* Stage 32 — explicit, accessible protected-supplier search cancellation. */
+#studio #travel-cancel-button[hidden]{display:none!important;}
+#studio .travel-research-action{display:flex;flex-wrap:wrap;align-items:center;gap:10px;}
+#studio .travel-research-action button{min-height:44px;}
+#studio .travel-research-action #travel-search-help{flex:1 1 100%;}
+#studio .travel-research-action .wf-travel-cancel{
+ color:#f1dfbf;background:rgba(225,199,153,.07);
+ border:1px solid rgba(225,199,153,.55);
+ border-radius:9px;box-shadow:none;
+}
+#studio .travel-research-action .wf-travel-cancel:hover{
+ background:rgba(225,199,153,.15);color:#fff4dd;
+}
+#studio .travel-research-action .wf-travel-cancel:focus-visible{
+ outline:3px solid #e5cb96;outline-offset:3px;
+}
+@media(max-width:560px){
+ #studio .travel-research-action button{flex:1 1 140px;}
+}
+@media(prefers-reduced-motion:reduce){
+ #studio .travel-research-action button{transition:none!important;}
+}
