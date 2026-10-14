@@ -186,3 +186,52 @@ test('country provider outage leaves sourced national facts visible but not live
     else process.env.WAYFARER_INTELLIGENCE_AI_ENABLED=priorEnabled;
   }
 });
+
+
+test('the real Studio pace labels reach the AI composer as Slow or Active, with no paid request',async()=>{
+  const originalFetch=globalThis.fetch;
+  const variables=['WAYFARER_AI_BETA_TOKEN','WAYFARER_INTELLIGENCE_AI_ENABLED','GROQ_API_KEY'];
+  const originals=Object.fromEntries(variables.map(k=>[k,process.env[k]]));
+  process.env.WAYFARER_AI_BETA_TOKEN='test-token-validated-over-24-characters';
+  process.env.WAYFARER_INTELLIGENCE_AI_ENABLED='true';
+  process.env.GROQ_API_KEY='fake-test-only-not-a-credential';
+  const prompts=[];
+  globalThis.fetch=async (url,options={})=>{
+    const host=new URL(url).hostname;
+    if(host==='api.open-meteo.com')return Response.json({
+      current:{temperature_2m:21,wind_speed_10m:4,time:'2026-10-14T10:00'},timezone:'Asia/Tokyo'});
+    if(host==='en.wikipedia.org')return Response.json({
+      extract:'Kyoto is a city in Japan.',content_urls:{desktop:{page:'https://en.wikipedia.org/wiki/Kyoto'}}});
+    if(host==='restcountries.com')return Response.json({
+      currencies:{JPY:{name:'Japanese yen'}},languages:{jpn:'Japanese'},timezones:['UTC+09:00']});
+    if(host==='api.groq.com'){
+      const request=JSON.parse(options.body);
+      prompts.push(request.messages[1].content);
+      const draft={title:'Mocked travel plan',days:Array.from({length:3},(_,i)=>({
+        title:'Day '+(i+1),summary:'Mocked itinerary content only, no supplier inventory.'}))};
+      return Response.json({choices:[{message:{content:JSON.stringify(draft)}}]});
+    }
+    throw Error('Unexpected external hostname: '+host);
+  };
+  try{
+    for(const [display,expected] of [
+      ['Slow & considered','Slow'],['Full & energetic','Active'],['Balanced','Balanced']
+    ]){
+      const res={code:0,body:null,setHeader(){},status(n){this.code=n;return this},json(v){this.body=v;return this}};
+      await handler({method:'GET',headers:{'x-wayfarer-beta-token':process.env.WAYFARER_AI_BETA_TOKEN},
+        query:{destination:'Kyoto',countryCode:'JP',days:'3',budget:'180',
+          lat:'35.0116',lon:'135.7681',pace:display,moods:'Culture'}},res);
+      assert.equal(res.code,200);
+      assert.equal(res.body.ai.ok,true);
+      assert.match(prompts.at(-1),new RegExp('pace: '+expected+';'));
+      assert.equal(res.body.ai.days.length,3);
+    }
+    assert.equal(prompts.length,3,'Each mock composition requires an explicit valid request');
+  }finally{
+    globalThis.fetch=originalFetch;
+    for(const key of variables){
+      if(originals[key]===undefined)delete process.env[key];
+      else process.env[key]=originals[key];
+    }
+  }
+});
