@@ -79,6 +79,9 @@
     focus={name:String(item.name||'Mapped place').slice(0,120),
       latitude:item.latitude,longitude:item.longitude,key:pinKey(item)};
     label.textContent=focus.name;links(focus);
+    // Keep the optional globe pointed at the same verified map coordinate;
+    // this performs no imagery request while Earth is closed.
+    window.WayfarerGlobe?.centerOn(item);
     pins.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',
       b.dataset.place===focus.key?'true':'false'));
     if(open||initialized)iframe();
