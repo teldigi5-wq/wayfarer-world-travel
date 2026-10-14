@@ -11,7 +11,7 @@ const app=read('premium-app.js');
 const priceBridge=read('travel-research.js');
 const css=read('premium-refinement.css');
 
-function domFixture(fetchOverride=null) {
+function domFixture(fetchOverride=null,{map=null,intelligence=null}={}) {
   function make(tag='div') {
     const node={
       tagName:tag.toUpperCase(),className:'',textContent:'',children:[],dataset:{},
@@ -38,7 +38,8 @@ function domFixture(fetchOverride=null) {
   ids['check-in'].value='2026-11-12';ids['check-out'].value='2026-11-15';
   ids['stay-adults'].value='2';
   ids['wf-tab-prices'].click=()=>{ids['wf-tab-prices'].clicked=true;};
-  ids['nearby'].classList={add(){},remove(){}};
+  ids['nearby'].loading=new Set();
+  ids['nearby'].classList={add(name){ids['nearby'].loading.add(name)},remove(name){ids['nearby'].loading.delete(name)}};
   const state={
     ok:true,mapAvailable:true,airports:[
       {name:'Sigiriya Airport',iata:'GIU',distanceKm:4.7,source:'OpenStreetMap contributors',url:'https://www.openstreetmap.org/way/12'},
@@ -48,7 +49,8 @@ function domFixture(fetchOverride=null) {
     ]
   };
   const environment={
-    window:{},document:{getElementById:id=>ids[id],createElement:make},
+    window:{WayfarerMap:map,WayfarerDestinationIntelligence:intelligence},
+    document:{getElementById:id=>ids[id],createElement:make},
     Intl,URL,URLSearchParams,AbortController,Date,Number,Event:class{},matchMedia:()=>({matches:false}),
     fetch:fetchOverride|| (async()=>({ok:true,json:async()=>state}))
   };
@@ -56,6 +58,182 @@ function domFixture(fetchOverride=null) {
   const textOf=el=>String(el.textContent||'')+' '+(el.children||[]).map(textOf).join(' ');
   return {ids,state,public:environment.window.WayfarerNearby,textOf};
 }
+
+
+test('rapid valid country switches never allow late airport, hotel, map or intelligence results to overwrite the latest selection',async()=>{
+  const pending=[],mapSelections=[],mapResults=[],sourceCountries=[];
+  const map={
+    selectDestination:place=>mapSelections.push(place?.countryCode||null),
+    setNearby:data=>mapResults.push({
+      airports:data.airports.map(item=>item.name),hotels:data.hotels.map(item=>item.name)
+    })
+  };
+  const intelligence={
+    choose:()=>{},show:payload=>sourceCountries.push(payload?.intelligence?.country?.name||'')
+  };
+  const f=domFixture((url,{signal})=>new Promise(resolve=>{
+    pending.push({url:String(url),signal,resolve});
+  }),{map,intelligence});
+  const france={name:'Paris',countryCode:'FR',latitude:48.8566,longitude:2.3522};
+  const texas={name:'Paris',countryCode:'US',latitude:33.6609,longitude:-95.5555};
+  const old=f.public.load(france);
+  assert.equal(pending.length,2);
+  const current=f.public.load(texas);
+  assert.equal(pending.length,4);
+  assert.deepEqual(mapSelections,['FR','US']);
+  assert.equal(pending[0].signal.aborted,true);
+  assert.equal(pending[1].signal.aborted,true);
+  assert.equal(pending[2].signal.aborted,false);
+  assert.equal(pending[3].signal.aborted,false);
+  assert.equal(f.ids['nearby'].loading.has('world-loading'),true);
+
+  const reply=(request,where)=>request.resolve({ok:true,json:async()=>({
+    ok:true,mapAvailable:true,
+    airports:[{name:where+' Airport',distanceKm:4,iata:'ABC'}],
+    hotels:[{name:where+' Hotel',distanceKm:1}],
+    intelligence:{mode:'deterministic-reference-agent',country:{name:where}}
+  })});
+  // The latest request finishes BEFORE the superseded browser work returns.
+  for(const request of pending.slice(2))reply(request,'Texas');
+  await current;
+  assert.match(f.textOf(f.ids['airport-list']),/Texas Airport/);
+  assert.match(f.textOf(f.ids['hotel-list']),/Texas Hotel/);
+  assert.equal(f.ids['nearby'].loading.has('world-loading'),false);
+  const appliedCount=mapResults.length,briefCount=sourceCountries.length;
+  for(const request of pending.slice(0,2))reply(request,'France');
+  await old;
+  assert.equal(mapResults.length,appliedCount,'Late old map data must not render');
+  assert.equal(sourceCountries.length,briefCount,'Late old country references must not render');
+  assert.doesNotMatch(f.textOf(f.ids['airport-list']),/France Airport/);
+  assert.doesNotMatch(f.textOf(f.ids['hotel-list']),/France Hotel/);
+  assert.equal(f.public.currentLocation().countryCode,'US');
+  assert.equal(f.ids['nearby'].loading.has('world-loading'),false);
+});
+
+test('invalid destination selection clears existing map identity, locations and visible source cards',async()=>{
+  const mapSelections=[],briefSelections=[];
+  const f=domFixture(async()=>({ok:true,json:async()=>({
+    ok:true,mapAvailable:true,
+    airports:[{name:'London Airport',distanceKm:7}],
+    hotels:[{name:'London Hotel',distanceKm:2}]
+  })}),{
+    map:{selectDestination:place=>mapSelections.push(place?.name??null),setNearby:()=>{}},
+    intelligence:{choose:place=>briefSelections.push(place?.name??null),show:()=>{}}
+  });
+  await f.public.load({name:'London',countryCode:'GB',latitude:51.5074,longitude:-0.1278});
+  assert.match(f.textOf(f.ids['hotel-list']),/London Hotel/);
+  await f.public.load(null);
+  assert.deepEqual(mapSelections,['London',null]);
+  assert.deepEqual(briefSelections,['London',null]);
+  assert.doesNotMatch(f.textOf(f.ids['airport-list']),/London Airport/);
+  assert.doesNotMatch(f.textOf(f.ids['hotel-list']),/London Hotel/);
+  assert.equal(f.public.currentLocation(),null);
+  assert.equal(f.ids['nearby'].loading.has('world-loading'),false);
+});
+
+test('negative public source acknowledgements leave usable failure guidance, never a perpetual researching message',async()=>{
+  const f=domFixture(async()=>({ok:true,json:async()=>({ok:false,error:'source-unavailable'})}));
+  await f.public.load({name:'Oslo',countryCode:'NO',latitude:59.9139,longitude:10.7522});
+  assert.match(f.textOf(f.ids['airport-list']),/temporarily unavailable/);
+  assert.match(f.textOf(f.ids['hotel-list']),/temporarily unavailable/);
+  assert.doesNotMatch(f.textOf(f.ids['airport-list']),/Preparing|Checking/);
+  assert.doesNotMatch(f.textOf(f.ids['hotel-list']),/Researching/);
+  assert.equal(f.ids['nearby'].loading.has('world-loading'),false);
+});
+
+test('abort rejections from old fetches cannot clear the newer loading state',async()=>{
+  const pending=[];
+  const f=domFixture((url,{signal})=>new Promise((resolve,reject)=>{
+    const request={url:String(url),signal,resolve};
+    pending.push(request);
+    signal.addEventListener('abort',()=>{
+      const error=new Error('aborted');error.name='AbortError';reject(error);
+    },{once:true});
+  }));
+  const previous=f.public.load({name:'Rome',countryCode:'IT',latitude:41.9028,longitude:12.4964});
+  const next=f.public.load({name:'Tokyo',countryCode:'JP',latitude:35.6762,longitude:139.6503});
+  await previous;
+  assert.equal(pending[0].signal.aborted,true);
+  assert.equal(pending[1].signal.aborted,true);
+  assert.equal(f.ids['nearby'].loading.has('world-loading'),true,
+    'Aborted previous request must not remove the current search loading state');
+  for(const request of pending.slice(2))request.resolve({ok:true,json:async()=>({
+    ok:true,mapAvailable:true,
+    airports:[{name:'Tokyo source airport',distanceKm:3}],
+    hotels:[{name:'Tokyo source hotel',distanceKm:2}]
+  })});
+  await next;
+  assert.match(f.textOf(f.ids['hotel-list']),/Tokyo source hotel/);
+  assert.equal(f.ids['nearby'].loading.has('world-loading'),false);
+});
+
+test('unmapped, out-of-range and malformed worldwide locations never trigger public API calls',async()=>{
+  const requests=[];
+  const f=domFixture(async url=>{requests.push(String(url));throw Error('No invalid lookup should occur');});
+  const invalid=[
+    null,{}, {name:'',latitude:12,longitude:60},
+    {name:'Invalid latitude',latitude:91,longitude:30},
+    {name:'Invalid longitude',latitude:20,longitude:181},
+    {name:'Negative latitude',latitude:-91,longitude:30},
+    {name:'Negative longitude',latitude:20,longitude:-181},
+    {name:'String coordinates',latitude:'48.8',longitude:'2.3'},
+    {name:'Infinite',latitude:Infinity,longitude:2.3},
+    {name:'Missing longitude',latitude:48.8},
+    {name:'Too long '+('A'.repeat(130)),latitude:48.8,longitude:2.3}
+  ];
+  for(const item of invalid){
+    await f.public.load(item);
+    assert.equal(requests.length,0,'Invalid place must never request an airport or hotel endpoint');
+    assert.equal(f.public.currentLocation(),null);
+    assert.match(f.textOf(f.ids['airport-list']),/valid coordinates/);
+    assert.match(f.textOf(f.ids['hotel-list']),/valid coordinates/);
+    assert.equal(f.ids['nearby'].loading.has('world-loading'),false);
+  }
+  assert.equal(f.public.applyQuotes({
+    mode:'search_only',checkedAt:'2030-11-12T08:00:00Z',hotels:{offers:[]}
+  },{destination:'Invalid latitude'},{name:'Invalid latitude',latitude:91,longitude:30}),false);
+});
+test('switching from slow mapped search to no valid map location cancels and clears spinner',async()=>{
+  const pending=[];
+  const f=domFixture((url,opts)=>new Promise(resolve=>{
+    pending.push({url:String(url),signal:opts?.signal,resolve});
+  }));
+  const searching=f.public.load({
+    name:'Valid place',country:'France',countryCode:'FR',latitude:48.8566,longitude:2.3522
+  });
+  assert.equal(pending.length,2);
+  assert.equal(f.ids['nearby'].loading.has('world-loading'),true);
+  await f.public.load({name:'Unmapped',latitude:120,longitude:2.3522});
+  assert.equal(f.ids['nearby'].loading.has('world-loading'),false);
+  assert.equal(f.public.currentLocation(),null);
+  assert.equal(pending[0].signal.aborted,true);
+  assert.equal(pending[1].signal.aborted,true);
+  for(const request of pending)
+    request.resolve({ok:true,json:async()=>({
+      ok:true,mapAvailable:true,
+      airports:[{name:'OLD AIRPORT',iata:'OLD',distanceKm:1}],
+      hotels:[{name:'OLD HOTEL',distanceKm:1}]
+    })});
+  await searching;
+  assert.doesNotMatch(f.textOf(f.ids['airport-list']),/OLD AIRPORT/);
+  assert.doesNotMatch(f.textOf(f.ids['hotel-list']),/OLD HOTEL/);
+  assert.equal(f.ids['nearby'].loading.has('world-loading'),false);
+});
+test('a valid equatorial destination at the zero meridian still supports free source discovery',async()=>{
+  const calls=[];
+  const f=domFixture(async (url)=>{
+    calls.push(String(url));
+    return {ok:true,json:async()=>({ok:true,mapAvailable:true,
+      airports:[{name:'Source airport',iata:'ABC',distanceKm:2}],
+      hotels:[{name:'Source stay',distanceKm:0.5}]})};
+  });
+  await f.public.load({name:'Null Island reference',latitude:0,longitude:0});
+  assert.equal(calls.length,2);
+  assert.deepEqual(JSON.parse(JSON.stringify(f.public.currentLocation())),
+    {name:'Null Island reference',countryCode:'',latitude:0,longitude:0});
+  assert.match(f.textOf(f.ids['hotel-list']),/Source stay/);
+  assert.equal(f.ids['nearby'].loading.has('world-loading'),false);
+});
 
 test('a repeated destination instantly restores public references without another network lookup',async()=>{
   let calls=0;
@@ -74,8 +252,10 @@ test('a repeated destination instantly restores public references without anothe
   await f.public.load(paris);
   assert.equal(calls,2);
   assert.match(f.textOf(f.ids['hotel-list']),/Paris Source Hotel/);
+  await f.public.load(null);
+  assert.doesNotMatch(f.textOf(f.ids['hotel-list']),/Paris Source Hotel/);
   await f.public.load(paris);
-  assert.equal(calls,2,'Warm browser source cache should avoid two repeat API calls');
+  assert.equal(calls,2,'Warm browser source cache should survive an unmapped selection without new API calls');
   assert.match(f.textOf(f.ids['hotel-list']),/Paris Source Hotel/);
   assert.match(f.textOf(f.ids['hotel-list']),/Price unavailable/);
 });

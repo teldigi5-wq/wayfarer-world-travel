@@ -471,6 +471,16 @@ To keep the customer experience usable in large worldwide cities, the nearby car
 
 New tests in `tests/nearby-results.test.mjs` check the same-name mapped/supplier card split, absence of incorrectly attached prices or geographic links on provider-only cards, price removal when trip dates change, correct coexistence with a full public map shortlist, and retention of source-backed mapped actions. No new paid API, Google Maps billing, secrets, map-tile background traffic or subscriptions. Release requires green CI, exact-head free Preview, manual browser mobile/desktop reviews and explicit owner sign-off before Production.
 
+### Stage 42 — reliable worldwide nearby discovery and no stuck loading state (draft)
+
+During integration review of source-backed Map Studio and nearby airport/hotel discovery, `nearby-results.js` accepted any numerically finite latitude and longitude, including geographically impossible coordinates such as **91° latitude** or **181° longitude**. A malformed third-party/location response could therefore trigger unnecessary public destination requests before the backend rejected the coordinates. When a traveler switched away from a valid place while the nearby search was still loading, selecting an unmapped place also returned early without removing the **world-loading** UI class, leaving an indefinite spinner even though no research was active.
+
+Stage 42 consolidates a lightweight, pure **validMappedPlace** guard at the browser boundary. A place needs a nonempty bounded name, finite numeric latitude in −90..90 and longitude in −180..180. The same check gates current-place identity, new nearby research, and free external hotel-location links; zero-valued equatorial/prime-meridian coordinates are permitted. Invalid or missing geography immediately resets source cards to a clear instruction, aborts any earlier request, invalidates old result sequence, clears the spinner, resets Map Studio's selected location, and does **not** spend public API requests, let alone paid provider credits. It does not guess alternative coordinates or assert a supplier's actual hotel address.
+
+Existing fastest-available airport-first parallel lookup, country-aware public reference cache, user-controlled Map Studio and provider-price separation are preserved. No dependency, new account, background search, Google Maps Platform SDK, paid API or billing setting is introduced.
+
+`tests/nearby-results.test.mjs` executes the real nearby-browser module in VM for invalid/out-of-range/non-numeric/missing coordinates, zero network on invalid data, no stale supplier quote identity, pending network responses arriving after an invalid selection, immediate loader cleanup, and genuine 0°/0° coordinate lookup. Existing flights/hotels/map/AI/full-site tests remain required. The release gate is full green GitHub CI, a Preview of the exact passing revision within free Vercel quota, interactive mobile/desktop and keyboard QA, plus owner approval before any merge or Production promotion.
+
 ## Run and test
 
 Install Node.js 20+ from its official distribution. No package install, API key, environment variable, card or build dependency is needed.
