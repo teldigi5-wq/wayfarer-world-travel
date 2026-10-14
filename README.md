@@ -397,6 +397,16 @@ The provider's results are still **indicative**: a more precise text query does 
 
 `tests/worldwide-hotel-provider-scope.test.mjs` mocks the SerpApi network boundary (zero real credits spent) and verifies cross-country same-name query differences, same-country coordinate distinctions, missing-geometry fallback, input rejection before provider calls, source-attribution copy and no token leakage. The usual GitHub checks, exact-HEAD free Vercel Preview and real desktop/mobile visual checks remain required before merging the stacked draft into Production.
 
+### Stage 35 — trustworthy flight route continuity, worldwide (draft)
+
+The existing private, **user-initiated** SerpApi flight research previously normalized provider `flights[]` by keeping segments with valid-looking IATA strings, then displayed an indicative fare without verifying whether the entire result actually connected the airports the traveler requested. That can produce misleading flight options, particularly for international connecting routes or malformed supplier data. Optional return-flight selection had the same weakness.
+
+`flight-route-integrity.mjs` now provides a pure **zero-network** route validator. Both the main protected `/api/travel-search` and `/api/flight-selection` adapters require a complete 1–6-leg itinerary, valid source-provided airport codes for **every** leg, continuous arrival-to-next-departure connections, no malformed/zero-length leg, and actual first departure and final arrival matching the submitted outbound airports. For optional return selection, the expected direction is reversed from the original destination back to the original airport. Partial, inconsistent and unrelated provider results are **excluded before any indicative price, token or return-selection action reaches the UI**. No additional provider search, AI token, payment, or Google Cloud billing is involved.
+
+This intentionally conservative check may omit some unusual valid **self-transfer or surface-transfer itineraries**, because Wayfarer cannot verify those transfers from the supplier response. It never claims airline operations, available seats, final payable round-trip fares or booking confirmation. Empty filtered results explicitly mean **no route-consistent itinerary from that search**, not that flights are sold out. Flight bookability and prices must still be verified on an original airline/supplier site.
+
+`tests/supplier-flight-route-integrity.test.mjs` mocks the initial and optional return SerpApi network boundary; it covers valid two-leg routes, wrong starting/ending airports, mismatched connection airports, empty/malformed/oversized legs, no booking tokens from invalid offers, correct return direction and source-policy wording. Existing Stage 34 worldwide hotel geo-scope and source provenance remain unchanged. Test locally with `npm run check && npm test` and require an exact-head free Vercel Preview plus mobile/desktop review before any Production promotion. Keep this PR draft and stacked; no hidden live supplier calls.
+
 ## Run and test
 
 Install Node.js 20+ from its official distribution. No package install, API key, environment variable, card or build dependency is needed.

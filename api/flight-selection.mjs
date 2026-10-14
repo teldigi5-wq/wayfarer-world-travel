@@ -1,5 +1,6 @@
 import {timingSafeEqual} from 'node:crypto';
 import {signSelection,verifySelection} from '../flight-selection-token.mjs';
+import {verifiedSegmentRoute} from '../flight-route-integrity.mjs';
 
 // Controlled extra supplier searches, never hidden/automatic. No booking or payment.
 const BASE='https://serpapi.com/search.json';
@@ -57,14 +58,16 @@ function normalizeReturn(data,state,secret,checkedAt){
   const entries=[...(Array.isArray(data.best_flights)?data.best_flights:[]),
     ...(Array.isArray(data.other_flights)?data.other_flights:[])];
   const options=entries.slice(0,15).map(f=>{
-    if(!price(f.price)||!Array.isArray(f.flights))return null;
+    if(!price(f.price)||!Array.isArray(f.flights)||f.flights.length<1||f.flights.length>6||f.flights.some(x=>!x||typeof x!=='object'))return null;
     const segments=f.flights.slice(0,6).map(seg=>({
       airline:text(seg.airline,80),flightNumber:text(seg.flight_number,24),
       from:text(seg.departure_airport?.id,3),to:text(seg.arrival_airport?.id,3),
       departureAt:text(seg.departure_airport?.time,48),
       arrivalAt:text(seg.arrival_airport?.time,48)
-    })).filter(x=>iata(x.from)&&iata(x.to));
-    if(!segments.length)return null;
+    }));
+    // Return segment must run from the originally requested destination
+    // back to its origin, with no dropped or disconnected flight legs.
+    if(!verifiedSegmentRoute(segments,state.to,state.from))return null;
     const token=signSelection('booking',f.booking_token,{from:state.from,to:state.to,checkIn:state.outbound,checkOut:state.returnDate,adults:state.adults},secret);
     return {segments,pricePerAdult:money(f.price),
       estimatedGroup:money(Number(f.price)*state.adults),currency:'USD',
@@ -77,7 +80,7 @@ function normalizeReturn(data,state,secret,checkedAt){
   return {ok:true,stage:'return_flights',checkedAt,
     message:options.length?
       'Return-flight search options found. Prices, selected outbound, booking sellers and seats must still be checked.' :
-      'No return choices returned by this search. This does not mean the route is sold out.',
+      'No route-consistent return choices returned by this search. This does not mean the route is sold out.',
     options:options.slice(0,MAX_CHOICES),
     limitations:['These are supplier search options, not confirmed tickets.',
       'Booking sellers require another explicit lookup and may use another search credit.']};
