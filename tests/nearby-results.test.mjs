@@ -95,6 +95,25 @@ test('only a matching explicit protected hotel quote can display total and night
   assert.match(f.textOf(f.ids['hotel-list']),/Price unavailable/);
 });
 
+test('real protected hotel offers show names/prices worldwide when public maps have no hotels',async()=>{
+  const f=domFixture();
+  f.state.hotels=[];
+  await f.public.load({name:'Paris',country:'France',latitude:48.8566,longitude:2.3522});
+  assert.match(f.textOf(f.ids['hotel-list']),/No named hotels returned/);
+  const trip={destination:'Paris',checkIn:'2026-11-12',checkOut:'2026-11-15',adults:2};
+  const payload={mode:'search_only',checkedAt:'2026-10-14T06:00:00Z',hotels:{
+    offers:[{name:'A Provider-Supplied Paris Hotel',currency:'USD',displayedTotal:'450.00'}]}};
+  f.public.applyQuotes(payload,trip);
+  assert.match(f.textOf(f.ids['hotel-list']),/A Provider-Supplied Paris Hotel/);
+  assert.match(f.textOf(f.ids['hotel-list']),/\$450\.00 total/);
+  assert.match(f.textOf(f.ids['hotel-list']),/Distance unavailable/);
+  assert.match(f.textOf(f.ids['hotel-list']),/Google Travel hotel search/);
+  // Provider names, too, must vanish when the selected dates change.
+  f.ids['check-out'].value='2026-11-16';f.ids['check-out'].listeners.change();
+  assert.doesNotMatch(f.textOf(f.ids['hotel-list']),/A Provider-Supplied Paris Hotel/);
+  assert.doesNotMatch(f.textOf(f.ids['hotel-list']),/\$450\.00/);
+});
+
 test('bad or unverified provider totals never become visible numeric hotel prices',async()=>{
   const f=domFixture();await f.public.load({name:'Sigiriya',latitude:7.95,longitude:80.75});
   const trip={destination:'Sigiriya',checkIn:'2026-11-12',checkOut:'2026-11-15',adults:2};
