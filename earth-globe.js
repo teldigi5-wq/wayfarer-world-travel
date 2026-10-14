@@ -70,6 +70,7 @@
     gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,textureImage);
     if(gl.getError()!==gl.NO_ERROR)throw Error('Texture unavailable');
     canvas.hidden=false;fallback.hidden=true;
+    root.querySelectorAll('[data-earth-direction]').forEach(button=>{button.disabled=false;});
     render();
     status.textContent='NASA photographic Earth centered near '+placeName+
       '. Drag or use arrow keys and direction controls. Not live weather or a booking map.';
@@ -112,6 +113,7 @@
   function showStatic(message){
     gl=null;program=null;texture=null;
     canvas.hidden=true;fallback.hidden=false;
+    root.querySelectorAll('[data-earth-direction]').forEach(button=>{button.disabled=true;});
     fallback.alt='NASA Blue Marble satellite world mosaic in flat equirectangular projection';
     if(!fallback.getAttribute('src'))fallback.src=IMAGE;
     status.textContent=message+' Use the interactive OpenStreetMap for mapped destination coordinates.';
@@ -119,7 +121,14 @@
   function show(){
     active=true;root.dataset.open='true';stage.hidden=false;open.hidden=true;close.hidden=false;describe();
     if(gl&&program&&texture){canvas.hidden=false;fallback.hidden=true;render();return;}
-    if(pending||image)return;
+    if(pending)return;
+    // Opening again after an image finished loading while the stage was
+    // closed must reinitialize it rather than leave an empty globe.
+    if(image&&image.complete&&image.naturalWidth>0){
+      try{initialize(image);}catch{showStatic('The projected globe is unavailable; showing the flat NASA mosaic.');}
+      return;
+    }
+    if(image){fallback.hidden=false;return;}
     pending=true;
     status.textContent='Loading one public NASA Blue Marble image on request. No map SDK or paid search.';
     image=new Image();image.crossOrigin='anonymous';image.decoding='async';
