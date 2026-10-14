@@ -171,6 +171,7 @@
   async function load(place){
     const seq=++loadSeq;
     controller?.abort();controller=new AbortController();
+    window.dispatchEvent?.(new Event('wayfarer:location-changed'));
     chosen=Number.isFinite(place?.latitude)&&Number.isFinite(place?.longitude)?{...place}:null;
     window.WayfarerMap?.selectDestination(chosen);
     window.WayfarerDestinationIntelligence?.choose(chosen);
