@@ -72,7 +72,10 @@ function arrivalFixture(){
     agentData:null,checks:{},$ :el,$$:selector=>selector==='[data-check]'?checkboxes:[],
     store:(key,value)=>stored.push({key,value:JSON.parse(JSON.stringify(value))})
   });
-  vm.runInContext(app.slice(sliceStart,sliceEnd),ctx,{timeout:1000});
+  const sourceStart=app.indexOf('const ARRIVAL_SOURCE_MAX_AGE_MS=');
+  const sourceEnd=app.indexOf('function resetAgents(preserveContext=false){',sourceStart);
+  assert.ok(sourceStart>0&&sourceEnd>sourceStart);
+  vm.runInContext(app.slice(sourceStart,sourceEnd)+'\n'+app.slice(sliceStart,sliceEnd),ctx,{timeout:1000});
   return {ctx,checkboxes,stored,el};
 }
 test('the REAL Arrival UI toggles saved checkboxes per place without cross-country leakage',()=>{
