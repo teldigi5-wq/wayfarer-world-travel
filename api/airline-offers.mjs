@@ -1,5 +1,6 @@
 import {timingSafeEqual} from 'node:crypto';
 import {sealAirlineOffer,openAirlineOffer} from '../airline-offer-token.mjs';
+import {verifiedSegmentRoute} from '../flight-route-integrity.mjs';
 
 // Optional airline offer adapter. Completely disabled without opt-in credentials.
 // Uses Duffel's developer sandbox by default; never creates orders or payments.
@@ -87,16 +88,22 @@ function normalizeOffer(raw,t,config,secret,checkedAt){
   if(!Number.isFinite(expiry)||expiry<=Date.now())return null;
   // Reject provider/test-mode mismatches to avoid labeling sandbox prices live.
   if(raw.live_mode!==(config.mode==='live'))return null;
-  const slices=raw.slices.map(slice=>{
-    const segments=(slice.segments||[]).slice(0,6).map(seg=>({
+  // A priced round trip must contain two COMPLETE, connected provider
+  // slices. Dropping malformed legs before display would falsely imply a
+  // viable journey; reject the whole supplier offer instead.
+  if(raw.slices.some(slice=>!slice||!Array.isArray(slice.segments)||
+    slice.segments.length<1||slice.segments.length>6||
+    slice.segments.some(seg=>!seg||typeof seg!=='object')))return null;
+  const slices=raw.slices.map(slice=>({
+    segments:slice.segments.map(seg=>({
       operatingCarrier:clean(seg.operating_carrier?.name||'Not supplied',80),
       flightNumber:clean(seg.operating_carrier_flight_number,12),
       from:clean(seg.origin?.iata_code,3),to:clean(seg.destination?.iata_code,3),
       departingAt:clean(seg.departing_at,35),arrivingAt:clean(seg.arriving_at,35)
-    })).filter(seg=>iata(seg.from)&&iata(seg.to));
-    return {segments};
-  });
-  if(slices.some(slice=>!slice.segments.length))return null;
+    }))
+  }));
+  if(!verifiedSegmentRoute(slices[0].segments,t.from,t.to)||
+     !verifiedSegmentRoute(slices[1].segments,t.to,t.from))return null;
   const encrypted=sealAirlineOffer(raw.id,config.mode,t,secret);
   return {source:'Duffel airline offer',mode:config.mode,
     label:config.mode==='test'?'SANDBOX — NOT REAL TICKETS':'LIVE SUPPLIER OFFER — NOT RESERVED',
