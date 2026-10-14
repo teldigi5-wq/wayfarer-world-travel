@@ -58,7 +58,7 @@ function normalizeReturn(data,state,secret,checkedAt){
   const entries=[...(Array.isArray(data.best_flights)?data.best_flights:[]),
     ...(Array.isArray(data.other_flights)?data.other_flights:[])];
   const options=entries.slice(0,15).map(f=>{
-    if(!price(f.price)||!Array.isArray(f.flights)||f.flights.length<1||f.flights.length>6)return null;
+    if(!price(f.price)||!Array.isArray(f.flights)||f.flights.length<1||f.flights.length>6||f.flights.some(x=>!x||typeof x!=='object'))return null;
     const segments=f.flights.slice(0,6).map(seg=>({
       airline:text(seg.airline,80),flightNumber:text(seg.flight_number,24),
       from:text(seg.departure_airport?.id,3),to:text(seg.arrival_airport?.id,3),
