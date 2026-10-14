@@ -49,7 +49,7 @@ function domFixture() {
   };
   const environment={
     window:{},document:{getElementById:id=>ids[id],createElement:make},
-    Intl,URL,AbortController,Date,Number,Event:class{},matchMedia:()=>({matches:false}),
+    Intl,URL,URLSearchParams,AbortController,Date,Number,Event:class{},matchMedia:()=>({matches:false}),
     fetch:async()=>({ok:true,json:async()=>state})
   };
   vm.runInNewContext(script,environment,{timeout:1000});
