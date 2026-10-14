@@ -1,5 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
 import {signSelection} from '../flight-selection-token.mjs';
+import countryDirectory from '../data.json' with {type:'json'};
 
 // Source-grounded, opt-in Google Travel searches via SerpApi.
 // Search results are not real-time airline/hotel inventory or purchase confirmations.
@@ -12,6 +13,17 @@ const dateRx = /^\d{4}-\d{2}-\d{2}$/;
 const numMoney = n => (typeof n==='number'||typeof n==='string') && Number.isFinite(Number(n)) && Number(n)>0 && Number(n)<1e9;
 const money = n => (Math.round(Number(n)*100)/100).toFixed(2);
 const airport = code => /^[A-Z]{3}$/.test(code ?? '');
+const countriesByCode=new Map((countryDirectory.countries||[]).map(c=>[c.code,c.name]));
+const finiteLocation=(lat,lon)=>Number.isFinite(lat)&&Math.abs(lat)<=90&&
+  Number.isFinite(lon)&&Math.abs(lon)<=180;
+function hotelGeoQuery(trip){
+  const country=trip.countryCode?countriesByCode.get(trip.countryCode):null;
+  const location=country?trip.destination+', '+country:trip.destination;
+  if(country&&finiteLocation(trip.latitude,trip.longitude)){
+    return 'hotels in '+location+' near '+trip.latitude.toFixed(5)+', '+trip.longitude.toFixed(5);
+  }
+  return 'hotels in '+location;
+}
 function secureEqual(a,b){const l=Buffer.from(String(a||''),'utf8'),r=Buffer.from(String(b||''),'utf8');return l.length>=24&&l.length===r.length&&timingSafeEqual(l,r)}
 function json(res,code,payload){res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');return res.status(code).json(payload)}
 function parseTrip(req){
@@ -22,6 +34,11 @@ function parseTrip(req){
     from:clean(t.from,12).toUpperCase(),to:clean(t.to,12).toUpperCase(),
     checkIn:clean(t.checkIn,16),checkOut:clean(t.checkOut,16),
     destination:clean(t.destination,90),adults:Number(t.adults),
+    // Public mapped reference context; source location is selected by visitor.
+    // Never assert these values are independently validated by our backend.
+    countryCode:clean(t.countryCode,4).toUpperCase(),
+    latitude:t.latitude==null||t.latitude===''?null:Number(t.latitude),
+    longitude:t.longitude==null||t.longitude===''?null:Number(t.longitude),
     flightBudget:t.flightBudget==null||t.flightBudget===''?0:Number(t.flightBudget),
     groundBudget:t.groundBudget==null||t.groundBudget===''?0:Number(t.groundBudget)
   };
@@ -33,6 +50,10 @@ function parseTrip(req){
     !Number.isFinite(route.flightBudget)||route.flightBudget<0||route.flightBudget>1e6||
     !Number.isFinite(route.groundBudget)||route.groundBudget<0||route.groundBudget>1e6||
     !route.destination||route.destination.length<2||
+    (route.countryCode&&!countriesByCode.has(route.countryCode))||
+    ((route.latitude===null)!==(route.longitude===null))||
+    (route.latitude!==null&&!finiteLocation(route.latitude,route.longitude))||
+    (route.latitude!==null&&!route.countryCode)||
     (route.from&&!airport(route.from))||(route.to&&!airport(route.to))||
     (route.from&&route.to&&route.from===route.to)){throw Error('Invalid route, date, group or budget');}
   return route;
@@ -116,6 +137,10 @@ export default async function handler(req,res){
   if(!secureEqual(req.headers?.['x-wayfarer-beta-token'],process.env.WAYFARER_AI_BETA_TOKEN))return json(res,401,{ok:false,error:'Private beta code required'});
   let t;try{t=parseTrip(req)}catch{return json(res,400,{ok:false,error:'Please check route, dates, group and budget.'})}
   const payload={ok:true,source:'SerpApi Google Travel Search',mode:'disabled',checkedAt:null,
+    hotelSearchContext:{destination:t.destination,countryCode:t.countryCode||null,
+      countryName:countriesByCode.get(t.countryCode)||null,
+      coordinateScoped:finiteLocation(t.latitude,t.longitude)&&!!t.countryCode,
+      caveat:'Location context is traveler-selected; provider results may not match this exact area. Verify hotel addresses before booking.'},
     flights:state('not_connected','Search provider not enabled.'),
     hotels:state('not_connected','Search provider not enabled.'),
     food:state('not_connected','Restaurant menu prices are not yet connected.'),
@@ -127,7 +152,7 @@ export default async function handler(req,res){
   payload.mode='search_only';payload.checkedAt=new Date().toISOString();
   const jobs=[
     airport(t.from)&&airport(t.to)?search('google_flights',key,{departure_id:t.from,arrival_id:t.to,outbound_date:t.checkIn,return_date:t.checkOut,adults:t.adults,type:1,travel_class:1,hl:'en',currency:'USD'}):Promise.resolve(null),
-    t.adults<=2?search('google_hotels',key,{q:'hotels in '+t.destination,check_in_date:t.checkIn,check_out_date:t.checkOut,adults:t.adults,hl:'en',currency:'USD'}):Promise.resolve(null)
+    t.adults<=2?search('google_hotels',key,{q:hotelGeoQuery(t),check_in_date:t.checkIn,check_out_date:t.checkOut,adults:t.adults,hl:'en',currency:'USD'}):Promise.resolve(null)
   ];
   const [f,h]=await Promise.allSettled(jobs);
   const failed=e=>state(e?.quota?'quota_exceeded':'unavailable',e?.quota?'Provider monthly quota or rate limit reached.':'Provider search failed. This is not proof of sold-out inventory.');

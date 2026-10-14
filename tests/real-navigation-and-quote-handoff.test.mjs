@@ -55,7 +55,7 @@ test('clicking the actual router binding switches pages instead of throwing a No
   assert.doesNotMatch(app,/(?<!\$)\$\('\.nav-links button'\)\.forEach/);
 });
 function guardFixture(){
-  const a=research.indexOf('    const locationAtSearch='),
+  const a=research.indexOf('    const requestStillCurrent=()=>{'),
     b=research.indexOf('    try{\n      const ctrl=new AbortController()',a);
   assert.ok(a>0&&b>a);
   const values={
@@ -69,7 +69,7 @@ function guardFixture(){
     currentLocation:()=>place,
     isCurrentLocation:old=>old.name===place.name&&old.latitude===place.latitude&&
       old.longitude===place.longitude&&old.countryCode===place.countryCode
-  }},get:id=>values[id],
+  }},get:id=>values[id],locationAtSearch:place,
   trip:{from:'CMB',to:'ORY',destination:'Paris',
     checkIn:'2026-11-12',checkOut:'2026-11-15',adults:2,
     flightBudget:0,groundBudget:540}};
