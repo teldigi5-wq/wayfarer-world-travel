@@ -123,7 +123,7 @@ test('invalid supplier flight routes are never given selectable prices or signed
     assert.equal(x.data.flights.status,'no_results');
     assert.equal(x.data.flights.offers.length,0);
     assert.match(x.data.flights.message,/No route-consistent flight price/);
-    assert.doesNotMatch(x.data.flights.message,/sold out\./i);
+    assert.match(x.data.flights.message,/does not mean flights are sold out/i);
   });
 });
 test('optional return flight selection validates reverse route before any booking token is created',async()=>{
