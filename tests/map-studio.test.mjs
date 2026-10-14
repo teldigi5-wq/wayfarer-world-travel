@@ -143,3 +143,66 @@ test('both fast and fallback worldwide map records have source coordinates, not 
   assert.equal(wd[0].latitude,48.86);
   assert.equal(wd[0].longitude,2.35);
 });
+
+
+test('two source-mapped stays sharing a name stay individually clickable and accessible',()=>{
+  const {ids,map}=setup();
+  map.selectDestination({name:'Paris',country:'France',latitude:48.8566,longitude:2.3522});
+  const stay1={name:'Same Name Hotel',source:'Synthetic source fixture',
+    latitude:48.858,longitude:2.351,distanceKm:0.3};
+  const stay2={name:'Same Name Hotel',source:'Synthetic source fixture',
+    latitude:48.868,longitude:2.361,distanceKm:1.8};
+  map.setNearby({airports:[],hotels:[stay1,stay2]});
+  const buttons=ids['wf-map-pins'].children;
+  assert.equal(buttons.length,3,'The selected city plus two distinct-coordinate stays are shown');
+  assert.notEqual(buttons[1].dataset.place,buttons[2].dataset.place,
+    'Different coordinates with identical names must not collapse');
+  assert.equal(buttons.filter(x=>x.getAttribute('aria-pressed')==='true').length,1);
+  assert.equal(buttons[0].getAttribute('aria-pressed'),'true');
+  assert.match(buttons[1].children[1].children[1].textContent,/48\.85800, 2\.35100/);
+  assert.match(buttons[2].children[1].children[1].textContent,/48\.86800, 2\.36100/);
+  assert.match(buttons[2].getAttribute('aria-label'),/48\.86800, 2\.36100/);
+  assert.equal(ids['wf-map-viewport'].children.some(x=>x.tagName==='IFRAME'),false,
+    'No third-party map imagery before an explicit pin click or map-open action');
+  buttons[1].click();
+  assert.equal(ids['wf-map-viewport'].children[0].tagName,'IFRAME');
+  assert.equal(new URL(ids['wf-map-viewport'].children[0].src).searchParams.get('marker'),
+    '48.858000,2.351000');
+  assert.equal(buttons[1].getAttribute('aria-pressed'),'true');
+  assert.equal(buttons[2].getAttribute('aria-pressed'),'false');
+  buttons[2].click();
+  assert.equal(new URL(ids['wf-map-viewport'].children[0].src).searchParams.get('marker'),
+    '48.868000,2.361000');
+  assert.equal(buttons[1].getAttribute('aria-pressed'),'false');
+  assert.equal(buttons[2].getAttribute('aria-pressed'),'true');
+  assert.equal(new URL(ids['wf-map-directions-link'].href).searchParams.get('destination'),
+    '48.86800,2.36100');
+});
+test('map pin identity distinguishes type even at identical coordinates and deduplicates identical references',()=>{
+  const {ids,map}=setup();
+  map.selectDestination({name:'Transit Point',latitude:1.35,longitude:103.82});
+  const point={name:'Same Place',latitude:1.36,longitude:103.83,distanceKm:1};
+  map.setNearby({airports:[point],hotels:[point,point]});
+  const buttons=ids['wf-map-pins'].children;
+  assert.equal(buttons.length,3,'Airport and hotel retain distinct category; exact duplicate stay is deduplicated');
+  assert.notEqual(buttons[1].dataset.place,buttons[2].dataset.place);
+  assert.equal(buttons.filter(x=>x.getAttribute('aria-pressed')==='true').length,1);
+  buttons[2].click();
+  assert.equal(buttons[2].getAttribute('aria-pressed'),'true');
+  assert.equal(buttons[1].getAttribute('aria-pressed'),'false');
+  ids['wf-map-hide'].click();
+  assert.equal(ids['wf-map-viewport'].children.some(x=>x.tagName==='IFRAME'),false);
+  map.selectDestination({name:'New City',latitude:40.7128,longitude:-74.006});
+  assert.equal(ids['wf-map-pins'].children.length,1);
+  assert.equal(ids['wf-map-pins'].children[0].getAttribute('aria-pressed'),'true');
+  assert.equal(ids['wf-map-viewport'].children.some(x=>x.tagName==='IFRAME'),false);
+});
+test('map selection never relies on label-only identity or paid Google Maps SDK',()=>{
+  const source=read('map-studio.js');
+  assert.match(source,/const pinKey=item=>/);
+  assert.match(source,/item\.latitude\.toFixed\(5\),item\.longitude\.toFixed\(5\)/);
+  assert.match(source,/b\.dataset\.place===focus\.key/);
+  assert.match(source,/button\.setAttribute\('aria-label'/);
+  assert.doesNotMatch(source,/const key=entry\.type\+':'\+entry\.name/);
+  assert.doesNotMatch(source,/maps\.googleapis\.com|GOOGLE_MAPS_API_KEY|mapboxgl|new google\.maps/);
+});

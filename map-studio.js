@@ -30,6 +30,11 @@
     routeUrl.searchParams.set('api','1');routeUrl.searchParams.set('destination',q);
     directions.href=routeUrl.href;
   }
+  // Named mapped locations are not globally unique. Coordinates and type are
+  // part of the pin identity, not just a display label or array position.
+  const pinKey=item=>item&&valid(item.latitude,item.longitude)?
+    [item.type||'destination',String(item.name||'Mapped place').slice(0,120),
+     item.latitude.toFixed(5),item.longitude.toFixed(5)].join(':'):null;
   let focus=null,chosen=null,locations={airports:[],hotels:[]},initialized=false;
   function placeholder(message){
     viewport.replaceChildren();
@@ -61,10 +66,10 @@
   function focusOn(item,open=false){
     if(!valid(item?.latitude,item?.longitude))return false;
     focus={name:String(item.name||'Mapped place').slice(0,120),
-      latitude:item.latitude,longitude:item.longitude};
+      latitude:item.latitude,longitude:item.longitude,key:pinKey(item)};
     label.textContent=focus.name;links(focus);
     pins.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',
-      b.dataset.place===item.type+':'+focus.name?'true':'false'));
+      b.dataset.place===focus.key?'true':'false'));
     if(open||initialized)iframe();
     else status.textContent='Map ready for '+focus.name+'. Select Open interactive map to load map imagery.';
     return true;
@@ -75,21 +80,32 @@
     const entries=[...(chosen?[{...chosen,type:'destination'}]:[]),
       ...locations.airports.slice(0,5).map(x=>({...x,type:'airport'})),
       ...locations.hotels.slice(0,5).map(x=>({...x,type:'hotel'}))];
+    const duplicates=new Map();
     for(const entry of entries){
       if(!valid(entry.latitude,entry.longitude))continue;
-      const key=entry.type+':'+entry.name;
+      const name=String(entry.name||'Mapped place');
+      duplicates.set(name,(duplicates.get(name)||0)+1);
+    }
+    for(const entry of entries){
+      if(!valid(entry.latitude,entry.longitude))continue;
+      const key=pinKey(entry);
       if(known.has(key))continue;
       known.add(key);
       const button=document.createElement('button');button.type='button';
       button.className='wf-map-pin';
       button.dataset.place=key;
-      button.setAttribute('aria-pressed',String(focus?.name===entry.name));
+      button.setAttribute('aria-pressed',String(focus?.key===key));
       const icon=document.createElement('span');icon.className='wf-map-dot';
       const text=document.createElement('span');
       const name=document.createElement('strong');name.textContent=entry.name;
       const kind=document.createElement('small');
-      kind.textContent=entry.type==='airport'?'Airport reference':
+      const category=entry.type==='airport'?'Airport reference':
         entry.type==='hotel'?'Mapped hotel reference':'Chosen destination';
+      const coordinate=entry.latitude.toFixed(5)+', '+entry.longitude.toFixed(5);
+      kind.textContent=category+(duplicates.get(String(entry.name||'Mapped place'))>1?
+        ' · '+coordinate:'');
+      button.setAttribute('aria-label',String(entry.name||'Mapped place')+' · '+category+
+        (duplicates.get(String(entry.name||'Mapped place'))>1?' · '+coordinate:''));
       text.append(name,kind);button.append(icon,text);
       button.addEventListener('click',()=>focusOn(entry,true));
       pins.append(button);
