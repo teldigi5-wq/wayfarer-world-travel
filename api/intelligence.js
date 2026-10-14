@@ -1,4 +1,5 @@
 import {timingSafeEqual} from 'node:crypto';
+import localReference from '../data.json' with {type:'json'};
 import {getJson,scrub,validHttpsSource,verificationSummary} from '../agent-runtime.mjs';
 
 const known={
@@ -58,8 +59,17 @@ async function place(p){
     return {ok:true,extract,sourceUrl};
   }catch{return sourceFail('Encyclopedia destination context temporarily unavailable.');}
 }
+function countryReference(code){
+  // Public static reference from the bundled country index, *not* a claim
+  // that currencies, language or entry rules were retrieved live.
+  const c=Array.isArray(localReference.countries)?
+    localReference.countries.find(x=>x.code===code):null;
+  return c?{name:scrub(c.name,90),capital:scrub(c.capital,90),
+    region:scrub(c.region,90),basis:'Bundled country directory; not live verified'}:null;
+}
 async function country(p){
   if(!p.country)return sourceFail('Choose a destination with a country for reference details.');
+  const reference=countryReference(p.country);
   try{
     const u='https://restcountries.com/v3.1/alpha/'+encodeURIComponent(p.country)+
       '?fields=name,currencies,languages,timezones';
@@ -73,7 +83,7 @@ async function country(p){
       currencyCode:scrub(code,6),language:scrub(languages.join(', '),160),
       primaryLanguage:scrub(languages[0],65),primaryTimezone:scrub(zones[0],65),
       sourceUrl:'https://restcountries.com/'};
-  }catch{return sourceFail('Country reference temporarily unavailable.');}
+  }catch{return {...sourceFail('Live currency, language and timezone details unavailable.'),reference};}
 }
 const clean=(v,max,fallback)=>scrub(v,max)||fallback;
 async function compose(brief,tools){
