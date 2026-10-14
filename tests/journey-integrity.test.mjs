@@ -69,3 +69,47 @@ test('navigation labels the active view for assistive technology',()=>{
   assert.match(app,/setAttribute\('aria-current','page'\)/);
   assert.match(app,/removeAttribute\('aria-current'\)/);
 });
+
+
+test('same-name destinations in different countries are saved as distinct journeys',()=>{
+  const helper=sandbox.WayfarerJourneyIntegrity;
+  const make=(name,country,code,latitude,longitude,pace='Balanced')=>({
+    destination:name,country,worldPlace:{name,country,countryCode:code,latitude,longitude},
+    days:3,budget:180,pace
+  });
+  const france=make('Paris','France','FR',48.8566,2.3522);
+  const texas=make('Paris','United States','US',33.6609,-95.5555);
+  const springfieldIllinois=make('Springfield','United States','US',39.8017,-89.6437);
+  const springfieldMass=make('Springfield','United States','US',42.1015,-72.5898);
+  let saved=[];
+  for(const item of [france,texas,springfieldIllinois,springfieldMass])
+    saved=helper.upsertJourney(saved,item);
+  assert.equal(saved.length,4);
+  const newFrance={...france,pace:'Full & energetic'};
+  saved=helper.upsertJourney(saved,newFrance);
+  assert.equal(saved.length,4,'resaving the SAME geographic city should update just that card');
+  assert.equal(saved.find(x=>x.country==='France').pace,'Full & energetic');
+  assert.equal(saved.find(x=>x.country==='United States'&&x.destination==='Paris').worldPlace.longitude,-95.5555);
+  assert.notEqual(helper.journeyIdentity(france),helper.journeyIdentity(texas));
+  assert.notEqual(helper.journeyIdentity(springfieldIllinois),helper.journeyIdentity(springfieldMass));
+});
+
+test('legacy saves without coordinates are never incorrectly assigned another country',()=>{
+  const helper=sandbox.WayfarerJourneyIntegrity;
+  const a={destination:'Paris',country:'France',worldPlace:null,days:3};
+  const b={destination:'Paris',country:'United States',worldPlace:null,days:7};
+  const saved=helper.upsertJourney(helper.upsertJourney([],a),b);
+  assert.equal(saved.length,2);
+  assert.equal(helper.upsertJourney(saved,{...a,days:5}).length,2);
+  assert.equal(helper.journeyIdentity({destination:'',country:'France'}),null);
+});
+
+test('save and resume use geographic identity and reload worldwide sourced references',()=>{
+  assert.match(app,/WayfarerJourneyIntegrity\.upsertJourney\(trips,\{destination:selected/);
+  const chooser=app.slice(app.indexOf('function choose(n)'),app.indexOf('let agentRunSerial='));
+  assert.match(chooser,/nearbyPlaces\(worldSelection\)/);
+  const saved=app.slice(app.indexOf('const resumeTrip='),app.indexOf('resume.onclick=',app.indexOf('const resumeTrip=')));
+  assert.match(saved,/WayfarerJourneyIntegrity\?\.resolveSavedWorldPlace\(t\)/);
+  assert.match(saved,/nearbyPlaces\(worldSelection\)/);
+  assert.doesNotMatch(app,/trips=trips\.filter\(x=>x\.destination!==selected\)/);
+});

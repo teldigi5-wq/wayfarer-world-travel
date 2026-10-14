@@ -343,6 +343,14 @@ Regression tests `tests/worldwide-source-coordinator.test.mjs` cover public quer
 
 **Quality gates:** tests in `tests/real-navigation-and-quote-handoff.test.mjs` execute real router transitions and verify the actual protected form identity guard, and `tests/nearby-results.test.mjs` guards country/coordinate collisions for provider quotes. Run `npm run check && npm test`; then Vercel Preview and manual browser/mobile review are required before merging. PR remains draft stacked on Stage 27, Production remains unchanged, and no billing/secret changes are permitted.
 
+### Stage 29 — accurate saved-world journeys and quote lifecycle (draft)
+
+**One name is not one destination.** A previous save operation removed all journeys sharing the currently selected *name*, which could erase Paris, Texas when saving Paris, France. The existing on-device `wf-trips-v2` storage now uses `WayfarerJourneyIntegrity.upsertJourney()`, a deterministic identity based on destination name, ISO country code (or country label for legacy saves), and source-backed coordinates rounded to five decimals. Only an exact same-location resave replaces its earlier entry; distinct same-name cities and old country-only records are preserved. The local storage schema is unchanged; nothing is sent to a server. Curated city geography is still resolved exclusively through existing trusted static references. Resume now refreshes nearby airport/hotel cards for the restored place, or clears the previous geography when the saved entry has no valid coordinates.
+
+**No stale prices after edits.** Authorized supplier quotes are indicative snapshots of one selected place and travel form. The Travel Research panel now removes prior displayed results and the nearby cards' cached quote overlay as soon as a traveler edits the origin, arrival, airfare budget, dates, guests, trip length or ground budget after a search. Re-selecting a destination also invalidates old supplier results. This refresh is entirely client-side: no automatic paid searches, no booking, and no silent supplier credit use. Earlier Stage 28 safeguards still reject in-flight responses if the originally submitted destination, airports, dates or guests have changed. The visitor can run another explicitly authorized price search when ready.
+
+**QA:** `tests/journey-integrity.test.mjs` checks preserving distinct worldwide journeys and replacing the exact same place. `tests/nearby-results.test.mjs` checks removal of stale indicative flight/hotel prices and destination-change invalidation. Release requires green GitHub checks, an exact-commit Vercel Preview, and manual 390/768/1440px navigation, saved-trip resume and quote-change QA before any Production promotion.
+
 ## Run and test
 
 Install Node.js 20+ from its official distribution. No package install, API key, environment variable, card or build dependency is needed.

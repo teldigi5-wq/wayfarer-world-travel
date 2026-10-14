@@ -35,5 +35,23 @@
     // substitute unrelated coordinates or guess a country/airport code.
     return claimedCountry ? {name, country:claimedCountry} : null;
   }
-  globalThis.WayfarerJourneyIntegrity = Object.freeze({resolveSavedWorldPlace});
+  const token=value=>String(value||'').normalize('NFKC').toLocaleLowerCase('en')
+    .trim().replace(/\s+/g,' ');
+  function journeyIdentity(trip) {
+    if (!trip || !validLabel(trip.destination)) return null;
+    // Match the same geographic place, never only the visible city label.
+    const place=resolveSavedWorldPlace(trip);
+    const region=place?.countryCode||token(trip.country||place?.country);
+    const coordinates=place&&validCoord(place.latitude,90)&&validCoord(place.longitude,180)
+      ? place.latitude.toFixed(5)+','+place.longitude.toFixed(5) : 'no-coordinates';
+    return JSON.stringify([token(trip.destination),region,coordinates]);
+  }
+  function upsertJourney(existing,next) {
+    const identity=journeyIdentity(next);
+    if(!identity) return Array.isArray(existing)?[...existing]:[];
+    return [...(Array.isArray(existing)?existing:[]).filter(x=>journeyIdentity(x)!==identity),next];
+  }
+  globalThis.WayfarerJourneyIntegrity=Object.freeze({
+    resolveSavedWorldPlace,journeyIdentity,upsertJourney
+  });
 })();

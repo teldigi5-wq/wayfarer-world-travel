@@ -326,10 +326,13 @@
     output.append(word('p','Search timestamp: '+localeTime(res.checkedAt)+
       ' · '+res.note,'travel-search-foot'));
   }
+  let showingSupplierResults=false;
   form.addEventListener('submit',async event=>{
     event.preventDefault();if(!form.reportValidity())return;
     const button=$('travel-search-button');button.disabled=true;button.setAttribute('aria-busy','true');
     status.textContent='Searching connected travel providers…';output.replaceChildren();
+    showingSupplierResults=false;
+    window.WayfarerNearby?.clearQuotes?.();
     const days=Number(get('days'))||3,daily=Number(get('budget'))||0;
     const trip={
       from:get('travel-origin').toUpperCase().trim(),to:get('travel-arrival').toUpperCase().trim(),
@@ -366,12 +369,27 @@
       }
       status.textContent=payload.mode==='search_only'?'Google Travel search results · not confirmed inventory':'Search currently disabled · no real prices connected';
       show(payload);
+      showingSupplierResults=true;
       // Share ONLY actual, user-requested provider results with the existing map cards.
       // This does not start a supplier call and never invents a quote.
       window.WayfarerNearby?.applyQuotes(payload,trip,locationAtSearch);
     }catch(err){status.textContent=err.name==='AbortError'?'Search timed out. No availability conclusion is possible.':err.message||'Search unavailable.';}
     finally{button.disabled=false;button.removeAttribute('aria-busy');}
   });
+  // A completed supplier quote belongs to one exact travel form. Editing
+  // it cannot leave an old price visible or silently initiate a paid lookup.
+  const invalidateSupplierView=()=>{
+    if(!showingSupplierResults)return;
+    showingSupplierResults=false;output.replaceChildren();
+    window.WayfarerNearby?.clearQuotes?.();
+    status.textContent='Trip details changed. Previous search prices were cleared. Run a new explicit search to compare current options.';
+  };
+  for(const id of ['travel-origin','travel-arrival','travel-airfare','check-in',
+    'check-out','stay-adults','days','budget']){
+    $(id)?.addEventListener('input',invalidateSupplierView);
+    $(id)?.addEventListener('change',invalidateSupplierView);
+  }
+  window.addEventListener?.('wayfarer:location-changed',invalidateSupplierView);
   // Read explicit IATA attributes from source-backed nearby cards. Parsing
   // visible prices/text for three-letter codes could mistake USD for an airport.
   const nearby=$('airport-list');
