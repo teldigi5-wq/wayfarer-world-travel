@@ -6,9 +6,21 @@ const currentResearchBrief=()=>JSON.stringify({
   budget:$('#budget')?.value,pace:$('#pace')?.value,
   moods:[...document.querySelectorAll('.pref.on')].map(x=>x.textContent).join(', ')
 });
+// Data-source facts must belong to this mapped destination, not simply its name.
+const ARRIVAL_SOURCE_MAX_AGE_MS=30*60*1000;
+let arrivalResearchIdentity=null,arrivalResearchAt=0;
+const currentArrivalIdentity=()=>JSON.stringify([
+ selected,worldSelection?.countryCode||worldSelection?.country||'',
+ worldSelection?.latitude??null,worldSelection?.longitude??null
+]);
+function clearArrivalSources(message='Tap Refresh to retrieve available weather and country context. Visa rules and transport schedules are not connected.'){
+ $('#arr-weather').textContent='Run tools';
+ for(const id of ['arr-currency','arr-zone','arr-language'])$('#'+id).textContent='—';
+ $('#arr-source').textContent=message;
+}
 function resetAgents(preserveContext=false){
  agentRunSerial++;
- if(!preserveContext)agentData=null;
+ if(!preserveContext){agentData=null;arrivalResearchIdentity=null;arrivalResearchAt=0;clearArrivalSources();}
  agentRequestController?.abort();
  agentRequestController=null;
  const button=$('#run-agents');if(button){button.disabled=false;button.textContent='Run AI journey ↗';}const cancel=$('#cancel-agents');if(cancel)cancel.hidden=true;
@@ -41,7 +53,7 @@ const esc=v=>String(v??'—').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>'
    $('#agent-log').textContent='Your travel brief changed while research was running. The earlier result was discarded; run research again for the new details.';
    return false;
  }
- agentData=d;[['place','place'],['climate','weather'],['country','country']].forEach(([widget,key])=>{const ok=d[key]?.ok===true;$('#agent-'+widget).className=ok?'agent done':'agent';$('#agent-'+widget+' p').textContent=ok?'Sourced context received':'Source unavailable · continuing with other agents';});$('#agent-ai').className=d.ai?.ok?'agent done':'agent';$('#agent-ai p').textContent=d.ai?.ok?'AI draft created · verify before use':(d.ai?.error||'AI unavailable · local plan retained');const w=d.weather||{},p=d.place||{},c=d.country||{};$('#agent-log').innerHTML=`<div><strong>Climate Agent</strong>${w.ok?`${esc(w.temperature)} °C · wind ${esc(w.wind)} km/h<br><a href="${esc(w.sourceUrl)}" target="_blank">Open-Meteo ↗</a>`:'Unavailable'}</div><div><strong>Destination Agent</strong>${p.ok?`${esc(p.extract)}<br><a href="${esc(p.sourceUrl)}" target="_blank">Wikipedia ↗</a>`:'Unavailable'}</div><div><strong>Country Agent</strong>${c.ok?`${esc(c.currency)} · ${esc(c.language)}<br><a href="${esc(c.sourceUrl)}" target="_blank">REST Countries ↗</a>`:'Unavailable'}</div>`;
+ agentData=d;arrivalResearchIdentity=currentArrivalIdentity();arrivalResearchAt=Date.now();[['place','place'],['climate','weather'],['country','country']].forEach(([widget,key])=>{const ok=d[key]?.ok===true;$('#agent-'+widget).className=ok?'agent done':'agent';$('#agent-'+widget+' p').textContent=ok?'Sourced context received':'Source unavailable · continuing with other agents';});$('#agent-ai').className=d.ai?.ok?'agent done':'agent';$('#agent-ai p').textContent=d.ai?.ok?'AI draft created · verify before use':(d.ai?.error||'AI unavailable · local plan retained');const w=d.weather||{},p=d.place||{},c=d.country||{};$('#agent-log').innerHTML=`<div><strong>Climate Agent</strong>${w.ok?`${esc(w.temperature)} °C · wind ${esc(w.wind)} km/h<br><a href="${esc(w.sourceUrl)}" target="_blank">Open-Meteo ↗</a>`:'Unavailable'}</div><div><strong>Destination Agent</strong>${p.ok?`${esc(p.extract)}<br><a href="${esc(p.sourceUrl)}" target="_blank">Wikipedia ↗</a>`:'Unavailable'}</div><div><strong>Country Agent</strong>${c.ok?`${esc(c.currency)} · ${esc(c.language)}<br><a href="${esc(c.sourceUrl)}" target="_blank">REST Countries ↗</a>`:'Unavailable'}</div>`;
 if(!c.ok&&c.reference){
  const ref=document.createElement('p');ref.className='wf-country-reference';
  ref.textContent='Bundled country reference · '+c.reference.name+
@@ -69,7 +81,13 @@ $('#agent-log').append(note)}if(d.ai?.ok&&Array.isArray(d.ai.days)){const days=d
      agentRequestController=null;btn.disabled=false;btn.textContent='Run AI journey ↗';$('#cancel-agents').hidden=true;
    }
  }}$('#run-agents').onclick=runAgents;$('#cancel-agents').onclick=cancelAgentResearch;
-$('#save-trip').onclick=()=>{trips=globalThis.WayfarerJourneyIntegrity.upsertJourney(trips,{destination:selected,country:worldSelection?.country||'',worldPlace:worldSelection?.name===selected?{name:worldSelection.name,country:worldSelection.country,countryCode:worldSelection.countryCode,latitude:worldSelection.latitude,longitude:worldSelection.longitude}:null,days:Number($('#days').value),budget:Number($('#budget').value),pace:$('#pace').value,savedAt:new Date().toISOString()});store('wf-trips-v2',trips);toast('Journey saved on this device.')};const arrivalChecklistTrip=()=>({destination:selected,country:worldSelection?.name===selected?worldSelection.country:'',worldPlace:worldSelection?.name===selected?worldSelection:null});function arrival(){const d=destinations.find(x=>x.name===selected),fallback=destinations[0];$('#arrival-image').src=d?.arrival||'wayfarer-hero-v3.jpg';$('#arrival-image').alt='Illustrative travel scene for '+selected;$('#arrival-title').textContent='Welcome to '+selected+'.';const country=worldSelection?.name===selected?worldSelection.country:(d?.country||'');$('#arrival-context-destination').textContent=selected+(country&&country!==selected?', '+country:'');$('#arrival-context-duration').textContent=(Number($('#days').value)||3)+' days';$('#arrival-context-budget').textContent='USD '+((Number($('#days').value)||3)*(Number($('#budget').value)||180)).toLocaleString('en-US',{maximumFractionDigits:0})+' planned';$('#arr-tip').textContent=d?.tip||'Confirm local customs, entry requirements and transport details with official sources before travel.';$$('[data-check]').forEach(c=>c.checked=!!globalThis.WayfarerJourneyIntegrity?.checklistChecked(checks,arrivalChecklistTrip(),c.dataset.check));readiness();if(agentData)applyData(agentData);else{$('#arr-weather').textContent='Run tools';$('#arr-currency').textContent=$('#arr-zone').textContent=$('#arr-language').textContent='—';$('#arr-source').textContent='Tap Refresh to retrieve available weather and country context. Visa rules and transport schedules are not connected.'}}function readiness(){const n=$$('[data-check]').filter(x=>x.checked).length,p=n*25;$('#ring').style.setProperty('--value',p);$('#ring').setAttribute('aria-label',p+'% of preparation checklist complete');$('#ready-value').textContent=p+'%';$('#ready-label').textContent=p===100?'Four personal preparation reminders marked':p>=50?'A few preparation reminders remain':'Start with the essentials'}$$('[data-check]').forEach(c=>c.onchange=()=>{const key=globalThis.WayfarerJourneyIntegrity?.checklistKey(arrivalChecklistTrip(),c.dataset.check);if(key){checks[key]=c.checked;store('wf-checks-v2',checks)}readiness()});function applyData(d){
+$('#save-trip').onclick=()=>{trips=globalThis.WayfarerJourneyIntegrity.upsertJourney(trips,{destination:selected,country:worldSelection?.country||'',worldPlace:worldSelection?.name===selected?{name:worldSelection.name,country:worldSelection.country,countryCode:worldSelection.countryCode,latitude:worldSelection.latitude,longitude:worldSelection.longitude}:null,days:Number($('#days').value),budget:Number($('#budget').value),pace:$('#pace').value,savedAt:new Date().toISOString()});store('wf-trips-v2',trips);toast('Journey saved on this device.')};const arrivalChecklistTrip=()=>({destination:selected,country:worldSelection?.name===selected?worldSelection.country:'',worldPlace:worldSelection?.name===selected?worldSelection:null});function arrival(){const d=destinations.find(x=>x.name===selected),fallback=destinations[0];$('#arrival-image').src=d?.arrival||'wayfarer-hero-v3.jpg';$('#arrival-image').alt='Illustrative travel scene for '+selected;$('#arrival-title').textContent='Welcome to '+selected+'.';const country=worldSelection?.name===selected?worldSelection.country:(d?.country||'');$('#arrival-context-destination').textContent=selected+(country&&country!==selected?', '+country:'');$('#arrival-context-duration').textContent=(Number($('#days').value)||3)+' days';$('#arrival-context-budget').textContent='USD '+((Number($('#days').value)||3)*(Number($('#budget').value)||180)).toLocaleString('en-US',{maximumFractionDigits:0})+' planned';$('#arr-tip').textContent=d?.tip||'Confirm local customs, entry requirements and transport details with official sources before travel.';$$('[data-check]').forEach(c=>c.checked=!!globalThis.WayfarerJourneyIntegrity?.checklistChecked(checks,arrivalChecklistTrip(),c.dataset.check));readiness();
+const fresh=agentData&&arrivalResearchIdentity===currentArrivalIdentity()&&
+  arrivalResearchAt>0&&Date.now()-arrivalResearchAt<=ARRIVAL_SOURCE_MAX_AGE_MS;
+if(fresh)applyData(agentData);
+else clearArrivalSources(agentData?
+ 'Previous source readings have expired or belong to another destination. Refresh to retrieve current context. Flight schedules, visas and bookings are not verified.':
+ 'Tap Refresh to retrieve available weather and country context. Visa rules and transport schedules are not connected.');}function readiness(){const n=$$('[data-check]').filter(x=>x.checked).length,p=n*25;$('#ring').style.setProperty('--value',p);$('#ring').setAttribute('aria-label',p+'% of preparation checklist complete');$('#ready-value').textContent=p+'%';$('#ready-label').textContent=p===100?'Four personal preparation reminders marked':p>=50?'A few preparation reminders remain':'Start with the essentials'}$$('[data-check]').forEach(c=>c.onchange=()=>{const key=globalThis.WayfarerJourneyIntegrity?.checklistKey(arrivalChecklistTrip(),c.dataset.check);if(key){checks[key]=c.checked;store('wf-checks-v2',checks)}readiness()});function applyData(d){
  const weather=$('#arr-weather'),currency=$('#arr-currency'),zone=$('#arr-zone'),language=$('#arr-language');
  weather.textContent=d.weather?.ok?String(d.weather.temperature)+' °C':'Unavailable';
  currency.textContent=d.country?.ok?(d.country.currencyCode||'Unknown'):'Unavailable';
@@ -221,7 +239,29 @@ $('#country-filter')?.addEventListener('change',()=>{
 });
 
 
-function setStayDates(){const iso=d=>d.toISOString().slice(0,10),start=new Date(),end=new Date();start.setDate(start.getDate()+30);end.setDate(end.getDate()+33);$('#check-in').value=iso(start);$('#check-out').value=iso(end);$('#check-in').min=iso(new Date());$('#check-out').min=iso(new Date(Date.now()+86400000))}
+function localCalendarDate(date){
+ const two=n=>String(n).padStart(2,'0');
+ return date.getFullYear()+'-'+two(date.getMonth()+1)+'-'+two(date.getDate());
+}
+function syncStayDateRange(){
+ const checkIn=$('#check-in'),checkOut=$('#check-out');
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(checkIn.value))return;
+ // Local noon avoids date-boundary surprises around DST and UTC offsets.
+ const next=new Date(checkIn.value+'T12:00:00');
+ if(!Number.isFinite(next.getTime()))return;
+ next.setDate(next.getDate()+1);
+ checkOut.min=localCalendarDate(next);
+ if(!checkOut.value||checkOut.value<checkOut.min)checkOut.value=checkOut.min;
+}
+function setStayDates(){
+ const today=new Date(),start=new Date(today),end=new Date(today);
+ start.setDate(start.getDate()+30);end.setDate(end.getDate()+33);
+ $('#check-in').min=localCalendarDate(today);
+ $('#check-in').value=localCalendarDate(start);
+ $('#check-out').value=localCalendarDate(end);
+ syncStayDateRange();
+ $('#check-in').addEventListener('change',syncStayDateRange);
+}
 function stayMessage(title,detail,type=''){ $('#stay-results').innerHTML='<article class="stay-empty '+type+'"><b>'+esc(title)+'</b><span>'+esc(detail)+'</span></article>' }
 function searchStays(){
  const research=document.getElementById('wayfarer-travel-research');
