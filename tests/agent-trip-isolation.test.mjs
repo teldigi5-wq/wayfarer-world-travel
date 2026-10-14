@@ -30,6 +30,7 @@ function fixture(payloadOverride={}){
   const promise=new Promise(resolve=>{resolveNetwork=resolve;});
   let applied=0;
   const context=vm.createContext({
+    agentData:null,
     selected:'Kyoto',
     worldSelection:{name:'Kyoto',country:'Japan',countryCode:'JP',latitude:35.0116,longitude:135.7681},
     $:element,$$:()=>[{textContent:'Culture'}],
