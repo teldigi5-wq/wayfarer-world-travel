@@ -157,6 +157,16 @@
 #studio .wf-nearby-compare:hover{background:#27614a;}
 #studio :is(.wf-nearby-map,.wf-nearby-compare):focus-visible{outline:3px solid #b48a52;outline-offset:3px;}
 #studio .wf-nearby-status{grid-column:1/-1;font-size:.88rem;line-height:1.6;}
+#studio .wf-nearby-progress{
+ grid-column:1/-1;margin:0 0 1px;padding:10px 14px;
+ border-left:2px solid #d6bc8c;border-radius:0 7px 7px 0;
+ background:rgba(226,212,178,.10);color:#e5e9df;
+ font:500 .81rem/1.6 'DM Sans',sans-serif;
+}
+@media(max-width:650px){
+ #studio .wf-nearby-progress{padding:9px 11px;font-size:.77rem;}
+}
+
 @media(max-width:650px){
  #studio :is(#airport-list,#hotel-list){grid-template-columns:minmax(0,1fr);gap:10px;}
  #studio .wf-nearby-card{min-height:0;padding:16px;}
