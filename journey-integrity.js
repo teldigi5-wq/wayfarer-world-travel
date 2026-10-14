@@ -51,7 +51,28 @@
     if(!identity) return Array.isArray(existing)?[...existing]:[];
     return [...(Array.isArray(existing)?existing:[]).filter(x=>journeyIdentity(x)!==identity),next];
   }
+  function checklistKey(trip,item) {
+    if(typeof item!=='string'||!['connect','transport','stay','money'].includes(item))return null;
+    const id=journeyIdentity(trip);
+    return id?'arrival-v3:'+id+':'+item:null;
+  }
+  function checklistChecked(values,trip,item) {
+    if(!values||typeof values!=='object'||Array.isArray(values))return false;
+    const key=checklistKey(trip,item);
+    if(!key)return false;
+    if(Object.hasOwn(values,key))return values[key]===true;
+    // Migrate older city-name-only progress ONLY for the three original,
+    // unambiguous curated examples. Never import legacy "Paris:stay" for
+    // Paris in France, Texas, or any other internationally duplicated name.
+    const name=String(trip.destination||'').trim();
+    const known=Object.hasOwn(curated,name)?curated[name]:null;
+    const place=resolveSavedWorldPlace(trip);
+    if(known&&place?.countryCode===known.countryCode&&
+      place.latitude===known.latitude&&place.longitude===known.longitude)
+      return values[name+':'+item]===true;
+    return false;
+  }
   globalThis.WayfarerJourneyIntegrity=Object.freeze({
-    resolveSavedWorldPlace,journeyIdentity,upsertJourney
+    resolveSavedWorldPlace,journeyIdentity,upsertJourney,checklistKey,checklistChecked
   });
 })();
