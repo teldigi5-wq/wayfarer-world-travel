@@ -11,7 +11,7 @@ const app=read('premium-app.js');
 const priceBridge=read('travel-research.js');
 const css=read('premium-refinement.css');
 
-function domFixture() {
+function domFixture(fetchOverride=null) {
   function make(tag='div') {
     const node={
       tagName:tag.toUpperCase(),className:'',textContent:'',children:[],dataset:{},
@@ -50,12 +50,29 @@ function domFixture() {
   const environment={
     window:{},document:{getElementById:id=>ids[id],createElement:make},
     Intl,URL,URLSearchParams,AbortController,Date,Number,Event:class{},matchMedia:()=>({matches:false}),
-    fetch:async()=>({ok:true,json:async()=>state})
+    fetch:fetchOverride|| (async()=>({ok:true,json:async()=>state}))
   };
   vm.runInNewContext(script,environment,{timeout:1000});
   const textOf=el=>String(el.textContent||'')+' '+(el.children||[]).map(textOf).join(' ');
   return {ids,state,public:environment.window.WayfarerNearby,textOf};
 }
+
+test('airports render while slower hotel discovery is still pending',async()=>{
+  let finishHotel;
+  const unresolved=new Promise(resolve=>{finishHotel=resolve;});
+  const f=domFixture(async url=>{
+    if(String(url).includes('mode=airports'))return {ok:true,json:async()=>({ok:true,
+      airports:[{name:'Paris Orly Airport',iata:'ORY',distanceKm:14.1,source:'OurAirports reference'}]})};
+    return unresolved;
+  });
+  const pending=f.public.load({name:'Paris',latitude:48.8566,longitude:2.3522});
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.match(f.textOf(f.ids['airport-list']),/Paris Orly Airport/);
+  assert.match(f.textOf(f.ids['hotel-list']),/Researching sourced hotel locations/);
+  finishHotel({ok:true,json:async()=>({ok:true,mapAvailable:false,airports:[],hotels:[]})});
+  await pending;
+  assert.match(f.textOf(f.ids['hotel-list']),/Public hotel records are unavailable/);
+});
 
 test('nearby cards show source-backed names and honest distances without invented prices',async()=>{
   const f=domFixture();
