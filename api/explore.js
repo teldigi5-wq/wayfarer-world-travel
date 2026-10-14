@@ -2,6 +2,7 @@ import airportData from '../data.json' with {type:'json'};
 import airportCatalog from '../airports-index.json' with {type:'json'};
 import {lookupWikidataHotels} from '../worldwide-hotel-sources.mjs';
 import {rankReferenceAirports,destinationIntelligence} from '../destination-intelligence.mjs';
+import {gatherPublicHotels,cachedPublicNearby} from '../worldwide-source-coordinator.mjs';
 const timedFetch=(url,options={})=>fetch(url,{...options,signal:AbortSignal.timeout(12000)});
 const clean=(value,max=120)=>String(value??'').replace(/[\u0000-\u001f<>]/g,' ').trim().slice(0,max);
 const number=(value,min,max)=>{const n=Number(value);return Number.isFinite(n)&&n>=min&&n<=max?n:null};
@@ -71,15 +72,21 @@ async function nearby(req,{airportsOnly=false}={}){
       note:'Airport names and straight-line distances only; no operating routes or fares are verified.'}};
   }
 
-  const query=`[out:json][timeout:12];(nwr(around:35000,${lat},${lon})["tourism"="hotel"]["name"];nwr(around:140000,${lat},${lon})["aeroway"="aerodrome"]["iata"];);out center tags 160;`;
-  let mapped=[],mapAvailable=false;
-  for(const host of ['https://overpass-api.de/api/interpreter']){
+  // Airport geography is already indexed locally. Only ask the community map
+  // for named hotel references within a practical geographic radius.
+  const query=`[out:json][timeout:8];(nwr(around:25000,${lat},${lon})["tourism"="hotel"]["name"];);out center tags 90;`;
+  const queryMap=async()=>{
     try{
-      const r=await fetch(host,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','User-Agent':'Wayfarer/1.0'},body:new URLSearchParams({data:query}),signal:AbortSignal.timeout(2800)});
-      if(!r.ok)continue;
-      const d=await r.json();
-      if(!Array.isArray(d.elements))continue;
-      mapped=d.elements.map(x=>{
+      const response=await fetch('https://overpass-api.de/api/interpreter',{
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded','User-Agent':'Wayfarer/1.0'},
+        body:new URLSearchParams({data:query}),
+        signal:AbortSignal.timeout(2800)
+      });
+      if(!response.ok)return {mapped:[],mapAvailable:false};
+      const payload=await response.json();
+      if(!Array.isArray(payload.elements))return {mapped:[],mapAvailable:false};
+      const mapped=payload.elements.slice(0,220).map(x=>{
         const plat=x.lat??x.center?.lat,plon=x.lon??x.center?.lon;
         if(!Number.isFinite(plat)||!Number.isFinite(plon))return null;
         const type=x.tags?.tourism==='hotel'?'hotel':'airport';
@@ -95,9 +102,12 @@ async function nearby(req,{airportsOnly=false}={}){
           price:null
         };
       }).filter(Boolean);
-      mapAvailable=true;break;
-    }catch{/* A public map endpoint is unavailable; retain the local airport reference. */}
-  }
+      return {mapped,mapAvailable:true};
+    }catch{return {mapped:[],mapAvailable:false};}
+  };
+  const sourceResult=await gatherPublicHotels(queryMap,
+    ()=>lookupWikidataHotels(lat,lon),{hedgeMs:850});
+  const {mapped,mapAvailable,wikidataHotels,wikidataAvailable}=sourceResult;
   const uniq=(entries,limit)=>{
     const names=new Set(),codes=new Set();
     return entries.filter(a=>{
@@ -106,13 +116,6 @@ async function nearby(req,{airportsOnly=false}={}){
       names.add(key);if(a.iata)codes.add(a.iata);return true;
     }).slice(0,limit);
   };
-  // Independent CC0-backed worldwide hotel-name lookup if the public map query
-  // is unavailable or has no named hotels. No price/availability inference.
-  let wikidataHotels=[],wikidataAvailable=false;
-  if(!mapped.some(x=>x.type==='hotel')){
-    try{wikidataHotels=await lookupWikidataHotels(lat,lon);wikidataAvailable=true;}
-    catch{/* Worldwide hotel names remain unavailable without a valid source. */}
-  }
   const nearbySigiriya=distance(lat,lon,7.9498,80.7463)<=25;
   // GIU/VCCS is recorded as an aerodrome by Sri Lanka's aeronautical
   // information publication. Showing it does not imply scheduled flights.
@@ -148,5 +151,19 @@ export default async function handler(req,res){
   res.setHeader('Cache-Control','public, s-maxage=900, stale-while-revalidate=3600');
   res.setHeader('X-Content-Type-Options','nosniff');
   if(req.method!=='GET')return res.status(405).json({ok:false,error:'Method not allowed'});
-  try{const result=req.query.mode==='airports'?await nearby(req,{airportsOnly:true}):req.query.mode==='nearby'?await nearby(req):await search(req);return res.status(result.status).json(result.body)}catch(e){return res.status(502).json({ok:false,error:e.message||'Discovery provider unavailable'})}
+  try{
+    const mode=req.query.mode;
+    let result;
+    if(mode==='airports')result=await nearby(req,{airportsOnly:true});
+    else if(mode==='nearby'){
+      // Only public destination coordinates/ISO code enter this memory cache.
+      // No itinerary, authorization header, booking search or guest dates.
+      const lat=number(req.query.lat,-90,90),lon=number(req.query.lon,-180,180);
+      const code=clean(req.query.countryCode||'',2).toUpperCase();
+      const key=lat===null||lon===null?'invalid':lat.toFixed(5)+','+lon.toFixed(5)+'|'+code;
+      result=key==='invalid'?await nearby(req):
+        await cachedPublicNearby(key,()=>nearby(req));
+    }else result=await search(req);
+    return res.status(result.status).json(result.body);
+  }catch(e){return res.status(502).json({ok:false,error:e.message||'Discovery provider unavailable'})}
 }

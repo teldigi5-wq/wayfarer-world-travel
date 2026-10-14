@@ -37,6 +37,18 @@
     }
   };
   let chosen=null,items={airports:[],hotels:[]},quotes=null,loadSeq=0,controller=null;
+  const publicPlaceCache=new Map(),PLACE_CACHE_LIMIT=32;
+  const publicPlaceKey=place=>[
+    place.latitude.toFixed(5),place.longitude.toFixed(5),place.countryCode||''
+  ].join('|');
+  const restorePublicPlace=data=>{
+    items={airports:data.airports.map(x=>({...x})),hotels:data.hotels.map(x=>({...x}))};
+    window.WayfarerDestinationIntelligence?.show(data.source);
+    window.WayfarerMap?.setNearby(items);
+    render();
+    if(!data.source.mapAvailable&&!items.hotels.length)
+      status(hotels,'Public hotel records are unavailable for this area. An optional protected supplier search may provide named stays.',true);
+  };
   const selectedDates=()=>({checkIn:$('check-in')?.value||'',checkOut:$('check-out')?.value||'',
     adults:Number($('stay-adults')?.value||0)});
 
@@ -159,6 +171,14 @@
     if(!chosen){status(airports,'Select a destination with verified map coordinates.');
       status(hotels,'Choose a mapped destination to discover nearby stays.');return;}
     nearby.classList.add('world-loading');
+    const publicKey=publicPlaceKey(chosen),previous=publicPlaceCache.get(publicKey);
+    if(previous&&previous.until>Date.now()){
+      // Reference locations only; never replay supplier quotes or private inputs.
+      restorePublicPlace(previous.data);
+      nearby.classList.remove('world-loading');
+      return;
+    }
+    if(previous)publicPlaceCache.delete(publicKey);
     status(airports,'Preparing nearby airport references…');
     status(hotels,'Researching sourced hotel locations…');
     const filter=(entries,max)=>Array.isArray(entries)?entries.filter(x=>x&&typeof x.name==='string'&&x.name.trim()
@@ -193,6 +213,12 @@
         window.WayfarerDestinationIntelligence?.show(d);
         window.WayfarerMap?.setNearby(items);
         render();
+        const data={airports:items.airports.map(x=>({...x})),
+          hotels:items.hotels.map(x=>({...x})),source:d};
+        if(publicPlaceCache.size>=PLACE_CACHE_LIMIT)
+          publicPlaceCache.delete(publicPlaceCache.keys().next().value);
+        publicPlaceCache.set(publicKey,{data,
+          until:Date.now()+(items.hotels.length?180000:45000)});
         if(!d.mapAvailable&&!items.hotels.length){
           status(hotels,'Public hotel records are unavailable for this area. An optional protected supplier search may provide named stays.',true);
         }
