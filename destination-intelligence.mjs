@@ -71,8 +71,8 @@ export function destinationIntelligence({
     ['major gateway reference','regional gateway reference'].includes(x.referenceTier))||null;
   const hotelCount=hotels.filter(x=>typeof x?.name==='string'&&x.name.trim()).length;
   const guidance=[];
-  if(closest&&closest.referenceTier==='local airfield reference'&&primary&&primary.iata!==closest.iata)
-    guidance.push('The closest airfield is not necessarily a passenger gateway. Compare routes to '+primary.iata+' before planning airport transfers.');
+  if(closest&&['local airfield reference','seaplane reference'].includes(closest.referenceTier)&&primary&&primary.iata!==closest.iata)
+    guidance.push('The closest location ('+closest.iata+') is a local or seaplane reference, not a verified scheduled airline gateway. Compare routes to '+primary.iata+' and other major airports before planning transfers.');
   else if(closest)guidance.push('Compare operating routes to '+closest.iata+' before choosing an arrival airport; a directory listing is not a timetable.');
   else guidance.push('No coded airport was found in the current reference radius. Check a wider search or nearby countries.');
   if(primary&&countryCode&&primary.countryCode!==countryCode)
