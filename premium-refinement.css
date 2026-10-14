@@ -279,3 +279,22 @@
  #studio .wf-search-pulse{animation:none;}
  #studio #world-results .world-result{transition:none;}
 }
+
+/* Stage 24: transparent agent evidence, safe fallback and genuine request status. */
+#studio .wf-country-reference{
+ margin:12px 0 4px;padding:12px 16px;
+ color:#eee4cd;line-height:1.7;font-size:.82rem;
+ background:rgba(220,190,135,.075);border-left:2px solid #ddc08b;
+ border-radius:0 9px 9px 0;
+}
+#studio .wf-agent-speed{
+ color:#d0e3d7;font:500 .79rem/1.6 'DM Sans',sans-serif;
+ padding:9px 13px;border:1px solid rgba(224,201,160,.2);
+ border-radius:9px;background:rgba(247,241,220,.035);
+}
+#studio #agent-log:empty{display:none;}
+@media(max-width:650px){
+ #studio .wf-country-reference,#studio .wf-agent-speed{
+  font-size:.77rem;padding:10px 12px;
+ }
+}
