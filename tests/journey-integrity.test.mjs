@@ -113,3 +113,66 @@ test('save and resume use geographic identity and reload worldwide sourced refer
   assert.match(saved,/nearbyPlaces\(worldSelection\)/);
   assert.doesNotMatch(app,/trips=trips\.filter\(x=>x\.destination!==selected\)/);
 });
+
+test('explicit curated-name world selection survives saving even when coordinates differ within the same country',()=>{
+  const helper=sandbox.WayfarerJourneyIntegrity;
+  const alternate={
+    destination:'Kyoto',country:'Japan',
+    worldPlace:{name:'Kyoto',country:'Japan',countryCode:'JP',
+      latitude:35.73,longitude:136.18}
+  };
+  const restored=helper.resolveSavedWorldPlace(alternate);
+  assert.equal(restored.latitude,35.73);
+  assert.equal(restored.longitude,136.18);
+  assert.notEqual(helper.journeyIdentity(alternate),
+    helper.journeyIdentity({destination:'Kyoto',country:'Japan',worldPlace:null}));
+  assert.equal(helper.upsertJourney(helper.upsertJourney([],
+    {...alternate,days:3,budget:180}),
+    {destination:'Kyoto',country:'Japan',worldPlace:null,days:5,budget:190}).length,2,
+    'Distinct mapped and curated geography cannot overwrite the other journey');
+});
+
+test('explicit malformed curated-name geometry never silently changes into a curated location',()=>{
+  const helper=sandbox.WayfarerJourneyIntegrity;
+  const bad=[
+    {latitude:95,longitude:120,countryCode:'JP'},
+    {latitude:'35.5',longitude:120,countryCode:'JP'},
+    {latitude:35.5,longitude:120,countryCode:'US'},
+    {latitude:35.5,longitude:-181,countryCode:'JP'}
+  ];
+  for(const value of bad){
+    const trip={destination:'Kyoto',country:'Japan',worldPlace:{
+      name:'Kyoto',country:'Japan',...value}};
+    const restored=helper.resolveSavedWorldPlace(trip);
+    assert.deepEqual(JSON.parse(JSON.stringify(restored)),{name:'Kyoto',country:'Japan'});
+  }
+  assert.equal(helper.resolveSavedWorldPlace({
+    destination:'Kyoto',country:'Portugal',worldPlace:null
+  }).latitude,undefined);
+  assert.equal(helper.resolveSavedWorldPlace({
+    destination:'Kyoto',country:'Japan',worldPlace:null
+  }).latitude,35.0116,'Genuine curated legacy save still works');
+});
+
+test('itinerary snapshot validates strictly bounded per-day safe textual draft content',()=>{
+  const normalize=sandbox.WayfarerJourneyIntegrity.normalizeItineraryDraft;
+  const sample={basis:'ai-draft',title:'A three-day Kyoto exploration',
+    days:Array.from({length:3},(_,i)=>({
+      title:'Day '+(i+1),summary:'A draft itinerary; verify opening hours.'
+    }))};
+  const result=JSON.parse(JSON.stringify(normalize(sample,3)));
+  assert.equal(result.basis,'ai-draft');
+  assert.equal(result.days.length,3);
+  assert.equal(result.title,sample.title);
+  assert.equal(normalize(sample,5),null);
+  assert.equal(normalize({...sample,days:[...sample.days,{title:'Day4',summary:'More'}]},3),null);
+  assert.equal(normalize({...sample,days:[{title:'<img src=x onerror=alert(1)>',
+    summary:'X'.repeat(801)},...sample.days.slice(1)]},3),null);
+  assert.equal(normalize({...sample,title:''},3),null);
+  assert.equal(normalize({...sample,title:'Y'.repeat(161)},3),null);
+  assert.equal(normalize({...sample,days:'malicious'},3),null);
+  assert.equal(normalize(null,3),null);
+  const copied=JSON.parse(JSON.stringify(normalize({...sample,basis:'unknown'},3)));
+  assert.equal(copied.basis,'sample','Unsupported provenance cannot escalate to an AI claim');
+  assert.equal(normalize(sample,31),null);
+});
