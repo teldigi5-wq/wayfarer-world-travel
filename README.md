@@ -369,6 +369,16 @@ Journey Studio also had a static hero label `Your journey to Kyoto` for every wo
 
 New `tests/studio-actual-bootstrap.test.mjs` evaluates the actual preference wiring and last-stage reveal observer bootstrap in Node VM, checks the heading changes Paris→Sydney→Nairobi without Kyoto text, and guards every `$()` reference against illegal array-like methods. These are source-level runtime harness tests, not an actual browser screenshot or guarantee of mobile visual quality. Full CI plus a matching Vercel Preview and interactive keyboard/mobile walkthrough are still release gates. No paid API access, user data migration, secrets or Production changes.
 
+### Stage 32 — explicit supplier-search cancellation and stale-price protection (draft)
+
+The protected flight/hotel comparison previously guarded a response **after** it arrived, but did not invalidate or abort its *in-flight* browser request when travelers changed their dates, country, airports, guest count or budgets. Switching values away and back could allow an older reply into the active trip if the final field values looked identical. That is unacceptable when searches may consume limited authorized supplier credits.
+
+The Travel Research panel now exposes a keyboard-accessible **Cancel search** control (only while a request is active), blocks repeated simultaneous submit events, snapshots an incrementing request identity, and invalidates/aborts browser delivery immediately on any material form edit or location change. Responses and `finally` handlers from superseded requests cannot overwrite or unlock a newer active search. Already displayed indicative source prices are cleared on changes. Date, occupancy, route, airline budget, daily ground budget, destination and geographic identity are all verified before accepting a reply. **Cancelling the browser request cannot guarantee cancellation of an upstream supplier lookup or a charged provider credit already started.** Wayfarer does not issue a refund, reserve a flight or retry the request automatically.
+
+The implementation changes only the first-party browser script `travel-research.js` and premium responsive/focus styling; it adds no API credits, keys, automatic provider calls, data collection or payments. `tests/travel-supplier-request-lifecycle.test.mjs` executes the actual submit handlers in a DOM-style VM against deferred mock network responses and covers double clicks, deliberate cancellation, country switching, edits followed by restoring the original values, and old/new request interleaving. The real protected supplier endpoint is never invoked in those tests.
+
+Release gating: full GitHub CI must pass, a Vercel Preview must be built from the exact passing SHA, then the controls and disclosures need mobile/desktop keyboard and screen-reader QA. No Production merge or supplier search without explicit approval.
+
 ## Run and test
 
 Install Node.js 20+ from its official distribution. No package install, API key, environment variable, card or build dependency is needed.
