@@ -164,7 +164,7 @@ test('source-bound supplier quotes cannot cross between same-name cities in diff
   const texasOriginal=f.public.currentLocation();
   assert.equal(f.public.applyQuotes(payload,trip,texasOriginal),true);
   assert.match(f.textOf(f.ids['hotel-list']),/Paris Provider Hotel/);
-  assert.match(f.textOf(f.ids['hotel-list']),/\\$490\\.00 total/);
+  assert.match(f.textOf(f.ids['hotel-list']),/\$490\.00 total/);
 });
 
 test('same-name hotels must not reuse provider results after geographic coordinates change',async()=>{
