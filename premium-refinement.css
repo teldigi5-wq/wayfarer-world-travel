@@ -298,3 +298,22 @@
   font-size:.77rem;padding:10px 12px;
  }
 }
+
+/* Stage 24 · explicit, calm control over active source-grounded research. */
+#studio .wf-agent-controls{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:10px;}
+#studio .wf-agent-controls button{min-height:44px;white-space:normal;text-align:center;}
+#studio #cancel-agents[hidden]{display:none!important;}
+#studio .wf-agent-cancel{
+ color:#f4dec0;background:rgba(247,239,220,.035);
+ border:1px solid rgba(236,200,151,.44);
+ border-radius:9px;box-shadow:none;
+}
+#studio .wf-agent-cancel:hover{background:rgba(236,200,151,.12);color:#fff7e9;}
+#studio .wf-agent-cancel:focus-visible{outline:3px solid #e3c28b;outline-offset:3px;}
+@media(max-width:650px){
+ #studio .wf-agent-controls{width:100%;justify-content:stretch;}
+ #studio .wf-agent-controls button{flex:1 1 145px;}
+}
+@media(prefers-reduced-motion:reduce){
+ #studio .wf-agent-controls button{transition:none!important;}
+}
