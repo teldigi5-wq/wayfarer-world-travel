@@ -46,6 +46,34 @@
     for(const offer of (obj.offers||[])) article.append(render(offer));
     return article;
   }
+  // Known airline-owned booking websites. Exact aliases only; never synthesize
+  // arbitrary booking URLs from untrusted supplier text or imply a confirmed fare.
+  const officialAirlines=Object.freeze({
+    'srilankan airlines':{name:'SriLankan Airlines',url:'https://www.srilankan.com/'},
+    'srilankan':{name:'SriLankan Airlines',url:'https://www.srilankan.com/'},
+    'qatar airways':{name:'Qatar Airways',url:'https://www.qatarairways.com/en-lk/homepage.html'},
+    'singapore airlines':{name:'Singapore Airlines',url:'https://www.singaporeair.com/en_UK/se/home/'}
+  });
+  function addOfficialAirlineHandoff(card,segments){
+    const seen=new Set(),matched=[];
+    for(const segment of Array.isArray(segments)?segments:[]){
+      const name=String(segment.airline||'').trim().toLocaleLowerCase('en');
+      const airline=Object.hasOwn(officialAirlines,name)?officialAirlines[name]:null;
+      if(airline&&!seen.has(airline.name)){seen.add(airline.name);matched.push(airline);}
+    }
+    if(!matched.length)return;
+    const row=word('div','','wf-airline-direct');
+    row.append(word('strong','Prefer to book with the airline?','wf-airline-direct-title'));
+    for(const airline of matched){
+      const link=document.createElement('a');link.href=airline.url;
+      link.target='_blank';link.rel='noopener noreferrer';
+      link.className='wf-airline-direct-link';
+      link.textContent='Visit '+airline.name+' (official site) ↗';
+      row.append(link);
+    }
+    row.append(word('p','The airline opens in a separate tab. Enter your dates and route again and verify final fares, connections and baggage. Wayfarer does not send a booking or reserve seats.','wf-airline-direct-note'));
+    card.append(row);
+  }
   // Search handoff only: never suggest Google Flights will preselect this
   // exact itinerary, guarantee a price, or preserve a seller quote.
   function addExternalHandoff(card,details) {
@@ -202,6 +230,7 @@
     card.append(word('p','Ticket availability: NOT VERIFIED · No seats reserved · Provider-reported clock times; time zones and live operating status not independently verified. Outbound search fare only; return and checkout totals may change.',
       'wf-flight-disclaimer'));
     addSelection(card,offer.selection);
+    addOfficialAirlineHandoff(card,offer.segments);
     const times=(offer.segments||[]).map(segment=>
       [segment.airline,segment.number,segment.from+' → '+segment.to,
         'depart '+(segment.departureAt||'unknown'),
