@@ -449,6 +449,16 @@ The World Explorer form now uses one `invalidateWorldSearch` path for three case
 
 Stage 39 remains a draft PR stacked on Stage 38. Release requires full GitHub CI, Vercel Preview built from the exact passing head within free quota, and browser keyboard/mobile checking before any merge or Production deployment. There are no billing, provider credential or paid API changes.
 
+### Stage 40 — worldwide Map Studio pin identity and accessible map focus (draft)
+
+Worldwide public map sources may return hotels or airports with **identical names at different real coordinates**, and some sources may list an airport and a hotel with the same label. Map Studio previously de-duplicated pins using only `type:name` and considered a pin selected using only its displayed name. Consequently, distinct location references could disappear and a selected-pin state could highlight the wrong place even while the iframe and external Google Maps directions opened a different coordinate.
+
+Map Studio now builds pin identity from the **reference category, mapped name and source-provided latitude/longitude rounded to five decimal places**. Two same-name places at different coordinates remain separately clickable and keyboard-focusable, while a truly duplicated category/name/coordinate reference appears just once. Pressed state (`aria-pressed`) now follows that same full identity. When two displayed places share a name, their reference coordinates also appear beside their category and inside the button's accessible label so travelers can distinguish them. Clicking a specific place updates OpenStreetMap focus and the external Google Maps/Directions coordinates for that place. It does **not** infer drive times, real hotel inventory, hotel room rates or route availability.
+
+The existing opt-in map privacy/performance flow is unchanged: no map tiles before explicit Open map or mapped-pin interaction; Pause removes the iframe and destination changes reset focus. Google Maps links use the free external URLs, not Google Cloud Maps API keys or billable SDKs. No additional network searches, providers, AI calls, subscriptions or browser tracking are added.
+
+`tests/map-studio.test.mjs` exercises the **actual Map Studio script** in a DOM-style runtime to verify same-name distinct-position hotels, coordinate-specific OSM markers and Google Directions links, selected-pin accessibility, exact duplicate de-duplication, category distinction, navigation to a new city and opt-in iframe loading. Require full GitHub CI, an exact passing-head free Vercel Preview, keyboard/mobile visual QA and owner approval before any Production promotion. Stage 40 remains stacked on the prior draft branch.
+
 ## Run and test
 
 Install Node.js 20+ from its official distribution. No package install, API key, environment variable, card or build dependency is needed.
