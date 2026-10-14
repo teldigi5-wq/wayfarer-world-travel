@@ -84,8 +84,8 @@ test('source agents operate without metered AI access and preserve partial failu
     assert.equal(response.body.verification.sourceCount,1);
     assert.equal(response.body.verification.plannedGroundTotalUsd,600);
     assert.equal(visits.ai,0,'anonymous calls must never drain paid AI quota');
-    assert.equal(visits.weather,2,'one bounded network retry');
-    assert.equal(visits.wiki,2,'one bounded 503 retry');
+    assert.equal(visits.weather,1,'bounded public lookup does not repeat on failures');
+    assert.equal(visits.wiki,1,'bounded public lookup does not retry unavailable sources');
     assert.equal(visits.country,1);
     assert.ok(response.body.verification.flags.some(s=>s.includes('weather could not be retrieved')));
   }finally{globalThis.fetch=realFetch}
@@ -108,7 +108,7 @@ test('authenticated orchestration gathers all sources then composes a grounded A
     assert.equal(visits.ai,1,'only one paid AI generation call');
     assert.equal(visits.weather,1);
     assert.equal(visits.wiki,1);
-    assert.equal(visits.country,1);
+    assert.equal(visits.country,0,'unchanged country reference reused from recent public cache');
     assert.equal(response.headers['Cache-Control'],'no-store');
   }finally{globalThis.fetch=realFetch}
 });
