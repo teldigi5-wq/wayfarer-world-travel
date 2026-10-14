@@ -88,6 +88,24 @@ test('nearby cards show source-backed names and honest distances without invente
   assert.equal(f.ids['airport-list'].children[0].dataset.airportIata,'GIU');
 });
 
+test('uncovered destinations show free external hotel research without inventing rooms or prices',async()=>{
+  const f=domFixture();
+  f.state.hotels=[];f.state.mapAvailable=false;
+  await f.public.load({name:'Paris',country:'France',countryCode:'FR',latitude:48.8566,longitude:2.3522});
+  const hotelView=f.ids['hotel-list'];
+  assert.match(f.textOf(hotelView),/Research hotels near this location/);
+  const link=hotelView.children.find(x=>x.tagName==='A');
+  assert.ok(link);
+  const url=new URL(link.href);
+  assert.equal(url.hostname,'www.google.com');
+  assert.equal(url.pathname,'/maps/search/');
+  assert.equal(url.searchParams.get('api'),'1');
+  assert.equal(url.searchParams.get('query'),'hotels near 48.85660,2.35220');
+  assert.equal(link.target,'_blank');
+  assert.match(link.rel,/noopener/);
+  assert.doesNotMatch(f.textOf(hotelView),/\$[0-9]+/);
+});
+
 test('only a matching explicit protected hotel quote can display total and nightly average',async()=>{
   const f=domFixture();
   await f.public.load({name:'Sigiriya',latitude:7.95,longitude:80.75});
