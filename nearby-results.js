@@ -73,7 +73,7 @@
     if(type==='hotel'){
       // A supplier hotel name is NOT a verified identity for a mapped property.
       // Never attach a provider quote to an OSM/Wikidata location by name.
-      if(!Number.isInteger(item.providerQuoteIndex))return null;
+      if(item.providerOnly!==true||!Number.isInteger(item.providerQuoteIndex))return null;
       const hit=offers[item.providerQuoteIndex];
       if(!hit||cleanName(hit.name)!==cleanName(item.name)||
         hit.currency!=='USD'||!validMoney(hit.displayedTotal)||
@@ -97,7 +97,7 @@
     (airportCode?$('travel-origin'):$('travel-beta-code'))?.focus({preventScroll:true});
   }
   function renderCard(item,type){
-    const card=make('article','wf-nearby-card');
+    const card=make('article',item.providerOnly?'wf-nearby-card wf-nearby-card--provider':'wf-nearby-card');
     const top=make('div','wf-nearby-card-top'),content=make('div','wf-nearby-content');
     const heading=make('h4','wf-nearby-name',item.name),facts=make('p','wf-nearby-facts');
     const distance=typeof item.distanceKm==='number'?item.distanceKm:NaN;
@@ -108,7 +108,10 @@
     facts.textContent=(Number.isFinite(distance)&&distance>=0?distance.toFixed(1)+' km straight-line':'Distance unavailable')+
       code+(locality?' · '+locality:'')+airportTier+' · '+source;
     if(type==='airport'&&code)card.dataset.airportIata=item.iata;
-    content.append(heading,facts);top.append(content);
+    content.append(heading,facts);
+    if(item.providerOnly)content.append(make('span','wf-nearby-origin-label',
+      'SUPPLIER SEARCH · ADDRESS NOT VERIFIED'));
+    top.append(content);
     const price=make('div','wf-nearby-price'),quote=quoteFor(item,type);
     if(quote){
       price.append(make('strong','',type==='hotel'?money.format(quote.total)+' total':money.format(quote.perAdult)+' / adult'));
@@ -162,7 +165,7 @@
       known.add(key);
       extra.push({type:'hotel',name:offer.name.trim(),distanceKm:null,
         source:'Google Travel hotel search · unlinked supplier result · address not map-verified',
-        url:null,price:null,providerQuoteIndex});
+        url:null,price:null,providerOnly:true,providerQuoteIndex});
       if(extra.length===8)break;
     }
     return extra;
