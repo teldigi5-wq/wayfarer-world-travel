@@ -504,3 +504,47 @@
 @media(prefers-reduced-motion:reduce){
  #studio .travel-research-action button{transition:none!important;}
 }
+
+/* Stage 37 — source-grounded cost summary, not a fictional combined fare. */
+#world-explorer .wf-research-snapshot{
+  margin:18px 0 23px;padding:clamp(18px,2.8vw,30px);
+  background:linear-gradient(126deg,#0b3228 0%,#163f33 66%,#0f352c 100%);
+  color:#f9f0e2;border:1px solid rgba(227,197,144,.35);border-radius:18px;
+  box-shadow:0 16px 38px rgba(3,31,23,.11);
+}
+#world-explorer .wf-research-snapshot-heading h4{
+  margin:5px 0 18px;font:500 clamp(1.75rem,2.8vw,2.65rem)/1.14 'Cormorant Garamond',Georgia,serif;
+  letter-spacing:-.027em;color:#fff7e8;
+}
+#world-explorer .wf-research-snapshot-heading .wf-result-eyebrow{
+  color:#e4c794;font:700 .68rem/1.5 'DM Sans',sans-serif;letter-spacing:.12em;
+}
+#world-explorer .wf-research-snapshot-facts{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;
+}
+#world-explorer .wf-research-snapshot-fact{
+  display:flex;flex-direction:column;gap:8px;min-width:0;
+  padding:clamp(14px,1.8vw,20px);border-radius:11px;
+  border:1px solid rgba(240,221,184,.22);background:rgba(245,241,223,.065);
+}
+#world-explorer .wf-research-snapshot-fact .wf-detail-label{
+  font:700 .68rem/1.5 'DM Sans',sans-serif;color:#e6c990;letter-spacing:.09em;
+}
+#world-explorer .wf-research-snapshot-value{
+  color:#fffcf5;font:600 clamp(1.25rem,2vw,1.75rem)/1.18 'DM Sans',sans-serif;
+  letter-spacing:-.02em;overflow-wrap:anywhere;
+}
+#world-explorer .wf-research-snapshot-fact small{
+  color:#d5e4d9;font:.77rem/1.55 'DM Sans',sans-serif;
+}
+#world-explorer .wf-research-snapshot-caveat{
+  margin:17px 0 0;padding-top:13px;
+  border-top:1px solid rgba(238,218,177,.24);
+  color:#cfe0d3;font:.77rem/1.65 'DM Sans',sans-serif;
+}
+@media(max-width:600px){
+ #world-explorer .wf-research-snapshot-facts{grid-template-columns:minmax(0,1fr);}
+}
+@media(prefers-reduced-motion:reduce){
+ #world-explorer .wf-research-snapshot *{animation:none!important;transition:none!important;}
+}
