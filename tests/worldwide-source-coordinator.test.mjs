@@ -108,3 +108,56 @@ test('integration remains limited to public-source discovery, never live paid se
  assert.doesNotMatch(module,/GROQ_API_KEY|SERPAPI_API_KEY|WAYFARER_AI_BETA_TOKEN|travel-search/);
  assert.match(backend,/hedgeMs:850/);
 });
+
+test('a still-pending public lookup remains coalesced after its old provisional timeout',async()=>{
+ const key='stage43-cache-pending-nearby-unique';
+ let clock=1_700_000_000_000,starts=0,finish;
+ const now=()=>clock;
+ const loader=()=>{
+   starts++;
+   if(starts===1)return new Promise(resolve=>{finish=resolve;});
+   return healthy('Fresh source after expiry');
+ };
+ const first=cachedPublicNearby(key,loader,{now});
+ await Promise.resolve();
+ assert.equal(starts,1);
+ clock+=240000; // Beyond the old 120-second provisional TTL.
+ const second=cachedPublicNearby(key,loader,{now});
+ await Promise.resolve();
+ assert.equal(starts,1,'Must not duplicate an ongoing public provider request');
+ finish(healthy('Delayed first source'));
+ const [one,two]=await Promise.all([first,second]);
+ assert.equal(one.body.hotels[0].name,'Delayed first source');
+ assert.equal(two.body.hotels[0].name,'Delayed first source');
+ one.body.hotels[0].name='client changed';
+ clock+=599999; // TTL begins only after source completion, not request start.
+ const cached=await cachedPublicNearby(key,loader,{now});
+ assert.equal(cached.body.hotels[0].name,'Delayed first source');
+ assert.equal(starts,1);
+ clock+=2;
+ const refreshed=await cachedPublicNearby(key,loader,{now});
+ assert.equal(refreshed.body.hotels[0].name,'Fresh source after expiry');
+ assert.equal(starts,2);
+});
+
+test('a good OpenStreetMap response after hedging is not held hostage by slow Wikidata',async()=>{
+ let finishMap,finishReference,referenceStarted=0;
+ const researching=gatherPublicHotels(
+   ()=>new Promise(resolve=>{finishMap=resolve;}),
+   ()=>{referenceStarted++;return new Promise(resolve=>{finishReference=resolve;});},
+   {hedgeMs:10}
+ );
+ await new Promise(resolve=>setTimeout(resolve,35));
+ assert.equal(referenceStarted,1,'A slow map should independently start the reference fallback');
+ finishMap({mapAvailable:true,mapped:[{type:'hotel',name:'Source-backed local stay'}]});
+ const completed=await Promise.race([
+   researching,
+   new Promise((_,reject)=>setTimeout(()=>reject(Error('Credible OSM was blocked by secondary provider')),350))
+ ]);
+ assert.equal(completed.mapAvailable,true);
+ assert.equal(completed.mapped[0].name,'Source-backed local stay');
+ assert.equal(completed.wikidataAvailable,false);
+ assert.deepEqual(completed.wikidataHotels,[]);
+ finishReference([{type:'hotel',name:'Very late reference'}]);
+ assert.equal(completed.mapped.length,1,'Late fallback must not mutate the returned result');
+});
