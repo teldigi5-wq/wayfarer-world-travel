@@ -161,3 +161,47 @@ test('no extra billing keys, map requests or model calls introduced by determini
   assert.match(backend,/destinationIntelligence/);
   assert.doesNotMatch(read('destination-intelligence.mjs'),/openai|groq|serpapi/i);
 });
+
+test('actual destination-intelligence module converts a partial hotel-pending brief to unavailable without erasing verified airport gateways',()=>{
+  const content=read('destination-intelligence.js');
+  const ids=['wf-destination-intelligence','wf-intelligence-facts',
+    'wf-intelligence-gateways','wf-intelligence-guidance','wf-intelligence-foot',
+    'travel-arrival','wf-tab-prices','wayfarer-travel-research','travel-origin'];
+  class Element {
+    constructor(){this.children=[];this.textContent='';this.hidden=true;this.listeners={};this.value='';}
+    replaceChildren(...v){this.children=[...v];}
+    append(...v){this.children.push(...v);}
+    addEventListener(name,fn){this.listeners[name]=fn;}
+    scrollIntoView(){}
+    focus(){}
+    dispatchEvent(){}
+  }
+  const elements=Object.fromEntries(ids.map(id=>[id,new Element()]));
+  const context={window:{},document:{getElementById:id=>elements[id]||null,
+    createElement:()=>new Element()},Number,String,Array,Event:class{}};
+  vm.runInNewContext(content,context,{timeout:1000});
+  const ui=context.window.WayfarerDestinationIntelligence;
+  ui.choose({name:'Rome',countryCode:'IT',country:'Italy',latitude:41.9028,longitude:12.4964});
+  const brief=destinationIntelligence({
+    lat:41.9028,lon:12.4964,countryCode:'IT',
+    airports:[{name:'Rome Fiumicino',iata:'FCO',distanceKm:21,
+      referenceTier:'major gateway reference'}],
+    gateways:[{name:'Rome Fiumicino',iata:'FCO',distanceKm:21,
+      referenceTier:'major gateway reference'}],hotels:[],partial:true
+  });
+  ui.show({intelligence:brief});
+  const facts=elements['wf-intelligence-facts'];
+  const gateways=elements['wf-intelligence-gateways'];
+  assert.match(facts.children[3].children[1].textContent,/pending/i);
+  assert.equal(gateways.children.length,1);
+  ui.finishPartial();
+  assert.match(facts.children[3].children[1].textContent,/providers unavailable/i);
+  assert.equal(gateways.children.length,1);
+  assert.match(gateways.children[0].children[0].children[0].textContent,/FCO/);
+  assert.match(elements['wf-intelligence-foot'].textContent,/Public hotel reference lookup unavailable/);
+  ui.choose({name:'Unknown',countryCode:'XX',latitude:0,longitude:0});
+  ui.finishPartial();
+  assert.match(facts.children[0].textContent,/temporarily unavailable/);
+  assert.equal(gateways.children.length,0);
+  assert.doesNotMatch(elements['wf-intelligence-foot'].textContent,/pending/i);
+});
