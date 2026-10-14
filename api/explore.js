@@ -1,3 +1,4 @@
+import airportData from '../data.json' with {type:'json'};
 const timedFetch=(url,options={})=>fetch(url,{...options,signal:AbortSignal.timeout(12000)});
 const clean=(value,max=120)=>String(value??'').replace(/[\u0000-\u001f<>]/g,' ').trim().slice(0,max);
 const number=(value,min,max)=>{const n=Number(value);return Number.isFinite(n)&&n>=min&&n<=max?n:null};
@@ -15,12 +16,64 @@ async function search(req){
 async function nearby(req){
   const lat=number(req.query.lat,-90,90),lon=number(req.query.lon,-180,180);
   if(lat===null||lon===null)return {status:400,body:{ok:false,error:'Invalid coordinates'}};
-  const query=`[out:json][timeout:18];(nwr(around:35000,${lat},${lon})["tourism"="hotel"];nwr(around:120000,${lat},${lon})["aeroway"="aerodrome"]["iata"];);out center tags 100;`;
-  const r=await timedFetch('https://overpass-api.de/api/interpreter',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','User-Agent':'Wayfarer/1.0'},body:new URLSearchParams({data:query})});
-  if(!r.ok)throw Error('Nearby discovery unavailable');
-  const d=await r.json(),items=(d.elements||[]).map(x=>{const p={lat:x.lat??x.center?.lat,lon:x.lon??x.center?.lon};if(!Number.isFinite(p.lat)||!Number.isFinite(p.lon))return null;const type=x.tags?.tourism==='hotel'?'hotel':'airport',name=clean(x.tags?.name||x.tags?.['name:en']||(type==='hotel'?'Mapped hotel':'Mapped airport'));return {type,name,iata:clean(x.tags?.iata,4),distanceKm:distance(lat,lon,p.lat,p.lon),url:clean(x.tags?.website||`https://www.openstreetmap.org/${x.type}/${x.id}`,300)}}).filter(Boolean);
-  const uniq=(type,limit)=>{const seen=new Set();return items.filter(x=>x.type===type).sort((a,b)=>a.distanceKm-b.distanceKm).filter(x=>{const k=x.name.toLowerCase();if(seen.has(k))return false;seen.add(k);return true}).slice(0,limit)};
-  return {status:200,body:{ok:true,provider:'OpenStreetMap contributors via Overpass',sourceUrl:'https://www.openstreetmap.org/copyright',airports:uniq('airport',10),hotels:uniq('hotel',14)}};
+
+  // Always provide sourced airport reference names, even if Overpass is rate limited.
+  // The bundled OurAirports-based file is an airport index, not flight availability.
+  const indexed=(Array.isArray(airportData.airports)?airportData.airports:[])
+    .filter(a=>Number.isFinite(a.lat)&&Number.isFinite(a.lon)&&/^[A-Z]{3}$/.test(a.iata||''))
+    .map(a=>({
+      type:'airport',name:clean(a.name),iata:a.iata,
+      distanceKm:distance(lat,lon,a.lat,a.lon),source:'OurAirports reference',
+      url:/^https:\/\/ourairports\.com\/airports\//.test(a.source||'')?a.source:'https://ourairports.com',
+      price:null
+    })).filter(a=>a.name&&a.distanceKm<=280).sort((a,b)=>a.distanceKm-b.distanceKm).slice(0,10);
+
+  const query=`[out:json][timeout:12];(nwr(around:35000,${lat},${lon})["tourism"="hotel"]["name"];nwr(around:140000,${lat},${lon})["aeroway"="aerodrome"]["iata"];);out center tags 160;`;
+  let mapped=[],mapAvailable=false;
+  for(const host of ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter']){
+    try{
+      const r=await fetch(host,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','User-Agent':'Wayfarer/1.0'},body:new URLSearchParams({data:query}),signal:AbortSignal.timeout(8500)});
+      if(!r.ok)continue;
+      const d=await r.json();
+      if(!Array.isArray(d.elements))continue;
+      mapped=d.elements.map(x=>{
+        const plat=x.lat??x.center?.lat,plon=x.lon??x.center?.lon;
+        if(!Number.isFinite(plat)||!Number.isFinite(plon))return null;
+        const type=x.tags?.tourism==='hotel'?'hotel':'airport';
+        const name=clean(x.tags?.name||x.tags?.['name:en']);
+        if(!name)return null;
+        const iata=clean(x.tags?.iata,3).toUpperCase();
+        if(type==='airport'&&!/^[A-Z]{3}$/.test(iata))return null;
+        return {
+          type,name,iata:type==='airport'?iata:'',
+          distanceKm:distance(lat,lon,plat,plon),
+          source:'OpenStreetMap contributors',
+          url:`https://www.openstreetmap.org/${x.type}/${x.id}`,
+          price:null
+        };
+      }).filter(Boolean);
+      mapAvailable=true;break;
+    }catch{/* A public map endpoint is unavailable; retain the local airport reference. */}
+  }
+  const uniq=(entries,limit)=>{
+    const names=new Set(),codes=new Set();
+    return entries.filter(a=>{
+      const key=a.name.toLocaleLowerCase('en').replace(/\\s+/g,' ').trim();
+      if(names.has(key)||(a.iata&&codes.has(a.iata)))return false;
+      names.add(key);if(a.iata)codes.add(a.iata);return true;
+    }).slice(0,limit);
+  };
+  const airports=uniq([...mapped.filter(a=>a.type==='airport'),...indexed]
+    .sort((a,b)=>a.distanceKm-b.distanceKm),8);
+  const hotels=uniq(mapped.filter(a=>a.type==='hotel')
+    .sort((a,b)=>a.distanceKm-b.distanceKm),10);
+  return {status:200,body:{
+    ok:true,provider:'OpenStreetMap and bundled OurAirports reference data',
+    sourceUrl:'https://www.openstreetmap.org/copyright',
+    mapAvailable,airports,hotels,
+    note:mapAvailable?'Locations and straight-line distances only; no fare or room prices supplied.':
+      'OpenStreetMap nearby service unavailable. Airport reference names may still be shown; hotels and prices are not inferred.'
+  }};
 }
 
 export default async function handler(req,res){
