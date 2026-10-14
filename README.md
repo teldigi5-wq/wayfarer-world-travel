@@ -296,7 +296,9 @@ Travel plans must never receive an agent itinerary generated for a different des
 
 Live REST Countries currency, language and timezone references occasionally fail. When this happens, Wayfarer shows a **clearly labeled bundled country reference** (name, capital and region from the existing country directory) without inventing prices, entry rules, languages, currency or timezones. Its verification state remains **partial** or **unavailable**, not falsely successful. The bundled material adds no new paid API, package dependency or external lookup. Visual evidence blocks retain the premium emerald/champagne contrast.
 
-Regression coverage: `tests/agent-trip-isolation.test.mjs` simulates slow responses across modified briefs, switched destinations and a public country-provider outage. The existing source-grounding, authorization and no-paid-call checks continue to apply.
+**Journey handoff consistency:** Changing planner preferences discards stale agent context before Arrival can reuse it. Cancelling a new run can retain valid prior context and its existing source attribution. The offline notes export now labels an actual AI draft as **AI-GENERATED DRAFT · VERIFY BEFORE TRAVEL**, or labels a local plan **ILLUSTRATIVE SAMPLE · NOT LIVE BOOKINGS**, and includes its provenance and limitations. Older saved journeys are normalized to the UI's real 3/5/7-day durations, USD 25–2,500 daily ground-budget limits, and named pace options. The backend converts `Slow & considered` to `Slow` and `Full & energetic` to `Active`, rather than silently defaulting them to Balanced.
+
+Regression coverage: `tests/agent-trip-isolation.test.mjs` simulates slow responses across modified briefs, switched destinations and a public country-provider outage. It now also tests cancellation/provenance, legacy saved-trip settings, stale Arrival context, and all three actual pace labels using a **fully mocked** AI composer (no real Groq/provider request). The existing source-grounding, authorization and no-paid-call checks continue to apply.
 
 ## Run and test
 
