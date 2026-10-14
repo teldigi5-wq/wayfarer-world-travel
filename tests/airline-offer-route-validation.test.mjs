@@ -15,7 +15,7 @@ const leg=(from,to)=>({
 });
 let id=0;
 const offer=(out,back)=>({
- id:'off_route_fixture_'+String(++id).padStart(4,'0'),
+ id:'off_routefixture'+String(++id).padStart(4,'0'),
  total_amount:'850.00',total_currency:'USD',live_mode:false,
  expires_at:new Date(Date.now()+20*60000).toISOString(),owner:{name:'Synthetic Test Airline'},
  slices:[{segments:out.map(([f,t])=>leg(f,t))},{segments:back.map(([f,t])=>leg(f,t))}]
