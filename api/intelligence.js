@@ -8,6 +8,13 @@ const known={
   Switzerland:{lat:46.6863,lon:7.8632,wiki:'Switzerland',country:'CH'}
 };
 const MODEL='openai/gpt-oss-120b';
+const parseCoordinate=value=>{
+  if(typeof value!=='number'&&typeof value!=='string')return NaN;
+  if(typeof value==='string'&&(
+    value.length>48||!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(value.trim())
+  ))return NaN;
+  return Number(value);
+};
 const validWorldCoordinates=(lat,lon)=>Number.isFinite(lat)&&Math.abs(lat)<=90&&
   Number.isFinite(lon)&&Math.abs(lon)<=180;
 const distanceKm=(a,b,c,d)=>{
@@ -28,8 +35,8 @@ function tripQuery(query={}){
   const latProvided=query.lat!==undefined&&query.lat!==null&&String(query.lat).trim()!=='';
   const lonProvided=query.lon!==undefined&&query.lon!==null&&String(query.lon).trim()!=='';
   if(latProvided!==lonProvided)return null;
-  const lat=latProvided&&typeof query.lat!=='boolean'?Number(query.lat):NaN;
-  const lon=lonProvided&&typeof query.lon!=='boolean'?Number(query.lon):NaN;
+  const lat=latProvided?parseCoordinate(query.lat):NaN;
+  const lon=lonProvided?parseCoordinate(query.lon):NaN;
   const usesSelected=latProvided&&lonProvided;
   const latitude=usesSelected?lat:base?.lat,longitude=usesSelected?lon:base?.lon;
   const declaredCountry=scrub(query.countryCode,4).toUpperCase();
