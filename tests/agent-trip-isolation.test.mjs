@@ -7,9 +7,12 @@ import handler from '../api/intelligence.js';
 const script=readFileSync(new URL('../premium-app.js',import.meta.url),'utf8');
 const headerStart=script.indexOf('let agentRunSerial=0,agentRequestController=null;');
 const headerEnd=script.indexOf('function resetAgents(){',headerStart);
+const resetStart=script.indexOf('function resetAgents(){',headerEnd);
+const cancelStart=script.indexOf('function cancelAgentResearch(){',resetStart);
+const cancelEnd=script.indexOf('function build(){',cancelStart);
 const runStart=script.indexOf('async function runAgents(){');
 const runEnd=script.indexOf("$('#run-agents').onclick=runAgents;",runStart);
-assert.ok(headerStart>=0&&headerEnd>headerStart&&runStart>=0&&runEnd>runStart);
+assert.ok(headerStart>=0&&headerEnd>headerStart&&resetStart>=0&&cancelStart>resetStart&&cancelEnd>cancelStart&&runStart>=0&&runEnd>runStart);
 
 function fixture(){
   const elements=new Map();
@@ -36,7 +39,7 @@ function fixture(){
     toast:()=>{},esc:value=>String(value),
     document:{createElement:()=>({className:'',textContent:'',append(){}}),querySelectorAll:()=>[{textContent:'Culture'}]}
   });
-  vm.runInContext(script.slice(headerStart,headerEnd)+'\n'+script.slice(runStart,runEnd),context,{timeout:1000});
+  vm.runInContext(script.slice(headerStart,headerEnd)+'\n'+script.slice(resetStart,cancelEnd)+'\n'+script.slice(runStart,runEnd),context,{timeout:1000});
   const run=()=>vm.runInContext('runAgents()',context,{timeout:1000});
   const finish=async()=>{
     resolveNetwork({ok:true,json:async()=>({
@@ -45,7 +48,7 @@ function fixture(){
     })});
     await Promise.resolve();
   };
-  return {run,finish,context,element,get applied(){return applied;}};
+  return {run,finish,context,element,cancel:()=>vm.runInContext('cancelAgentResearch()',context,{timeout:1000}),get applied(){return applied;}};
 }
 
 test('changing trip duration mid-flight prevents a stale agent response from rendering',async()=>{
@@ -76,6 +79,50 @@ test('matching journey brief accepts grounded research response',async()=>{
   assert.equal(await pending,true);
   assert.equal(f.applied,1);
   assert.equal(f.element('#run-agents').disabled,false);
+});
+
+test('traveler can cancel an active agent run without overwriting or relabeling a previous AI draft',async()=>{
+  const f=fixture();
+  f.element('#plan-status').className='micro ok';
+  f.element('#plan-status').textContent='Groq AI itinerary';
+  f.element('#plan-source').textContent='Prior verified sources for Kyoto';
+  const pending=f.run();
+  assert.equal(f.element('#cancel-agents').hidden,false);
+  assert.equal(f.element('#run-agents').disabled,true);
+  assert.equal(f.cancel(),true);
+  assert.equal(f.element('#cancel-agents').hidden,true);
+  assert.equal(f.element('#run-agents').disabled,false);
+  assert.equal(f.element('#plan-status').textContent,'Groq AI itinerary');
+  assert.equal(f.element('#plan-source').textContent,'Prior verified sources for Kyoto');
+  assert.match(f.element('#agent-log').textContent,/Research cancelled/);
+  assert.match(f.element('#agent-log').textContent,/may not cancel any provider processing/);
+  await f.finish();
+  assert.equal(await pending,false,'Late response after cancel must never apply');
+  assert.equal(f.applied,0);
+  assert.equal(f.cancel(),false,'Cancel does nothing with no active run');
+});
+
+test('a duplicate invocation does not start a second paid-capable request',async()=>{
+  const f=fixture();
+  const pending=f.run();
+  assert.equal(await f.run(),false);
+  assert.equal(f.element('#cancel-agents').hidden,false);
+  await f.finish();
+  assert.equal(await pending,true);
+  assert.equal(f.applied,1);
+  assert.equal(f.element('#cancel-agents').hidden,true);
+});
+
+test('editing any material trip preference invalidates the current research',()=>{
+  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+  const css=readFileSync(new URL('../premium-refinement.css',import.meta.url),'utf8');
+  assert.match(html,/id="cancel-agents"[^>]*hidden/);
+  assert.match(script,/\$\('#cancel-agents'\)\.onclick=cancelAgentResearch/);
+  assert.match(script,/b\.classList\.toggle\('on'\);resetAgents\(\);build\(\)/);
+  assert.match(script,/\['days','pace'\]\.forEach\(x=>\$\('#'\+x\)\.onchange=\(\)=>\{resetAgents\(\);build\(\)\}\)/);
+  assert.match(script,/\$\('#budget'\)\.oninput=\(\)=>\{if\(agentRequestController\)resetAgents\(\)\}/);
+  assert.match(css,/#studio #cancel-agents\[hidden\]\{display:none!important;\}/);
+  assert.match(css,/min-height:44px/);
 });
 
 test('country provider outage leaves sourced national facts visible but not live currency/rules',async()=>{
