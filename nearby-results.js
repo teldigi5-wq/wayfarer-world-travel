@@ -172,9 +172,9 @@
       const supplier=type==='hotel'?providerHotelCards():[];
       // Keep both mapped-reference and source-only quote cards discoverable,
       // including when the local map returns ten or more named properties.
-      const mappedLimit=supplier.length?7:10;
+      const mapped=items.hotels.slice(0,supplier.length?7:10);
       const rows=type==='airport'?items.airports:
-        [...items.hotels.slice(0,mappedLimit),...supplier.slice(0,10-mappedLimit)];
+        [...mapped,...supplier.slice(0,10-mapped.length)];
       if(rows.length)root.replaceChildren(...rows.map(row=>renderCard(row,type)));
       else status(root,type==='airport'?'No named airport reference available nearby. Try a wider destination search.':
         'No named hotels returned by public map data. A map search is available, but prices and rooms are not confirmed.',true);
