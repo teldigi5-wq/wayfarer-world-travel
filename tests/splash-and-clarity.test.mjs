@@ -47,12 +47,12 @@ test('splash renders first, before homepage, even before JavaScript executes',()
   assert.match(css,/focus-visible/);
   assert.doesNotMatch(js,/fetch\(|XMLHttpRequest|\/api\/travel-search|\/api\/intelligence|new Image/);
 });
-test('every full navigation starts with visible splash then closes after 1350ms',()=>{
+test('every full navigation starts with visible splash then closes after 850ms',()=>{
   for(let run=0;run<2;run++){
     const state=simulate();
     assert.equal(state.splash.hidden,false,'visible in original HTML');
     assert.deepEqual(state.actions,['skip focused']);
-    const automatic=state.timers.find(t=>t.delay===1350);
+    const automatic=state.timers.find(t=>t.delay===850);
     assert.ok(automatic);
     automatic.fn();
     assert.ok(state.classes.has('wf-splash-closing'));
