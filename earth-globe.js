@@ -159,6 +159,10 @@
     active=false;stage.hidden=true;root.dataset.open='false';close.hidden=true;open.hidden=false;
     if(raf){cancelAnimationFrame(raf);raf=0;}open.focus();
   }
+  fallback.addEventListener('error',()=>{
+    fallback.hidden=true;
+    status.textContent='NASA and mirror satellite imagery could not be displayed. World Explorer and the source-backed map remain available.';
+  });
   open.addEventListener('click',show);close.addEventListener('click',dismiss);
   for(const button of root.querySelectorAll('[data-earth-direction]')){
     button.addEventListener('click',()=>{
