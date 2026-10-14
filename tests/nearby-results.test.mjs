@@ -181,6 +181,64 @@ test('same-name hotels must not reuse provider results after geographic coordina
   assert.doesNotMatch(f.textOf(f.ids['hotel-list']),/Known Springfield Hotel|\\$300/);
 });
 
+test('mapped hotel and same-name provider quote are separate, never name-joined property identities',async()=>{
+  const f=domFixture();
+  await f.public.load({name:'Sigiriya',country:'Sri Lanka',latitude:7.95,longitude:80.75});
+  const trip={destination:'Sigiriya',checkIn:'2026-11-12',checkOut:'2026-11-15',adults:2};
+  const payload={mode:'search_only',checkedAt:'2026-10-14T06:00:00Z',hotels:{
+    offers:[{name:'Hotel Sigiriya',currency:'USD',displayedTotal:'360.00'}]}};
+  f.public.applyQuotes(payload,trip);
+  const cards=f.ids['hotel-list'].children;
+  assert.equal(cards.length,2,'Same name must appear as independent mapped and unlinked supplier references');
+  const [mapped,supplier]=cards;
+  assert.match(f.textOf(mapped),/2\.1 km straight-line/);
+  assert.match(f.textOf(mapped),/OpenStreetMap contributors/);
+  assert.match(f.textOf(mapped),/Price unavailable/);
+  assert.doesNotMatch(f.textOf(mapped),/\$360\.00/,'Name-only matching is not verified property identity');
+  assert.match(f.textOf(supplier),/Distance unavailable/);
+  assert.match(f.textOf(supplier),/unlinked supplier result/);
+  assert.match(f.textOf(supplier),/address not map-verified/);
+  assert.match(f.textOf(supplier),/\$360\.00 total/);
+  assert.match(f.textOf(supplier),/\$120\.00 \/ night average/);
+  assert.equal(supplier.children[2].children.some(x=>x.className==='wf-nearby-map'),false,
+    'Provider-only result must not be presented as an actual mapped hotel');
+  assert.equal(mapped.children[2].children.some(x=>x.className==='wf-nearby-map'),true,
+    'Verified geographic reference retains its ordinary map action');
+});
+test('provider-only quote remains visible when public map supplies ten unrelated named hotels',async()=>{
+  const f=domFixture();
+  f.state.hotels=Array.from({length:10},(_,i)=>({
+    name:'Mapped Stay '+(i+1),distanceKm:i+1,source:'OpenStreetMap contributors',
+    latitude:48.85+i/1000,longitude:2.35+i/1000,
+    url:'https://www.openstreetmap.org/node/'+(i+1)
+  }));
+  await f.public.load({name:'Paris',country:'France',countryCode:'FR',
+    latitude:48.8566,longitude:2.3522});
+  const trip={destination:'Paris',checkIn:'2026-11-12',checkOut:'2026-11-15',adults:2};
+  const quote={mode:'search_only',checkedAt:'2026-10-14T06:00:00Z',hotels:{
+    offers:[{name:'Supplier-Only Stay',currency:'USD',displayedTotal:'420.00'}]}};
+  f.public.applyQuotes(quote,trip);
+  const names=f.ids['hotel-list'].children.map(x=>f.textOf(x));
+  assert.ok(names.length<=10);
+  assert.equal(names.filter(x=>x.includes('Mapped Stay')).length,7);
+  assert.equal(names.filter(x=>x.includes('Supplier-Only Stay')).length,1);
+  assert.match(names.at(-1),/address not map-verified/);
+  assert.match(names.at(-1),/\$420\.00 total/);
+});
+test('unlinked supplier price is removed when trip dates change but public mapped reference persists',async()=>{
+  const f=domFixture();
+  await f.public.load({name:'Sigiriya',latitude:7.95,longitude:80.75});
+  const trip={destination:'Sigiriya',checkIn:'2026-11-12',checkOut:'2026-11-15',adults:2};
+  f.public.applyQuotes({mode:'search_only',checkedAt:'2026-10-14T06:00:00Z',hotels:{
+    offers:[{name:'Hotel Sigiriya',currency:'USD',displayedTotal:'360.00'}]}},trip);
+  f.ids['check-out'].value='2026-11-16';
+  f.ids['check-out'].listeners.change();
+  assert.equal(f.ids['hotel-list'].children.length,1);
+  assert.match(f.textOf(f.ids['hotel-list']),/OpenStreetMap contributors/);
+  assert.match(f.textOf(f.ids['hotel-list']),/Price unavailable/);
+  assert.doesNotMatch(f.textOf(f.ids['hotel-list']),/\$360\.00/);
+});
+
 test('only a matching explicit protected hotel quote can display total and nightly average',async()=>{
   const f=domFixture();
   await f.public.load({name:'Sigiriya',latitude:7.95,longitude:80.75});
