@@ -1,5 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
 import {signSelection} from '../flight-selection-token.mjs';
+import {verifiedSegmentRoute} from '../flight-route-integrity.mjs';
 import countryDirectory from '../data.json' with {type:'json'};
 
 // Source-grounded, opt-in Google Travel searches via SerpApi.
@@ -79,13 +80,13 @@ function fit(total,budget){return !budget?'budget_not_set':total<=budget?'within
 function flightsFrom(data,t,checkedAt,secret){
   const entries=[...(Array.isArray(data.best_flights)?data.best_flights:[]),...(Array.isArray(data.other_flights)?data.other_flights:[])];
   const offers=entries.slice(0,12).map(item=>{
-    if(!numMoney(item.price)||!Array.isArray(item.flights))return null;
+    if(!numMoney(item.price)||!Array.isArray(item.flights)||item.flights.length<1||item.flights.length>6)return null;
     const segments=item.flights.slice(0,6).map(f=>({
       airline:clean(f.airline,70),number:clean(f.flight_number,20),
       from:clean(f.departure_airport?.id,3),to:clean(f.arrival_airport?.id,3),
       departureAt:clean(f.departure_airport?.time,40),arrivalAt:clean(f.arrival_airport?.time,40)
-    })).filter(f=>airport(f.from)&&airport(f.to));
-    if(!segments.length)return null;
+    }));
+    if(!verifiedSegmentRoute(segments,t.from,t.to))return null;
     const perAdult=Number(money(item.price)),estimatedGroup=Number(money(perAdult*t.adults));
     return {currency:'USD',perAdult:money(perAdult),estimatedGroup:money(estimatedGroup),
       priceBasis:'Indicative search price per adult; full round trip not repriced',
@@ -105,7 +106,7 @@ function flightsFrom(data,t,checkedAt,secret){
   }).filter(Boolean).sort((a,b)=>Number(a.estimatedGroup)-Number(b.estimatedGroup)).slice(0,6);
   return state(offers.length?'search_results':'no_results',offers.length?
     'Flight times are provider-reported search schedule indications. Ticket availability, operating status, return-flight selection and final booking totals are not verified.':
-    'No price found in this search; that does not mean flights are sold out.',offers);
+    'No route-consistent flight price found in this search; that does not mean flights are sold out.',offers);
 }
 function hotelsFrom(data,t,checkedAt){
   const allocation=Number(money(t.groundBudget*.40));
