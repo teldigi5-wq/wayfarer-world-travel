@@ -548,3 +548,21 @@
 @media(prefers-reduced-motion:reduce){
  #world-explorer .wf-research-snapshot *{animation:none!important;transition:none!important;}
 }
+
+/* Stage 41 — separate mapped geographic references from unlinked provider quotes. */
+#studio .wf-nearby-card--provider{
+ border-color:#d6bd8e;
+ background:linear-gradient(145deg,#fffaf0 0%,#fffdf8 85%);
+}
+#studio .wf-nearby-origin-label{
+ display:inline-flex;max-width:100%;align-self:flex-start;
+ margin-top:9px;padding:5px 8px;border:1px solid #dac49d;
+ border-radius:6px;background:#f7ecd4;color:#5c4725;
+ font:700 .65rem/1.4 'DM Sans',sans-serif;letter-spacing:.08em;
+}
+#studio .wf-nearby-card--provider .wf-nearby-price{
+ background:#faf2df;border-color:#e9d9b8;
+}
+@media(max-width:650px){
+ #studio .wf-nearby-origin-label{font-size:.63rem;overflow-wrap:anywhere;}
+}

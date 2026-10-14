@@ -459,6 +459,18 @@ The existing opt-in map privacy/performance flow is unchanged: no map tiles befo
 
 `tests/map-studio.test.mjs` exercises the **actual Map Studio script** in a DOM-style runtime to verify same-name distinct-position hotels, coordinate-specific OSM markers and Google Directions links, selected-pin accessibility, exact duplicate de-duplication, category distinction, navigation to a new city and opt-in iframe loading. Require full GitHub CI, an exact passing-head free Vercel Preview, keyboard/mobile visual QA and owner approval before any Production promotion. Stage 40 remains stacked on the prior draft branch.
 
+### Stage 41 — avoid false hotel-price identity matches (draft)
+
+A significant trust issue was confirmed in the worldwide hotel handoff: `nearby-results.js` formerly linked a protected provider's hotel `displayedTotal` to an OpenStreetMap/Wikidata **mapped property using only the hotel name**. Different properties can share the same name, and supplier data currently lacks an independently verified common property ID or source-backed address/coordinates. Even with the correct city, dates and guest count, attaching a price to a mapped hotel was **not evidence that the price belonged to that exact building**.
+
+Stage 41 deliberately separates two kinds of source evidence:
+- **Mapped location reference:** its original name, source, straight-line distance and map/geographic actions remain, but **no hotel rate is attached by text matching**. The card continues to show `Price unavailable` unless a future authorized identifier-level property match can be verified.
+- **Unlinked supplier-priced hotel:** the same explicit user-authorized Google Travel provider quote appears in a **separate card**, even if a local mapped hotel has the identical name. It is clearly styled and labeled `SUPPLIER SEARCH · ADDRESS NOT VERIFIED`, with no invented map location, distance, or clickable geographic pin. Price, date and guest snapshots retain existing protection, and the underlying Travel Research offer still carries supplier attribution and source caveats.
+
+To keep the customer experience usable in large worldwide cities, the nearby card layout reserves enough space for mapped hotel references and unlinked supplier results within ten visible cards, rather than truncating provider records behind all ten mapped places. It does not initiate a second hotel lookup or book anything automatically.
+
+New tests in `tests/nearby-results.test.mjs` check the same-name mapped/supplier card split, absence of incorrectly attached prices or geographic links on provider-only cards, price removal when trip dates change, correct coexistence with a full public map shortlist, and retention of source-backed mapped actions. No new paid API, Google Maps billing, secrets, map-tile background traffic or subscriptions. Release requires green CI, exact-head free Preview, manual browser mobile/desktop reviews and explicit owner sign-off before Production.
+
 ## Run and test
 
 Install Node.js 20+ from its official distribution. No package install, API key, environment variable, card or build dependency is needed.

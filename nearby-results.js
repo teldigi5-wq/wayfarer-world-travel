@@ -71,9 +71,13 @@
     const response=quotes.payload,offers=type==='hotel'?response.hotels?.offers:response.flights?.offers;
     if(!Array.isArray(offers)||!response.checkedAt)return null;
     if(type==='hotel'){
-      const hit=offers.find(o=>cleanName(o.name)===cleanName(item.name)&&o.currency==='USD'
-        &&validMoney(o.displayedTotal));
-      if(!hit||!nights(dates.checkIn,dates.checkOut))return null;
+      // A supplier hotel name is NOT a verified identity for a mapped property.
+      // Never attach a provider quote to an OSM/Wikidata location by name.
+      if(item.providerOnly!==true||!Number.isInteger(item.providerQuoteIndex))return null;
+      const hit=offers[item.providerQuoteIndex];
+      if(!hit||cleanName(hit.name)!==cleanName(item.name)||
+        hit.currency!=='USD'||!validMoney(hit.displayedTotal)||
+        !nights(dates.checkIn,dates.checkOut))return null;
       return {total:Number(hit.displayedTotal),checkedAt:hit.checkedAt||response.checkedAt,
         perNight:Number(hit.displayedTotal)/nights(dates.checkIn,dates.checkOut),currency:'USD'};
     }
@@ -93,7 +97,7 @@
     (airportCode?$('travel-origin'):$('travel-beta-code'))?.focus({preventScroll:true});
   }
   function renderCard(item,type){
-    const card=make('article','wf-nearby-card');
+    const card=make('article',item.providerOnly?'wf-nearby-card wf-nearby-card--provider':'wf-nearby-card');
     const top=make('div','wf-nearby-card-top'),content=make('div','wf-nearby-content');
     const heading=make('h4','wf-nearby-name',item.name),facts=make('p','wf-nearby-facts');
     const distance=typeof item.distanceKm==='number'?item.distanceKm:NaN;
@@ -104,7 +108,10 @@
     facts.textContent=(Number.isFinite(distance)&&distance>=0?distance.toFixed(1)+' km straight-line':'Distance unavailable')+
       code+(locality?' · '+locality:'')+airportTier+' · '+source;
     if(type==='airport'&&code)card.dataset.airportIata=item.iata;
-    content.append(heading,facts);top.append(content);
+    content.append(heading,facts);
+    if(item.providerOnly)content.append(make('span','wf-nearby-origin-label',
+      'SUPPLIER SEARCH · ADDRESS NOT VERIFIED'));
+    top.append(content);
     const price=make('div','wf-nearby-price'),quote=quoteFor(item,type);
     if(quote){
       price.append(make('strong','',type==='hotel'?money.format(quote.total)+' total':money.format(quote.perAdult)+' / adult'));
@@ -144,25 +151,33 @@
     if(!t||cleanName(t.destination)!==cleanName(chosen.name)||
       t.checkIn!==dates.checkIn||t.checkOut!==dates.checkOut||
       Number(t.adults)!==dates.adults||!quotes.payload.checkedAt)return [];
-    const known=new Set(items.hotels.map(x=>cleanName(x.name)));
+    // Supplier-only names must stay separate even when they match an OSM
+    // property; matching text is never evidence of matching addresses.
+    const known=new Set();
     const source=quotes.payload.hotels?.offers;
     if(!Array.isArray(source))return [];
     const extra=[];
-    for(const offer of source){
+    for(const [providerQuoteIndex,offer] of source.entries()){
       if(typeof offer?.name!=='string'||offer.name.trim().length<2||offer.name.length>150||
         offer.currency!=='USD'||!validMoney(offer.displayedTotal))continue;
       const key=cleanName(offer.name);
       if(known.has(key))continue;
       known.add(key);
       extra.push({type:'hotel',name:offer.name.trim(),distanceKm:null,
-        source:'Google Travel hotel search · provider supplied',url:null,price:null});
+        source:'Google Travel hotel search · unlinked supplier result · address not map-verified',
+        url:null,price:null,providerOnly:true,providerQuoteIndex});
       if(extra.length===8)break;
     }
     return extra;
   }
   function render(){
     for(const [type,root] of [['airport',airports],['hotel',hotels]]){
-      const rows=type==='airport'?items.airports:[...items.hotels,...providerHotelCards()].slice(0,10);
+      const supplier=type==='hotel'?providerHotelCards():[];
+      // Keep both mapped-reference and source-only quote cards discoverable,
+      // including when the local map returns ten or more named properties.
+      const mapped=items.hotels.slice(0,supplier.length?7:10);
+      const rows=type==='airport'?items.airports:
+        [...mapped,...supplier.slice(0,10-mapped.length)];
       if(rows.length)root.replaceChildren(...rows.map(row=>renderCard(row,type)));
       else status(root,type==='airport'?'No named airport reference available nearby. Try a wider destination search.':
         'No named hotels returned by public map data. A map search is available, but prices and rooms are not confirmed.',true);
