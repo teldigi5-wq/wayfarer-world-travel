@@ -601,6 +601,8 @@
 #studio #wf-earth .wf-earth-intro p.wf-earth-credit{
  margin-top:11px;font-size:.72rem;color:#d6bd90;line-height:1.5;
 }
+#studio #wf-earth .wf-earth-credit a{color:#ffe2a9;text-underline-offset:3px;}
+#studio #wf-earth .wf-earth-network-note{font-size:.7rem;color:#d7c49e;max-width:28ch;line-height:1.55;}
 #studio #wf-earth .wf-earth-actions{display:flex;flex-direction:column;gap:10px;align-items:flex-start;}
 #studio #wf-earth :is(#wf-earth-open,#wf-earth-close){
  min-height:46px;max-width:100%;border-radius:8px;padding:11px 17px;
