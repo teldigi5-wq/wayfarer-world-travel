@@ -324,6 +324,17 @@ Every mapped destination can now render the **Destination Intelligence** panel i
 
 Tests in `tests/worldwide-intelligence.test.mjs` exercise country-context and local-airport behavior across France, Japan, Australia, Kenya, Sri Lanka and Thailand, public-source failures, authentic cross-border caution, and explicit only-on-click supplier handoff. Interactive real-device review and an authorized supplier test remain release gates.
 
+### Stage 27 — worldwide source orchestration and truthful speed (draft)
+
+The destination research service now coordinates only **public, source-backed** map and hotel-reference lookups. It never treats an LLM answer as a verified hotel, fare, timetable, booking or visa fact.
+
+- **Fast gateway first:** `/api/explore?mode=airports` remains an offline-backed response. The global OurAirports index already provides airport coordinates, so the OSM query is now **hotels only**, restricted to named mapped entries within 25 km (bounded response size) rather than repeatedly scanning airports over 140 km.
+- **Hedged, not indefinitely sequential:** a bounded OpenStreetMap lookup starts first. If it is still slow after 850 ms, a Wikidata CC0 reference lookup may begin in parallel; if OSM returns mapped hotels promptly, there is no second query. Each provider retains a strict timeout. Source absence is shown as unavailable, never replaced by invented names. On shared public services, repeated searches remain subject to upstream rate limits and availability.
+- **Per-instance, public-only deduplication:** identical full nearby requests from the same source-backed coordinates and country code coalesce. Returned results are copied before use so one caller cannot mutate another. Positive results remain cached for ten minutes; no-hotel results expire after 45 seconds; failures and malformed inputs are not cached. Cache scope is limited to anonymous public geographic references, **not** flight/hotel supplier quotes, protected tokens, guest dates, AI outputs, saved trips or account data. Cache is memory-only and disappears with a new server instance.
+- **Customer experience:** immediate airport references and Destination Intelligence still render before the slower hotel check. Map Studio remains opt-in, with no Google Maps Platform billing or background tile calls, and the explicit airline/supplier handoff remains unchanged.
+
+Regression tests `tests/worldwide-source-coordinator.test.mjs` cover public query coalescing, cache isolation and expiry, bounded source overlap, fast OSM success, provider outages and no metered API interaction. Automated tests do **not** establish real browser Web Vitals. Before Production release verify multiple regions, provider/source policy, mobile UI and authorized supplier search separately.
+
 ## Run and test
 
 Install Node.js 20+ from its official distribution. No package install, API key, environment variable, card or build dependency is needed.
