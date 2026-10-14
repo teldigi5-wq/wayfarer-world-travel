@@ -147,7 +147,7 @@ test('UI handles missing sources honestly and keeps source/AI statuses distinct'
   assert.match(html,/AI draft created · verify before use/);
   assert.match(html,/Verification Agent/);
   assert.match(html,/AbortSignal\.any\(\[controller\.signal,AbortSignal\.timeout\(26000\)\]\)/);
-  assert.match(html,/local itinerary and saved journeys are unchanged/);
+  assert.match(html,/current itinerary and saved journeys are unchanged/);
 });
 test('verification agent never equates source contexts or AI drafts with live fares',()=>{
   const result=verificationSummary({weather:{ok:true},place:{ok:false},
