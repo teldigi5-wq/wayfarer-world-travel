@@ -14,7 +14,12 @@ function resetAgents(){
  [['place','Wikipedia context'],['climate','Open-Meteo'],['country','REST Countries']].forEach(([id,label])=>{$('#agent-'+id).className='agent';$('#agent-'+id+' p').textContent='Ready · '+label});$('#agent-ai').className='agent waiting';$('#agent-ai p').textContent='Ready · Groq GPT-OSS 120B';$('#agent-log').classList.remove('open');$('#agent-log').innerHTML='';$('#plan-status').className='micro wait';$('#plan-status').textContent='Sample itinerary';$('#plan-source').textContent='Descriptions and budgets are illustrative. Live tool results appear above with sources.'}
 function cancelAgentResearch(){
  if(!agentRequestController)return false;
+ // Preserve the existing itinerary provenance if a previous valid draft exists.
+ // Cancellation must not relabel an older AI draft as a sample itinerary.
+ const status=$('#plan-status'),source=$('#plan-source');
+ const savedStatusClass=status.className,savedStatusText=status.textContent,savedSourceText=source.textContent;
  resetAgents();
+ status.className=savedStatusClass;status.textContent=savedStatusText;source.textContent=savedSourceText;
  $('#agent-ai').className='agent';
  $('#agent-ai p').textContent='Cancelled · no new itinerary applied';
  $('#agent-log').className='agent-log open';
