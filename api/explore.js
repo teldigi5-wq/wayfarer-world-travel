@@ -167,7 +167,9 @@ async function nearby(req,{airportsOnly=false}={}){
 }
 
 export default async function handler(req,res){
-  res.setHeader('Cache-Control','public, s-maxage=900, stale-while-revalidate=3600');
+  // Fail closed for request-specific geocoding and provider errors. Shared CDN
+  // caching is reserved for successful, reusable public geographic references.
+  res.setHeader('Cache-Control','no-store');
   res.setHeader('X-Content-Type-Options','nosniff');
   if(req.method!=='GET')return res.status(405).json({ok:false,error:'Method not allowed'});
   try{
@@ -183,6 +185,19 @@ export default async function handler(req,res){
       result=key==='invalid'?await nearby(req):
         await cachedPublicNearby(key,()=>nearby(req));
     }else result=await search(req);
+    if(result.status===200&&result.body?.ok===true){
+      if(mode==='airports')
+        res.setHeader('Cache-Control','public, s-maxage=900, stale-while-revalidate=3600');
+      else if(mode==='nearby'){
+        const hasHotels=Array.isArray(result.body.hotels)&&result.body.hotels.length>0;
+        const liveSource=result.body.mapAvailable===true||result.body.wikidataAvailable===true;
+        // Degraded or empty maps must revalidate soon rather than displaying
+        // an outage or absence as if it were a durable worldwide result.
+        res.setHeader('Cache-Control',liveSource&&hasHotels?
+          'public, s-maxage=600, stale-while-revalidate=3600':
+          'public, s-maxage=45, stale-while-revalidate=120');
+      }
+    }
     return res.status(result.status).json(result.body);
-  }catch(e){return res.status(502).json({ok:false,error:e.message||'Discovery provider unavailable'})}
+  }catch(e){return res.status(502).json({ok:false,error:'Destination references temporarily unavailable'})}
 }
