@@ -101,6 +101,7 @@
         latitude:place.latitude,longitude:place.longitude,country:String(place.country||''),
         type:'destination'}:null;
     locations={airports:[],hotels:[]};
+    renderInsights();
     focus=null;
     section.hidden=!chosen;
     placeholder(chosen?'Choose a mapped airport, hotel or destination. Map tiles load only when you open the map.':
@@ -108,12 +109,29 @@
     if(chosen)focusOn(chosen);
     renderPins();
   }
+  function renderInsights(){
+    const root=$('wf-map-insights');if(!root)return;
+    root.replaceChildren();
+    const nearest=locations.airports.filter(x=>typeof x.distanceKm==='number'&&
+      Number.isFinite(x.distanceKm)&&x.distanceKm>=0).sort((a,b)=>a.distanceKm-b.distanceKm)[0];
+    const facts=[
+      ['GROUND CONTEXT',nearest?nearest.name+' · '+nearest.distanceKm.toFixed(1)+' km straight-line':'No mapped airport reference'],
+      ['MAPPED STAYS',locations.hotels.length+' sourced hotel locations'],
+      ['FARE VERIFICATION','Flight times and prices require an authorized provider search']
+    ];
+    for(const [title,value] of facts){
+      const card=document.createElement('div');card.className='wf-map-insight';
+      const name=document.createElement('span');name.textContent=title;
+      const detail=document.createElement('strong');detail.textContent=value;
+      card.append(name,detail);root.append(card);
+    }
+  }
   function setNearby(data){
     if(!chosen)return;
     const clean=arr=>Array.isArray(arr)?arr.filter(x=>valid(x?.latitude,x?.longitude)&&
       typeof x.name==='string'&&x.name.trim()).slice(0,10):[];
     locations={airports:clean(data?.airports),hotels:clean(data?.hotels)};
-    renderPins();
+    renderPins();renderInsights();
     status.textContent='Select a pin to focus the map. '+locations.airports.length+
       ' airport references and '+locations.hotels.length+
       ' mapped hotel references available. Prices and routes require separate verification.';
