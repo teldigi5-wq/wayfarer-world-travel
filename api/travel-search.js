@@ -36,9 +36,9 @@ function parseTrip(req){
     destination:clean(t.destination,90),adults:Number(t.adults),
     // Public mapped reference context; source location is selected by visitor.
     // Never assert these values are independently validated by our backend.
-    countryCode:clean(t.countryCode,2).toUpperCase(),
-    latitude:t.latitude==null?null:Number(t.latitude),
-    longitude:t.longitude==null?null:Number(t.longitude),
+    countryCode:clean(t.countryCode,4).toUpperCase(),
+    latitude:t.latitude==null||t.latitude===''?null:Number(t.latitude),
+    longitude:t.longitude==null||t.longitude===''?null:Number(t.longitude),
     flightBudget:t.flightBudget==null||t.flightBudget===''?0:Number(t.flightBudget),
     groundBudget:t.groundBudget==null||t.groundBudget===''?0:Number(t.groundBudget)
   };
