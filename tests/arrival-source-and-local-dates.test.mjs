@@ -59,8 +59,8 @@ const response={
 
 test('Arrival only shows sources for exactly the current mapped country and city',()=>{
   const f=fixture(),c=f.context;
-  c.agentData=response;c.arrivalResearchIdentity=c.currentArrivalIdentity();
-  c.arrivalResearchAt=Date.now();c.arrival();
+  c.agentData=response;vm.runInContext('arrivalResearchIdentity=currentArrivalIdentity()',c);
+  vm.runInContext('arrivalResearchAt=Date.now()',c);c.arrival();
   assert.equal(f.$('#arr-weather').textContent,'26 °C');
   assert.equal(f.$('#arr-currency').textContent,'EUR');
   c.worldSelection={name:'Paris',country:'United States',countryCode:'US',
@@ -73,8 +73,8 @@ test('Arrival only shows sources for exactly the current mapped country and city
 });
 test('Arrival does not treat old weather as current after thirty minutes',()=>{
   const f=fixture(),c=f.context;
-  c.agentData=response;c.arrivalResearchIdentity=c.currentArrivalIdentity();
-  c.arrivalResearchAt=Date.now()-31*60*1000;
+  c.agentData=response;vm.runInContext('arrivalResearchIdentity=currentArrivalIdentity()',c);
+  vm.runInContext('arrivalResearchAt=Date.now()-31*60*1000',c);
   c.arrival();
   assert.equal(f.$('#arr-weather').textContent,'Run tools');
   assert.equal(f.$('#arr-language').textContent,'—');
@@ -82,18 +82,18 @@ test('Arrival does not treat old weather as current after thirty minutes',()=>{
 });
 test('changing trip details resets all arrival sources immediately',()=>{
   const f=fixture(),c=f.context;
-  c.agentData=response;c.arrivalResearchIdentity=c.currentArrivalIdentity();
-  c.arrivalResearchAt=Date.now();c.arrival();c.resetAgents();
+  c.agentData=response;vm.runInContext('arrivalResearchIdentity=currentArrivalIdentity()',c);
+  vm.runInContext('arrivalResearchAt=Date.now()',c);c.arrival();c.resetAgents();
   assert.equal(c.agentData,null);
-  assert.equal(c.arrivalResearchIdentity,null);
-  assert.equal(c.arrivalResearchAt,0);
+  assert.equal(vm.runInContext('arrivalResearchIdentity',c),null);
+  assert.equal(vm.runInContext('arrivalResearchAt',c),0);
   assert.equal(f.$('#arr-weather').textContent,'Run tools');
   assert.match(f.$('#arr-source').textContent,/Tap Refresh/);
 });
 test('cancelled rerun retains prior still-valid source context',()=>{
   const f=fixture(),c=f.context;
-  c.agentData=response;c.arrivalResearchIdentity=c.currentArrivalIdentity();
-  c.arrivalResearchAt=Date.now();c.arrival();
+  c.agentData=response;vm.runInContext('arrivalResearchIdentity=currentArrivalIdentity()',c);
+  vm.runInContext('arrivalResearchAt=Date.now()',c);c.arrival();
   c.resetAgents(true);c.arrival();
   assert.equal(f.$('#arr-weather').textContent,'26 °C');
   assert.equal(f.$('#arr-currency').textContent,'EUR');
