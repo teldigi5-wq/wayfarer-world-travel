@@ -86,6 +86,15 @@
     }
     card.append(top,price);
     const actions=make('div','wf-nearby-actions');
+    if(Number.isFinite(item.latitude)&&Math.abs(item.latitude)<=90&&
+      Number.isFinite(item.longitude)&&Math.abs(item.longitude)<=180){
+      const center=make('button','wf-nearby-map','View on map ↗');center.type='button';
+      center.addEventListener('click',()=>{
+        window.WayfarerMap?.focusOn({...item,type},true);
+        $('wf-map-studio')?.scrollIntoView({behavior:'instant',block:'start'});
+      });
+      actions.append(center);
+    }
     const details=safeUrl(item.url);
     if(details){const link=make('a','wf-nearby-map',details.includes('wikidata.org')?'View source ↗':'View location ↗');link.href=details;
       link.target='_blank';link.rel='noopener noreferrer';actions.append(link);}
@@ -130,6 +139,7 @@
     const seq=++loadSeq;
     controller?.abort();controller=new AbortController();
     chosen=Number.isFinite(place?.latitude)&&Number.isFinite(place?.longitude)?{...place}:null;
+    window.WayfarerMap?.selectDestination(chosen);
     const label=$('nearby-context');
     if(label)label.textContent=chosen?
       'Showing location references near '+chosen.name+(chosen.country?', '+chosen.country:'')+'. Distances are straight-line estimates. Prices require a separate search.':
@@ -151,6 +161,7 @@
         const d=await response.json();
         if(seq!==loadSeq||fullApplied||!d.ok)return;
         items.airports=filter(d.airports,8);
+        window.WayfarerMap?.setNearby(items);
         if(items.airports.length)airports.replaceChildren(...items.airports.map(x=>renderCard(x,'airport')));
         else status(airports,'No nearby coded airports found in the bundled reference.');
       }catch(e){
@@ -166,6 +177,7 @@
         if(seq!==loadSeq||!d.ok)return;
         fullApplied=true;
         items={airports:filter(d.airports,8),hotels:filter(d.hotels,10)};
+        window.WayfarerMap?.setNearby(items);
         render();
         if(!d.mapAvailable&&!items.hotels.length){
           status(hotels,'Public hotel records are unavailable for this area. An optional protected supplier search may provide named stays.');
