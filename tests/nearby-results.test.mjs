@@ -246,3 +246,29 @@ test('existing project routes and supplier bridge remain intentional and protect
   assert.doesNotMatch(script,/fetch\('\/api\/travel-search/);
   assert.doesNotMatch(script,/SERPAPI_API_KEY|GOOGLE_API_KEY/);
 });
+
+
+test('changing a booked-search brief immediately removes stale indicative hotel and flight quotes',async()=>{
+  const f=domFixture();
+  await f.public.load({name:'Sigiriya',country:'Sri Lanka',latitude:7.95,longitude:80.75});
+  const trip={destination:'Sigiriya',to:'GIU',checkIn:'2026-11-12',checkOut:'2026-11-15',adults:2};
+  const data={mode:'search_only',checkedAt:'2026-10-14T06:00:00Z',
+    hotels:{offers:[{name:'Hotel Sigiriya',currency:'USD',displayedTotal:'360.00'}]},
+    flights:{offers:[{currency:'USD',perAdult:'290.00',segments:[{from:'CMB',to:'GIU'}]}]}};
+  f.public.applyQuotes(data,trip);
+  assert.match(f.textOf(f.ids['hotel-list']),/\$360\.00 total/);
+  assert.match(f.textOf(f.ids['airport-list']),/\$290\.00/);
+  assert.equal(f.public.clearQuotes(),true);
+  assert.equal(f.public.clearQuotes(),false);
+  assert.doesNotMatch(f.textOf(f.ids['hotel-list']),/\$360\.00/);
+  assert.doesNotMatch(f.textOf(f.ids['airport-list']),/\$290\.00/);
+  assert.match(f.textOf(f.ids['hotel-list']),/Price unavailable/);
+});
+
+test('live quote widget clears old prices when source location is reselected',()=>{
+  assert.match(script,/window\.dispatchEvent\?\.\(new Event\('wayfarer:location-changed'\)\)/);
+  assert.match(priceBridge,/window\.addEventListener\?\.\('wayfarer:location-changed',invalidateSupplierView\)/);
+  assert.match(priceBridge,/window\.WayfarerNearby\?\.clearQuotes\?\.\(\)/);
+  assert.match(priceBridge,/showingSupplierResults=false;output\.replaceChildren\(\)/);
+  assert.match(priceBridge,/Trip details changed\. Previous search prices were cleared/);
+});
