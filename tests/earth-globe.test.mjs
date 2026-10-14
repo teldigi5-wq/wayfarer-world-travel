@@ -134,6 +134,9 @@ test('CORS/load failures retain the existing World Explorer and do not trigger a
   const f=fixture();
   f.ids['wf-earth-open'].click();
   f.images[0].onerror();
+  assert.match(f.images[0].src,/raw\.githubusercontent\.com\/MaxwellLee/);
+  assert.equal(f.ids['wf-earth-fallback'].hidden,true,'Try the public CORS mirror before using a flat fallback');
+  f.images[0].onerror();
   assert.equal(f.ids['wf-earth-fallback'].hidden,false);
   assert.match(f.ids['wf-earth-status'].textContent,/browser blocked projected Earth/);
   assert.equal(f.images.length,1,'Fallback image belongs to the local DOM, not another Image-loader');
@@ -141,6 +144,8 @@ test('CORS/load failures retain the existing World Explorer and do not trigger a
   const policy=cfg.headers[0].headers.find(x=>x.key==='Content-Security-Policy').value;
   assert.match(policy,/img-src[^;]+https:\/\/svs\.gsfc\.nasa\.gov/);
   assert.doesNotMatch(policy,/connect-src[^;]+svs\.gsfc\.nasa\.gov/);
+  assert.match(policy,/img-src[^;]+https:\/\/raw\.githubusercontent\.com/);
+  assert.doesNotMatch(policy,/connect-src[^;]+raw\.githubusercontent\.com/);
   assert.doesNotMatch(script,/fetch\(|google\.maps\.Map|mapboxgl|setInterval\(/);
 });
 test('earth scene is wired into existing worldwide UI without loading imagery automatically',()=>{
@@ -153,4 +158,16 @@ test('earth scene is wired into existing worldwide UI without loading imagery au
   assert.match(css,/#studio #wf-earth/);
   assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
   assert.match(pkg.scripts.check,/node --check earth-globe\.js/);
+});
+
+test('CORS-denied primary NASA source can load the credited mirror as a projected Earth globe',()=>{
+  const f=fixture({webgl:true});
+  f.ids['wf-earth-open'].click();
+  f.images[0].onerror();
+  assert.match(f.images[0].src,/raw\.githubusercontent\.com/);
+  f.load();
+  assert.equal(f.ids['wf-earth-canvas'].hidden,false);
+  assert.equal(f.ids['wf-earth-fallback'].hidden,true);
+  assert.equal(f.draws,1);
+  assert.equal(f.images.length,1,'The same image loader is reused without extra graphics resources');
 });
