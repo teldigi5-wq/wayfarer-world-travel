@@ -33,6 +33,11 @@ test('Sigiriya fallback returns real mapped hotel names and calculated straight-
     assert.equal(hotel.price,null);
   }
   assert.ok(res.body.airports.some(a=>a.name.includes('Bandaranaike')&&a.iata==='CMB'));
+  const sigiriyaAirport=res.body.airports.find(a=>a.iata==='GIU');
+  assert.ok(sigiriyaAirport,'Nearby local GIU aerodrome was omitted');
+  assert.equal(sigiriyaAirport.name,'Sigiriya Airport');
+  assert.ok(sigiriyaAirport.distanceKm<10);
+  assert.match(sigiriyaAirport.url,/^https:\/\/www\.openstreetmap\.org\/way\/297310393$/);
   assert.ok(res.body.airports.every(a=>a.price===null));
 });
 
