@@ -32,7 +32,7 @@ function domFixture(fetchOverride=null,{map=null,intelligence=null}={}) {
     return node;
   }
   const ids=Object.fromEntries([
-    'airport-list','hotel-list','nearby','check-in','check-out','stay-adults',
+    'airport-list','hotel-list','nearby','nearby-progress','check-in','check-out','stay-adults',
     'travel-origin','travel-arrival','travel-beta-code','wf-tab-prices','wayfarer-travel-research'
   ].map(id=>[id,make()]));
   ids['check-in'].value='2026-11-12';ids['check-out'].value='2026-11-15';
@@ -509,4 +509,113 @@ test('live quote widget clears old prices when source location is reselected',()
   assert.match(priceBridge,/window\.WayfarerNearby\?\.clearQuotes\?\.\(\)/);
   assert.match(priceBridge,/showingSupplierResults=false;output\.replaceChildren\(\)/);
   assert.match(priceBridge,/Trip details changed\. Previous search prices were cleared/);
+});
+
+test('full nearby reference results settle accessibly without waiting for a stalled fast airport request',async()=>{
+  const pending=[];
+  const f=domFixture((url,{signal})=>new Promise((resolve,reject)=>{
+    pending.push({url:String(url),signal,resolve,reject});
+    signal.addEventListener('abort',()=>{
+      const e=new Error('Request abandoned');e.name='AbortError';reject(e);
+    },{once:true});
+  }));
+  const researching=f.public.load({name:'Barcelona',countryCode:'ES',country:'Spain',
+    latitude:41.3874,longitude:2.1686});
+  assert.equal(pending.length,2);
+  assert.equal(f.ids.nearby['aria-busy'],'true');
+  assert.equal(f.ids['hotel-list']['aria-busy'],'true');
+  assert.match(f.ids['nearby-progress'].textContent,/Researching public/);
+  const fast=pending.find(x=>x.url.includes('mode=airports'));
+  const detailed=pending.find(x=>x.url.includes('mode=nearby'));
+  detailed.resolve({ok:true,json:async()=>({
+    ok:true,mapAvailable:true,wikidataAvailable:false,
+    airports:[{name:'Barcelona Airport',iata:'BCN',distanceKm:12.5}],
+    hotels:[{name:'Mapped Barcelona Stay',distanceKm:1.8}]
+  })});
+  await researching;
+  assert.equal(fast.signal.aborted,true,
+    'Detailed response includes airports, so unused fast reference fetch must be canceled');
+  assert.match(f.textOf(f.ids['airport-list']),/Barcelona Airport/);
+  assert.match(f.textOf(f.ids['hotel-list']),/Mapped Barcelona Stay/);
+  assert.equal(f.ids.nearby['aria-busy'],'false');
+  assert.equal(f.ids['airport-list']['aria-busy'],'false');
+  assert.equal(f.ids['hotel-list']['aria-busy'],'false');
+  assert.match(f.ids['nearby-progress'].textContent,/research complete/);
+  assert.equal(f.ids.nearby.loading.has('world-loading'),false);
+});
+
+test('independent airport success survives failed hotel source without claiming research is still pending',async()=>{
+  let resolvedBrief=0;
+  const f=domFixture(async url=>{
+    if(String(url).includes('mode=airports'))return {ok:true,json:async()=>({
+      ok:true,partial:true,airports:[{name:'Copenhagen Airport',iata:'CPH',distanceKm:8.4}]
+    })};
+    return {ok:true,json:async()=>({ok:false,error:'source temporarily unavailable'})};
+  },{intelligence:{choose(){},show(){},finishPartial(){resolvedBrief++;}}});
+  await f.public.load({name:'Copenhagen',countryCode:'DK',latitude:55.6761,longitude:12.5683});
+  assert.match(f.textOf(f.ids['airport-list']),/Copenhagen Airport/);
+  assert.match(f.textOf(f.ids['hotel-list']),/temporarily unavailable/);
+  assert.match(f.ids['nearby-progress'].textContent,/Airport references remain available/);
+  assert.doesNotMatch(f.ids['nearby-progress'].textContent,/checking|pending/i);
+  assert.equal(resolvedBrief,1);
+  assert.equal(f.ids['airport-list']['aria-busy'],'false');
+  assert.equal(f.ids['hotel-list']['aria-busy'],'false');
+  assert.equal(f.ids.nearby['aria-busy'],'false');
+  assert.equal(f.ids.nearby.loading.has('world-loading'),false);
+});
+
+test('when both public endpoints fail they settle without inventing references or leaving an active spinner',async()=>{
+  const f=domFixture(async()=>({ok:true,json:async()=>({ok:false})}));
+  await f.public.load({name:'Oslo',countryCode:'NO',latitude:59.9139,longitude:10.7522});
+  assert.match(f.textOf(f.ids['airport-list']),/temporarily unavailable/);
+  assert.match(f.textOf(f.ids['hotel-list']),/temporarily unavailable/);
+  assert.match(f.ids['nearby-progress'].textContent,/also unavailable or incomplete/);
+  assert.equal(f.ids['nearby']['aria-busy'],'false');
+  assert.equal(f.ids['airport-list']['aria-busy'],'false');
+  assert.equal(f.ids['hotel-list']['aria-busy'],'false');
+});
+
+test('an unmapped place clears progress and busy state after a previous request was started',async()=>{
+  const pending=[];
+  const f=domFixture((url,{signal})=>new Promise(resolve=>pending.push({url,signal,resolve})));
+  const abandoned=f.public.load({name:'Paris',countryCode:'FR',latitude:48.8566,longitude:2.3522});
+  assert.equal(f.ids.nearby['aria-busy'],'true');
+  await f.public.load(null);
+  assert.equal(f.ids.nearby['aria-busy'],'false');
+  assert.match(f.ids['nearby-progress'].textContent,/Choose a valid mapped destination/);
+  assert.equal(f.ids['airport-list']['aria-busy'],'false');
+  for(const request of pending)request.resolve({ok:true,json:async()=>({
+    ok:true,airports:[{name:'Old airport',distanceKm:2}],hotels:[{name:'Old hotel',distanceKm:2}]
+  })});
+  await abandoned;
+  assert.doesNotMatch(f.textOf(f.ids['airport-list']),/Old airport/);
+  assert.doesNotMatch(f.textOf(f.ids['hotel-list']),/Old hotel/);
+  assert.equal(f.ids.nearby['aria-busy'],'false');
+});
+
+test('warm cached references show explicit public cache provenance with no extra supplier search',async()=>{
+  let calls=0;
+  const f=domFixture(async()=>{calls++;return {ok:true,json:async()=>({
+    ok:true,mapAvailable:true,wikidataAvailable:false,
+    airports:[{name:'Melbourne Airport',distanceKm:18}],
+    hotels:[{name:'Melbourne public hotel',distanceKm:4}]
+  })}});
+  const place={name:'Melbourne',countryCode:'AU',latitude:-37.8136,longitude:144.9631};
+  await f.public.load(place);
+  assert.equal(calls,2);
+  await f.public.load(null);
+  await f.public.load(place);
+  assert.equal(calls,2);
+  assert.match(f.ids['nearby-progress'].textContent,/cached public location references/);
+  assert.match(f.textOf(f.ids['hotel-list']),/Price unavailable/);
+  assert.equal(f.ids.nearby['aria-busy'],'false');
+});
+
+test('actual DOM declares one polite nearby progress region and sensible initial loading semantics',()=>{
+  assert.match(html,/id="nearby-progress"[^>]+role="status" aria-live="polite" aria-atomic="true"/);
+  assert.ok(html.indexOf('id="nearby-progress"')<html.indexOf('id="nearby" aria-busy="false"'),
+    'Live status belongs outside busy results to announce incremental airport and hotel progress');
+  assert.match(html,/id="airport-list" aria-busy="false"/);
+  assert.match(html,/id="hotel-list" aria-busy="false"/);
+  assert.match(css,/\.wf-nearby-progress/);
 });

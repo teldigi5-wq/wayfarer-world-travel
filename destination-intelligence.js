@@ -11,8 +11,9 @@
    const n=document.createElement(tag);n.textContent=String(text??'');
    if(cls)n.className=cls;return n;
  };
- let current=null;
+ let current=null,lastBrief=null;
  function choose(place){
+   lastBrief=null;
    current=Number.isFinite(place?.latitude)&&Number.isFinite(place?.longitude)?
      {name:place.name,countryCode:place.countryCode||'',country:place.country||''}:null;
    root.hidden=!current;
@@ -35,6 +36,7 @@
    if(!current)return;
    const brief=payload?.intelligence;
    if(!brief||brief.mode!=='deterministic-reference-agent')return;
+   lastBrief=brief;
    facts.replaceChildren();guidance.replaceChildren();gateways.replaceChildren();
    const country=brief.country;
    const rows=[
@@ -81,5 +83,23 @@
      ' · '+(brief.sourceStatus?.hotels||'Hotel source not checked')+
      '. NOT verified live schedules, entry rules, road travel times or bookable prices.';
  }
- window.WayfarerDestinationIntelligence=Object.freeze({choose,show});
+ // The quick airport index can finish while the independent hotel endpoint
+ // fails. Resolve its pending stay claim without erasing verified gateways.
+ function finishPartial(){
+   if(!current)return;
+   if(lastBrief?.hotelSourceStatus==='pending'){
+     show({intelligence:{...lastBrief,hotelSourceStatus:'provider-unavailable',
+       sourceStatus:{...lastBrief.sourceStatus,hotels:'Public hotel reference lookup unavailable'}}});
+     return;
+   }
+   if(!lastBrief){
+     facts.replaceChildren(node('p',
+       'Public airport and hotel references are temporarily unavailable. No routes, rates or nearby stays are verified.',
+       'wf-intelligence-pending'));
+     gateways.replaceChildren();guidance.replaceChildren();
+     guidance.append(node('p','Search again later or check official sources independently.'));
+     foot.textContent='Public source request unavailable · no live schedules, rates, travel durations or room inventory inferred.';
+   }
+ }
+ window.WayfarerDestinationIntelligence=Object.freeze({choose,show,finishPartial});
 })();
