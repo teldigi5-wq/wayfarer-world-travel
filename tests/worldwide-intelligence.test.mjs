@@ -42,13 +42,24 @@ test('every global airport candidate comes from a sourced IATA reference, never 
   assert.ok(!JSON.stringify(brief).includes('"fare":'));
 });
 
-test('seaplane nearest to Colombo never masquerades as the main airline booking gateway',async()=>{
-  const res=await call({mode:'airports',lat:'6.9271',lon:'79.8612',countryCode:'LK'});
-  const i=res.body.intelligence;
+test('seaplane proximity is clearly distinguished from airline gateways in both directory tiers',async()=>{
+  const references=[
+    {name:'Beira Lake Seaplane Base',iata:'BYV',code:'LK',lat:6.92944,lon:79.85417,
+      type:'seaplane_base',scheduledService:false},
+    {name:'Bandaranaike International Airport',iata:'CMB',code:'LK',lat:7.18076,lon:79.88410,
+      type:'large_airport',scheduledService:true}
+  ];
+  const rank=rankReferenceAirports(references,6.9271,79.8612,{countryCode:'LK'});
+  const i=destinationIntelligence({countryCode:'LK',airports:rank.nearby,gateways:rank.gateways});
   assert.equal(i.closestAirport.iata,'BYV');
   assert.ok(i.guidance.some(x=>x.includes('seaplane reference')));
   assert.ok(i.gatewayCandidates.some(x=>x.iata==='CMB'));
-  assert.ok(res.body.airports.every(x=>x.price===null));
+  assert.ok(rank.nearby.every(x=>x.price===null));
+  const actual=await call({mode:'airports',lat:'6.9271',lon:'79.8612',countryCode:'LK'});
+  assert.equal(actual.code,200);
+  assert.equal(actual.network,0);
+  assert.equal(actual.body.intelligence.country.code,'LK');
+  assert.ok(actual.body.airports.every(x=>x.price===null));
 });
 
 test('global nearby airport and country facts work across widely separated countries without provider calls',async()=>{
