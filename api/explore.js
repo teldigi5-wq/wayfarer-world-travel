@@ -1,4 +1,5 @@
 import airportData from '../data.json' with {type:'json'};
+import {lookupWikidataHotels} from '../worldwide-hotel-sources.mjs';
 const timedFetch=(url,options={})=>fetch(url,{...options,signal:AbortSignal.timeout(12000)});
 const clean=(value,max=120)=>String(value??'').replace(/[\u0000-\u001f<>]/g,' ').trim().slice(0,max);
 const number=(value,min,max)=>{const n=Number(value);return Number.isFinite(n)&&n>=min&&n<=max?n:null};
@@ -35,16 +36,17 @@ async function nearby(req){
     .filter(a=>Number.isFinite(a.lat)&&Number.isFinite(a.lon)&&/^[A-Z]{3}$/.test(a.iata||''))
     .map(a=>({
       type:'airport',name:clean(a.name),iata:a.iata,
+      city:clean(a.municipality||''),countryCode:clean(a.code,2),
       distanceKm:distance(lat,lon,a.lat,a.lon),source:'OurAirports reference',
       url:/^https:\/\/ourairports\.com\/airports\//.test(a.source||'')?a.source:'https://ourairports.com',
       price:null
-    })).filter(a=>a.name&&a.distanceKm<=280).sort((a,b)=>a.distanceKm-b.distanceKm).slice(0,10);
+    })).filter(a=>a.name&&a.distanceKm<=550).sort((a,b)=>a.distanceKm-b.distanceKm).slice(0,12);
 
   const query=`[out:json][timeout:12];(nwr(around:35000,${lat},${lon})["tourism"="hotel"]["name"];nwr(around:140000,${lat},${lon})["aeroway"="aerodrome"]["iata"];);out center tags 160;`;
   let mapped=[],mapAvailable=false;
   for(const host of ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter']){
     try{
-      const r=await fetch(host,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','User-Agent':'Wayfarer/1.0'},body:new URLSearchParams({data:query}),signal:AbortSignal.timeout(8500)});
+      const r=await fetch(host,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','User-Agent':'Wayfarer/1.0'},body:new URLSearchParams({data:query}),signal:AbortSignal.timeout(4500)});
       if(!r.ok)continue;
       const d=await r.json();
       if(!Array.isArray(d.elements))continue;
@@ -75,6 +77,13 @@ async function nearby(req){
       names.add(key);if(a.iata)codes.add(a.iata);return true;
     }).slice(0,limit);
   };
+  // Independent CC0-backed worldwide hotel-name lookup if the public map query
+  // is unavailable or has no named hotels. No price/availability inference.
+  let wikidataHotels=[],wikidataAvailable=false;
+  if(!mapped.some(x=>x.type==='hotel')){
+    try{wikidataHotels=await lookupWikidataHotels(lat,lon);wikidataAvailable=true;}
+    catch{/* Worldwide hotel names remain unavailable without a valid source. */}
+  }
   const nearbySigiriya=distance(lat,lon,7.9498,80.7463)<=25;
   // GIU/VCCS is recorded as an aerodrome by Sri Lanka's aeronautical
   // information publication. Showing it does not imply scheduled flights.
@@ -90,14 +99,15 @@ async function nearby(req){
     type:'hotel',name:h.name,iata:'',distanceKm:distance(lat,lon,h.lat,h.lon),
     source:'OpenStreetMap reference snapshot · 2026-10-14',url:h.url,price:null
   })).filter(h=>h.distanceKm<=35):[];
-  const hotels=uniq([...mapped.filter(a=>a.type==='hotel'),...referenceHotels]
+  const hotels=uniq([...mapped.filter(a=>a.type==='hotel'),...wikidataHotels,...referenceHotels]
     .sort((a,b)=>a.distanceKm-b.distanceKm),10);
   return {status:200,body:{
     ok:true,provider:'OpenStreetMap and bundled OurAirports reference data',
     sourceUrl:'https://www.openstreetmap.org/copyright',
-    mapAvailable,airports,hotels,
-    note:mapAvailable?'Locations and straight-line distances only; no fare or room prices supplied.':
-      'Live OpenStreetMap lookup unavailable. Limited reference snapshots may be shown for mapped places; neither operating status nor room prices are verified.'
+    mapAvailable,wikidataAvailable,airports,hotels,
+    note:mapAvailable?'OpenStreetMap locations and approximate straight-line distances; no fare or room prices supplied.':
+      wikidataAvailable?'Public OpenStreetMap lookup unavailable. Where covered, named hotels come from CC0 Wikidata references; no room rates or availability verified.':
+      'Public nearby-place providers unavailable. Airport and geographically bounded reference records may still be shown; no room rates verified.'
   }};
 }
 
