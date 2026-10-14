@@ -111,7 +111,7 @@ test('existing project routes and supplier bridge remain intentional and protect
   assert.match(priceBridge,/WayfarerNearby\?\.applyQuotes\(payload,trip\)/);
   assert.match(priceBridge,/\[data-airport-iata\]/);
   assert.match(backend,/import airportData from '\.\.\/data\.json' with \{type:'json'\}/);
-  assert.match(backend,/mapAvailable,airports,hotels/);
+  assert.match(backend,/mapAvailable,wikidataAvailable,airports,hotels/);
   assert.match(css,/\.wf-nearby-card/);
   assert.match(css,/grid-template-columns:minmax\(0,1fr\)/);
   assert.doesNotMatch(script,/fetch\('\/api\/travel-search/);
