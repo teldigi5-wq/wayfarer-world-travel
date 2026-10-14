@@ -44,7 +44,7 @@ export function parseWikidataHotels(payload,lat,lon){
     const key=name.toLocaleLowerCase('en').normalize('NFKD');
     if(seen.has(key))continue;
     seen.add(key);
-    entries.push({type:'hotel',name,iata:'',distanceKm,
+    entries.push({type:'hotel',name,iata:'',distanceKm,latitude:at.lat,longitude:at.lon,
       source:'Wikidata hotel reference · CC0',
       url:'https://www.wikidata.org/wiki/'+id,price:null});
   }
