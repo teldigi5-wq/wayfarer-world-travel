@@ -407,6 +407,16 @@ This intentionally conservative check may omit some unusual valid **self-transfe
 
 `tests/supplier-flight-route-integrity.test.mjs` mocks the initial and optional return SerpApi network boundary; it covers valid two-leg routes, wrong starting/ending airports, mismatched connection airports, empty/malformed/oversized legs, no booking tokens from invalid offers, correct return direction and source-policy wording. Existing Stage 34 worldwide hotel geo-scope and source provenance remain unchanged. Test locally with `npm run check && npm test` and require an exact-head free Vercel Preview plus mobile/desktop review before any Production promotion. Keep this PR draft and stacked; no hidden live supplier calls.
 
+### Stage 36 — source-verified round-trip airline offers, worldwide (draft)
+
+Following Stage 35's strict Google Flights research validation, Wayfarer's **separate opt-in Duffel airline-offers adapter** now applies exactly the same zero-network route-integrity checks. A provider-supplied two-slice round-trip offer previously filtered invalid segment IATA codes and accepted any remaining non-empty segments. That could wrongly present a total-price offer for a disconnected, incomplete or entirely different departure/return city pair.
+
+In `api/airline-offers.mjs`, both provider slices must now be complete with 1–6 well-formed segments. Outbound must depart the requested origin and reach the requested destination, and the return must reverse that direction. Each connection must depart the previous segment's arrival airport. Malformed, truncated, disconnected or off-route offers are **excluded before indicative total prices, offer tokens or refresh actions are exposed**. Refresh applies the same validation and returns `expired_or_changed` if the supplier's latest data no longer matches. There are no additional provider/API calls; this validation runs locally on the supplier's existing response.
+
+These checks are conservative: legitimate surface/self-transfer itineraries without complete air segments may be omitted. They do not independently verify operating flights, actual inventory, usable layovers, visa/transit rules, taxes or final payable totals. The Duffel sandbox is **not real bookable airline inventory**, and production supplier mode remains gated behind separate explicit live approval plus credentials. No orders, payments, bookings or new paid integrations are enabled.
+
+`tests/airline-offer-route-validation.test.mjs` exercises the actual airline-offer API with a fully mocked Duffel sandbox boundary. It checks correct international two-leg routes, wrong outbound or return airports, broken connections, malformed/oversized legs, no encrypted offer token for rejected results, and fail-closed refresh after the supplier route changes. Require `npm run check && npm test`, an exact passing-head Preview, and a real desktop/mobile walkthrough before any Production release. This PR remains draft and stacked on Stage 35.
+
 ## Run and test
 
 Install Node.js 20+ from its official distribution. No package install, API key, environment variable, card or build dependency is needed.
