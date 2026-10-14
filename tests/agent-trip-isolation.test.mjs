@@ -34,7 +34,7 @@ function fixture(){
     URLSearchParams,AbortController,AbortSignal,
     applyData:()=>{applied++;},
     toast:()=>{},esc:value=>String(value),
-    document:{createElement:()=>({className:'',textContent:'',append(){}})}
+    document:{createElement:()=>({className:'',textContent:'',append(){}}),querySelectorAll:()=>[{textContent:'Culture'}]}
   });
   vm.runInContext(script.slice(headerStart,headerEnd)+'\n'+script.slice(runStart,runEnd),context,{timeout:1000});
   const run=()=>vm.runInContext('runAgents()',context,{timeout:1000});
