@@ -64,7 +64,7 @@
     const card=make('article','wf-nearby-card');
     const top=make('div','wf-nearby-card-top'),content=make('div','wf-nearby-content');
     const heading=make('h4','wf-nearby-name',item.name),facts=make('p','wf-nearby-facts');
-    const distance=Number(item.distanceKm);
+    const distance=typeof item.distanceKm==='number'?item.distanceKm:NaN;
     const source=String(item.source||'Map reference');
     const code=type==='airport'&&/^[A-Z]{3}$/.test(item.iata||'')?' · '+item.iata:'';
     const locality=[item.city,item.countryCode].filter(Boolean).join(', ');
