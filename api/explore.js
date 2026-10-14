@@ -75,9 +75,17 @@ async function nearby(req){
       names.add(key);if(a.iata)codes.add(a.iata);return true;
     }).slice(0,limit);
   };
-  const airports=uniq([...mapped.filter(a=>a.type==='airport'),...indexed]
-    .sort((a,b)=>a.distanceKm-b.distanceKm),8);
   const nearbySigiriya=distance(lat,lon,7.9498,80.7463)<=25;
+  // GIU/VCCS is recorded as an aerodrome by Sri Lanka's aeronautical
+  // information publication. Showing it does not imply scheduled flights.
+  const regionalAerodromes=nearbySigiriya?[{
+    type:'airport',name:'Sigiriya Airport',iata:'GIU',
+    distanceKm:distance(lat,lon,7.95732,80.72915),
+    source:'OpenStreetMap airport reference · 2026-10-14',
+    url:'https://www.openstreetmap.org/way/297310393',price:null
+  }]:[];
+  const airports=uniq([...mapped.filter(a=>a.type==='airport'),...regionalAerodromes,...indexed]
+    .sort((a,b)=>a.distanceKm-b.distanceKm),8);
   const referenceHotels=nearbySigiriya?sigiriyaHotelReferences.map(h=>({
     type:'hotel',name:h.name,iata:'',distanceKm:distance(lat,lon,h.lat,h.lon),
     source:'OpenStreetMap reference snapshot · 2026-10-14',url:h.url,price:null
