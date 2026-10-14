@@ -4,6 +4,7 @@
   'use strict';
   const $=id=>document.getElementById(id);
   const airports=$('airport-list'),hotels=$('hotel-list'),nearby=$('nearby');
+  const progress=$('nearby-progress');
   if(!airports||!hotels||!nearby)return;
   const money=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2});
   const validMappedPlace=place=>place&&typeof place.name==='string'&&
@@ -42,6 +43,11 @@
   };
   let chosen=null,items={airports:[],hotels:[]},quotes=null,loadSeq=0,controller=null;
   const publicPlaceCache=new Map(),PLACE_CACHE_LIMIT=32;
+  const paneBusy=(root,pending)=>root.setAttribute('aria-busy',String(pending));
+  const progressState=(pending,message)=>{
+    nearby.setAttribute('aria-busy',String(pending));
+    if(progress)progress.textContent=message;
+  };
   const publicPlaceKey=place=>[
     place.latitude.toFixed(5),place.longitude.toFixed(5),place.countryCode||''
   ].join('|');
@@ -52,6 +58,9 @@
     render();
     if(!data.source.mapAvailable&&!items.hotels.length)
       status(hotels,'Public hotel records are unavailable for this area. An optional protected supplier search may provide named stays.',true);
+    paneBusy(airports,false);paneBusy(hotels,false);
+    progressState(false,'Showing cached public location references: '+items.airports.length+
+      ' airport and '+items.hotels.length+' mapped hotel records. Prices and schedules are not verified.');
   };
   const selectedDates=()=>({checkIn:$('check-in')?.value||'',checkOut:$('check-out')?.value||'',
     adults:Number($('stay-adults')?.value||0)});
@@ -189,7 +198,8 @@
   }
   async function load(place){
     const seq=++loadSeq;
-    controller?.abort();controller=new AbortController();
+    controller?.abort();
+    const requestController=new AbortController();controller=requestController;
     window.dispatchEvent?.(new Event('wayfarer:location-changed'));
     chosen=validMappedPlace(place)?{...place}:null;
     window.WayfarerMap?.selectDestination(chosen);
@@ -203,11 +213,15 @@
       // A previously loading place has been abandoned. Leave neither stale
       // cards nor a permanent spinner while the old responses are settling.
       nearby.classList.remove('world-loading');
+      paneBusy(airports,false);paneBusy(hotels,false);
+      progressState(false,'Choose a valid mapped destination to begin public airport and hotel discovery.');
       status(airports,'Choose a mapped destination with valid coordinates to find airport references.');
       status(hotels,'Choose a mapped destination with valid coordinates to discover stays.');
       return;
     }
     nearby.classList.add('world-loading');
+    paneBusy(airports,true);paneBusy(hotels,true);
+    progressState(true,'Researching public airport and hotel reference locations. No live prices or flight schedules are requested.');
     const publicKey=publicPlaceKey(chosen),previous=publicPlaceCache.get(publicKey);
     if(previous&&previous.until>Date.now()){
       // Reference locations only; never replay supplier quotes or private inputs.
@@ -222,33 +236,43 @@
       &&Number.isFinite(x.distanceKm)&&x.distanceKm>=0).slice(0,max):[];
     const coords={lat:chosen.latitude,lon:chosen.longitude,
       ...( /^[A-Z]{2}$/.test(chosen.countryCode||'')?{countryCode:chosen.countryCode}:{} )};
-    let fullApplied=false;
+    let fullApplied=false,detailedFailed=false,quickState='pending';
     const quick=(async()=>{
       try{
-        const response=await fetch('/api/explore?'+new URLSearchParams({mode:'airports',...coords}),{signal:controller.signal});
+        const response=await fetch('/api/explore?'+new URLSearchParams({mode:'airports',...coords}),{signal:requestController.signal});
         if(!response.ok)throw Error('Airport reference failed');
         const d=await response.json();
         if(seq!==loadSeq||fullApplied)return;
         if(!d.ok)throw Error('Airport reference data unavailable');
         items.airports=filter(d.airports,8);
+        quickState=items.airports.length?'available':'empty';
+        paneBusy(airports,false);
+        if(!detailedFailed)
+          progressState(true,items.airports.length?
+            'Airport references ready; continuing public hotel research.':
+            'No coded airports in the local radius; continuing public hotel research.');
         window.WayfarerDestinationIntelligence?.show(d);
         window.WayfarerMap?.setNearby(items);
         if(items.airports.length)airports.replaceChildren(...items.airports.map(x=>renderCard(x,'airport')));
         else status(airports,'No nearby coded airports found in the bundled reference.');
       }catch(e){
-        if(seq===loadSeq&&!fullApplied&&e.name!=='AbortError')
+        if(seq===loadSeq&&!fullApplied&&e.name!=='AbortError'){
+          quickState='unavailable';paneBusy(airports,false);
+          if(!detailedFailed)progressState(true,'Airport reference lookup unavailable; checking nearby hotels.');
           status(airports,'Airport reference search is temporarily unavailable. No flights or airport services have been inferred.');
+        }
       }
     })();
     const detailed=(async()=>{
       try{
-        const response=await fetch('/api/explore?'+new URLSearchParams({mode:'nearby',...coords}),{signal:controller.signal});
+        const response=await fetch('/api/explore?'+new URLSearchParams({mode:'nearby',...coords}),{signal:requestController.signal});
         if(!response.ok)throw Error('Nearby discovery unavailable');
         const d=await response.json();
         if(seq!==loadSeq)return;
         if(!d.ok)throw Error('Nearby source data unavailable');
         fullApplied=true;
         items={airports:filter(d.airports,8),hotels:filter(d.hotels,10)};
+        paneBusy(airports,false);paneBusy(hotels,false);
         window.WayfarerDestinationIntelligence?.show(d);
         window.WayfarerMap?.setNearby(items);
         render();
@@ -261,13 +285,35 @@
         if(!d.mapAvailable&&!items.hotels.length){
           status(hotels,'Public hotel records are unavailable for this area. An optional protected supplier search may provide named stays.',true);
         }
+        progressState(false,'Public research complete: '+items.airports.length+
+          ' airport and '+items.hotels.length+' mapped hotel references. '+
+          (!d.mapAvailable&&!d.wikidataAvailable?
+            'Live public hotel sources unavailable; reference coverage may be incomplete.':
+            'Geographic references only; prices and flight operations are unverified.'));
       }catch(e){
         if(seq!==loadSeq||e.name==='AbortError')return;
+        detailedFailed=true;paneBusy(hotels,false);
+        progressState(true,'Hotel source research unavailable; completing the independent airport reference lookup.');
         status(hotels,'Hotel discovery temporarily unavailable. No names, prices or room availability have been inferred.',true);
       }
     })();
-    await Promise.allSettled([quick,detailed]);
-    if(seq===loadSeq)nearby.classList.remove('world-loading');
+    // Detailed nearby data already includes airports. Do not keep a completed
+    // result artificially loading while the independent quick lookup stalls.
+    await detailed;
+    if(seq!==loadSeq)return;
+    if(fullApplied){
+      requestController.abort();
+      nearby.classList.remove('world-loading');
+      return;
+    }
+    await quick;
+    if(seq!==loadSeq)return;
+    window.WayfarerDestinationIntelligence?.finishPartial?.();
+    paneBusy(airports,false);paneBusy(hotels,false);
+    progressState(false,'Hotel reference research temporarily unavailable. '+
+      (quickState==='available'?'Airport references remain available.':
+        'Airport reference coverage is also unavailable or incomplete.'));
+    nearby.classList.remove('world-loading');
   }
 
   function clearQuotes(){
