@@ -123,3 +123,45 @@
  .view .app{padding-bottom:calc(158px + env(safe-area-inset-bottom));}
  .wf-editorial-page,#discover{padding-bottom:calc(152px + env(safe-area-inset-bottom));}
 }
+
+/* Stage 21 · source-grounded airport/stay discovery cards. */
+#studio .nearby-pane{min-width:0;}
+#studio :is(#airport-list,#hotel-list){
+ display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,285px),1fr));
+ align-content:start;gap:11px;margin-top:14px;
+}
+#studio .wf-nearby-card{
+ display:flex;flex-direction:column;gap:12px;min-width:0;min-height:190px;
+ padding:18px;border:1px solid #d9d9cc;border-radius:13px;
+ background:#fffdf8;color:#193b31;box-shadow:0 5px 21px rgba(17,45,33,.045);
+}
+#studio .wf-nearby-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+#studio .wf-nearby-content{min-width:0;}
+#studio .wf-nearby-name{margin:0;color:#12382c;font:700 clamp(.94rem,1.02vw,1.12rem)/1.35 'DM Sans',sans-serif;overflow-wrap:anywhere;}
+#studio .wf-nearby-facts{margin:7px 0 0;font:500 .78rem/1.6 'DM Sans',sans-serif;color:#506a5e;}
+#studio .wf-nearby-price{
+ display:flex;flex-direction:column;gap:3px;padding:11px 13px;
+ border-radius:9px;background:#eff2e9;border:1px solid #e1e7d9;
+}
+#studio .wf-nearby-price strong{font:700 clamp(.92rem,1vw,1.09rem)/1.3 'DM Sans',sans-serif;color:#224333;}
+#studio .wf-nearby-price small{font:500 .74rem/1.5 'DM Sans',sans-serif;color:#536b5d;}
+#studio .wf-nearby-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-top:auto;}
+#studio :is(.wf-nearby-map,.wf-nearby-compare){
+ display:inline-flex;align-items:center;justify-content:center;
+ min-height:44px;padding:10px 12px;border-radius:9px;
+ font:700 .78rem/1.35 'DM Sans',sans-serif;text-decoration:none;
+}
+#studio .wf-nearby-map{color:#214d3e;background:#ecf1e8;border:1px solid #cdd8c9;}
+#studio .wf-nearby-compare{background:#143e31;color:#fff8e8;border:1px solid #143e31;}
+#studio .wf-nearby-map:hover{background:#e0e8dc;}
+#studio .wf-nearby-compare:hover{background:#27614a;}
+#studio :is(.wf-nearby-map,.wf-nearby-compare):focus-visible{outline:3px solid #b48a52;outline-offset:3px;}
+#studio .wf-nearby-status{grid-column:1/-1;font-size:.88rem;line-height:1.6;}
+@media(max-width:650px){
+ #studio :is(#airport-list,#hotel-list){grid-template-columns:minmax(0,1fr);gap:10px;}
+ #studio .wf-nearby-card{min-height:0;padding:16px;}
+ #studio .wf-nearby-actions>*{flex:1 1 auto;}
+}
+@media(prefers-reduced-motion:reduce){
+ #studio .wf-nearby-card,#studio .wf-nearby-compare{animation:none!important;transition:none!important;}
+}

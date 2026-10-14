@@ -319,17 +319,26 @@
       if(!response.ok||!payload.ok)throw Error(payload.error||'Provider search unavailable');
       status.textContent=payload.mode==='search_only'?'Google Travel search results · not confirmed inventory':'Search currently disabled · no real prices connected';
       show(payload);
+      // Share ONLY actual, user-requested provider results with the existing map cards.
+      // This does not start a supplier call and never invents a quote.
+      window.WayfarerNearby?.applyQuotes(payload,trip);
     }catch(err){status.textContent=err.name==='AbortError'?'Search timed out. No availability conclusion is possible.':err.message||'Search unavailable.';}
     finally{button.disabled=false;button.removeAttribute('aria-busy');}
   });
-  // Nearby airport *references* appear as suggestions; they are not airline routes.
+  // Read explicit IATA attributes from source-backed nearby cards. Parsing
+  // visible prices/text for three-letter codes could mistake USD for an airport.
   const nearby=$('airport-list');
   if(nearby){const refresh=()=>{
     const list=$('travel-airport-options');
+    if(!list)return;
     const known=new Set([...list.children].map(o=>o.value));
-    for(const el of nearby.querySelectorAll('.place-card')){
-      const match=el.textContent.match(/\b([A-Z]{3})\b/);if(!match||known.has(match[1]))continue;
-      const opt=document.createElement('option');opt.value=match[1];opt.label=el.querySelector('b')?.textContent||'Nearby airport reference';list.append(opt);known.add(match[1]);
+    for(const item of nearby.querySelectorAll('[data-airport-iata]')){
+      const code=item.dataset.airportIata;
+      if(!/^[A-Z]{3}$/.test(code||'')||known.has(code))continue;
+      const opt=document.createElement('option');opt.value=code;
+      opt.label=item.querySelector('.wf-nearby-name')?.textContent||'Nearby airport';
+      list.append(opt);known.add(code);
     }
   };new MutationObserver(refresh).observe(nearby,{childList:true,subtree:true});refresh();}
+
 })();
