@@ -242,6 +242,12 @@
     if(seq===loadSeq)nearby.classList.remove('world-loading');
   }
 
+  function clearQuotes(){
+    if(!quotes)return false;
+    quotes=null;
+    if(chosen)render();
+    return true;
+  }
   function applyQuotes(payload,trip,placeAtSearch=chosen){
     if(!isCurrentLocation(placeAtSearch)){
       // A response for another city or previous trip must never be displayed
@@ -255,6 +261,6 @@
   for(const id of ['check-in','check-out','stay-adults']){
     $(id)?.addEventListener('change',()=>{if(chosen)render();});
   }
-  window.WayfarerNearby=Object.freeze({load,applyQuotes,
+  window.WayfarerNearby=Object.freeze({load,applyQuotes,clearQuotes,
     currentLocation:()=>locationIdentity(chosen),isCurrentLocation});
 })();
