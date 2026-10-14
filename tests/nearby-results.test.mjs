@@ -145,6 +145,42 @@ test('uncovered destinations show free external hotel research without inventing
   assert.doesNotMatch(f.textOf(hotelView),/\$[0-9]+/);
 });
 
+test('source-bound supplier quotes cannot cross between same-name cities in different countries',async()=>{
+  const f=domFixture();
+  f.state.hotels=[];
+  const france={name:'Paris',country:'France',countryCode:'FR',latitude:48.8566,longitude:2.3522};
+  const texas={name:'Paris',country:'United States',countryCode:'US',latitude:33.6609,longitude:-95.5555};
+  await f.public.load(france);
+  const original=f.public.currentLocation();
+  const trip={destination:'Paris',checkIn:'2026-11-12',checkOut:'2026-11-15',adults:2};
+  const payload={mode:'search_only',checkedAt:'2026-10-14T06:00:00Z',hotels:{
+    offers:[{name:'Paris Provider Hotel',currency:'USD',displayedTotal:'490.00'}]}};
+  assert.equal(f.public.isCurrentLocation(original),true);
+  await f.public.load(texas);
+  assert.equal(f.public.isCurrentLocation(original),false);
+  assert.equal(f.public.applyQuotes(payload,trip,original),false);
+  assert.doesNotMatch(f.textOf(f.ids['hotel-list']),/Paris Provider Hotel|\\$490/);
+  assert.equal(f.public.currentLocation().countryCode,'US');
+  const texasOriginal=f.public.currentLocation();
+  assert.equal(f.public.applyQuotes(payload,trip,texasOriginal),true);
+  assert.match(f.textOf(f.ids['hotel-list']),/Paris Provider Hotel/);
+  assert.match(f.textOf(f.ids['hotel-list']),/\\$490\\.00 total/);
+});
+
+test('same-name hotels must not reuse provider results after geographic coordinates change',async()=>{
+  const f=domFixture();f.state.hotels=[];
+  const first={name:'Springfield',countryCode:'US',latitude:39.8017,longitude:-89.6437};
+  const second={name:'Springfield',countryCode:'US',latitude:42.1015,longitude:-72.5898};
+  await f.public.load(first);
+  const origin=f.public.currentLocation();
+  const trip={destination:'Springfield',checkIn:'2026-11-12',checkOut:'2026-11-15',adults:2};
+  const data={mode:'search_only',checkedAt:'2026-10-14T06:00:00Z',hotels:{
+    offers:[{name:'Known Springfield Hotel',currency:'USD',displayedTotal:'300'}]}};
+  await f.public.load(second);
+  assert.equal(f.public.applyQuotes(data,trip,origin),false);
+  assert.doesNotMatch(f.textOf(f.ids['hotel-list']),/Known Springfield Hotel|\\$300/);
+});
+
 test('only a matching explicit protected hotel quote can display total and nightly average',async()=>{
   const f=domFixture();
   await f.public.load({name:'Sigiriya',latitude:7.95,longitude:80.75});
