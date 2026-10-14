@@ -53,6 +53,21 @@ const esc=v=>String(v??'—').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>'
    $('#agent-log').textContent='Your travel brief changed while research was running. The earlier result was discarded; run research again for the new details.';
    return false;
  }
+ // Stage 48: an upstream briefing reporting a different mapped location
+ // must never contaminate this trip's Arrival Companion or exported draft.
+ // Older responses without the new provenance envelope remain supported.
+ if(d.location){
+   const loc=d.location,selectedPlace=worldSelection;
+   const validReported=typeof loc.latitude==='number'&&
+     Number.isFinite(loc.latitude)&&typeof loc.longitude==='number'&&
+     Number.isFinite(loc.longitude);
+   if(!validReported||!selectedPlace||
+      !Number.isFinite(selectedPlace.latitude)||!Number.isFinite(selectedPlace.longitude)||
+      Math.abs(loc.latitude-selectedPlace.latitude)>0.00001||
+      Math.abs(loc.longitude-selectedPlace.longitude)>0.00001||
+      (selectedPlace.countryCode&&loc.countryCode!==selectedPlace.countryCode))
+     throw Error('The source response belongs to a different mapped location. Refresh the selected destination.');
+ }
  agentData=d;arrivalResearchIdentity=currentArrivalIdentity();arrivalResearchAt=Date.now();[['place','place'],['climate','weather'],['country','country']].forEach(([widget,key])=>{const ok=d[key]?.ok===true;$('#agent-'+widget).className=ok?'agent done':'agent';$('#agent-'+widget+' p').textContent=ok?(widget==='place'&&d.place?.geographyVerified!==true?
   'Name-only source · geographic identity unverified':'Sourced context received'):
   'Source unavailable · continuing with other agents';});$('#agent-ai').className=d.ai?.ok?'agent done':'agent';$('#agent-ai p').textContent=d.ai?.ok?'AI draft created · verify before use':(d.ai?.error||'AI unavailable · local plan retained');const w=d.weather||{},p=d.place||{},c=d.country||{};$('#agent-log').innerHTML=`<div><strong>Climate Agent</strong>${w.ok?`${esc(w.temperature)} °C · wind ${esc(w.wind)} km/h<br><a href="${esc(w.sourceUrl)}" target="_blank">Open-Meteo ↗</a>`:'Unavailable'}</div><div><strong>Destination Agent</strong>${p.ok?`${esc(p.extract)}<br><a href="${esc(p.sourceUrl)}" target="_blank">Wikipedia ↗</a>`:'Unavailable'}</div><div><strong>Country Agent</strong>${c.ok?`${esc(c.currency)} · ${esc(c.language)}<br><a href="${esc(c.sourceUrl)}" target="_blank">REST Countries ↗</a>`:'Unavailable'}</div>`;
