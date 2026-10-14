@@ -120,9 +120,34 @@ test('editing any material trip preference invalidates the current research',()=
   assert.match(script,/\$\('#cancel-agents'\)\.onclick=cancelAgentResearch/);
   assert.match(script,/b\.classList\.toggle\('on'\);resetAgents\(\);build\(\)/);
   assert.match(script,/\['days','pace'\]\.forEach\(x=>\$\('#'\+x\)\.onchange=\(\)=>\{resetAgents\(\);build\(\)\}\)/);
-  assert.match(script,/\$\('#budget'\)\.oninput=\(\)=>\{if\(agentRequestController\)resetAgents\(\)\}/);
+  assert.match(script,/\$\('#budget'\)\.oninput=\(\)=>\{resetAgents\(\);if\(\$\('#budget'\)\.checkValidity\(\)\)build\(\)/);
   assert.match(css,/#studio #cancel-agents\[hidden\]\{display:none!important;\}/);
   assert.match(css,/min-height:44px/);
+});
+
+test('trip preference changes clear obsolete Arrival agent context, but user cancellation preserves prior context',async()=>{
+  const f=fixture();
+  vm.runInContext("agentData={destination:'Kyoto',weather:{ok:true}}",f.context);
+  vm.runInContext("resetAgents()",f.context);
+  assert.equal(vm.runInContext("agentData",f.context),null);
+
+  vm.runInContext("agentData={destination:'Kyoto',weather:{ok:true}}",f.context);
+  const pending=f.run();
+  assert.equal(f.cancel(),true);
+  assert.equal(vm.runInContext("agentData?.destination",f.context),'Kyoto');
+  await f.finish();
+  assert.equal(await pending,false);
+  assert.equal(f.applied,0);
+});
+
+test('legacy saved journeys use allowed day/budget/pace UI values and accurate offline export labels',()=>{
+  assert.match(script,/const days=lengths\.reduce\(/);
+  assert.match(script,/lengths=\[3,5,7\]/);
+  assert.match(script,/Math\.min\(2500,savedBudget\)/);
+  assert.match(script,/Full & energetic/);
+  assert.match(script,/ILLUSTRATIVE SAMPLE · NOT LIVE BOOKINGS/);
+  assert.match(script,/AI-GENERATED DRAFT · VERIFY BEFORE TRAVEL/);
+  assert.match(script,/SOURCE & LIMITATIONS/);
 });
 
 test('country provider outage leaves sourced national facts visible but not live currency/rules',async()=>{
