@@ -15,33 +15,49 @@ export function validHttpsSource(value,hosts){
       url.href:null;
   }catch{return null}
 }
-export async function getJson(url,{timeoutMs=6500,maxBytes=100000,retries=1,headers={}}={}){
+// Best-effort per-instance public-source cache. Never store keys, beta codes,
+// personalized trip inputs, generated AI output, or paid supplier responses.
+const sourceCache=new Map(),MAX_PUBLIC_CACHE=96;
+export async function getJson(url,{timeoutMs=6500,maxBytes=100000,retries=1,headers={},cacheTtlMs=0}={}){
   const safe=new URL(url);
   if(safe.protocol!=='https:'||safe.username||safe.password)throw Error('Unsafe source URL');
-  let last;
-  for(let attempt=0;attempt<=retries;attempt++){
-    try{
-      const response=await fetch(safe.href,{method:'GET',headers,
-        signal:AbortSignal.timeout(timeoutMs)});
-      const recoverable=[502,503,504].includes(response.status);
-      if(!response.ok){
-        last=Error('Source HTTP '+response.status);
-        if(recoverable&&attempt<retries)continue;
-        throw last;
+  const privateHeader=Object.keys(headers).some(k=>/authorization|cookie|token|api.?key/i.test(k));
+  const cacheable=Number.isFinite(cacheTtlMs)&&cacheTtlMs>0&&!privateHeader&&
+    ![...safe.searchParams.keys()].some(k=>/token|key|secret|auth/i.test(k));
+  const ttl=cacheable?Math.min(86400000,Math.max(1000,cacheTtlMs)):0;
+  const key=ttl?safe.href+'\n'+JSON.stringify(headers):null;
+  const cached=key?sourceCache.get(key):null;
+  if(cached&&cached.until>Date.now())return cached.promise;
+  async function fetchFresh(){
+    let last;
+    for(let attempt=0;attempt<=retries;attempt++){
+      try{
+        const response=await fetch(safe.href,{method:'GET',headers,
+          signal:AbortSignal.timeout(timeoutMs)});
+        const recoverable=[502,503,504].includes(response.status);
+        if(!response.ok){
+          last=Error('Source HTTP '+response.status);
+          if(recoverable&&attempt<retries)continue;
+          throw last;
+        }
+        if(Number(response.headers.get('content-length')||0)>maxBytes)
+          throw Error('Source response too large');
+        const body=await response.text();
+        if(Buffer.byteLength(body,'utf8')>maxBytes)throw Error('Source response too large');
+        return JSON.parse(body);
+      }catch(e){
+        last=e;
+        const transient=e?.name==='TypeError'||e?.name==='TimeoutError'||e?.name==='AbortError';
+        if(!transient||attempt===retries)break;
       }
-      if(Number(response.headers.get('content-length')||0)>maxBytes)
-        throw Error('Source response too large');
-      const body=await response.text();
-      if(Buffer.byteLength(body,'utf8')>maxBytes)throw Error('Source response too large');
-      return JSON.parse(body);
-    }catch(e){
-      last=e;
-      // Retry network failures, not malformed/oversized data or rate limiting.
-      const transient=e?.name==='TypeError'||e?.name==='TimeoutError'||e?.name==='AbortError';
-      if(!transient||attempt===retries)break;
     }
+    throw last||Error('Source unavailable');
   }
-  throw last||Error('Source unavailable');
+  if(!key)return fetchFresh();
+  if(sourceCache.size>=MAX_PUBLIC_CACHE)sourceCache.delete(sourceCache.keys().next().value);
+  const promise=fetchFresh().catch(e=>{if(sourceCache.get(key)?.promise===promise)sourceCache.delete(key);throw e});
+  sourceCache.set(key,{until:Date.now()+ttl,promise});
+  return promise;
 }
 export function verificationSummary({weather,place,country,ai,days,dailyBudget}){
   const sources=[weather,place,country].filter(x=>x?.ok===true);

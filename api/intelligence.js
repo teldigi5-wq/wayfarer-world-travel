@@ -38,7 +38,7 @@ async function weather(p){
       latitude:String(p.lat),longitude:String(p.lon),
       current:'temperature_2m,wind_speed_10m',timezone:'auto'
     }).toString();
-    const d=await getJson(u.href,{timeoutMs:5500,retries:1,maxBytes:16000});
+    const d=await getJson(u.href,{timeoutMs:4500,retries:0,maxBytes:16000,cacheTtlMs:180000});
     if(!Number.isFinite(d?.current?.temperature_2m))throw Error('Incomplete current conditions');
     return {ok:true,temperature:d.current.temperature_2m,
       wind:Number.isFinite(d.current.wind_speed_10m)?d.current.wind_speed_10m:null,
@@ -50,7 +50,7 @@ async function place(p){
   try{
     const wiki=scrub(p.wiki,80).replace(/\s+/g,'_');
     const d=await getJson('https://en.wikipedia.org/api/rest_v1/page/summary/'+encodeURIComponent(wiki),{
-      timeoutMs:5500,retries:1,maxBytes:110000,headers:{'User-Agent':'Wayfarer/1.0 (source-only research)'}});
+      timeoutMs:4500,retries:0,maxBytes:110000,cacheTtlMs:43200000,headers:{'User-Agent':'Wayfarer/1.0 (source-only research)'}});
     const extract=scrub(d?.extract,650);
     if(!extract)throw Error('No encyclopedia summary');
     const sourceUrl=validHttpsSource(d?.content_urls?.desktop?.page,
@@ -63,7 +63,7 @@ async function country(p){
   try{
     const u='https://restcountries.com/v3.1/alpha/'+encodeURIComponent(p.country)+
       '?fields=name,currencies,languages,timezones';
-    const payload=await getJson(u,{timeoutMs:5500,retries:1,maxBytes:30000});
+    const payload=await getJson(u,{timeoutMs:4500,retries:0,maxBytes:30000,cacheTtlMs:86400000});
     const d=Array.isArray(payload)?payload[0]:payload;
     const code=Object.keys(d?.currencies||{})[0];
     const languages=Object.values(d?.languages||{}).filter(x=>typeof x==='string');
@@ -132,9 +132,11 @@ export default async function handler(req,res){
   if(!trip)return res.status(400).json({ok:false,error:'Select a valid destination before running agents.'});
   try{
     // Independent source agents run concurrently; one failure cannot crash another.
+    const sourceStarted=Date.now();
     const [w,pl,c]=await Promise.all([
       weather(trip.p),place(trip.p),country(trip.p)
     ]);
+    const sourceElapsedMs=Date.now()-sourceStarted;
     const brief={destination:trip.destination,days:trip.days,budget:trip.budget,
       pace:trip.pace,moods:trip.moods};
     // Public sources are free to read. Paid AI generation requires explicit
@@ -145,6 +147,7 @@ export default async function handler(req,res){
     const permitted=process.env.WAYFARER_INTELLIGENCE_AI_ENABLED==='true'&&
       expected.length>=24&&actual.length===expected.length&&
       timingSafeEqual(actual,expected);
+    const aiStarted=Date.now();
     const ai=permitted?await compose(brief,{
       weather:w.ok?{temperature:w.temperature,wind:w.wind,observedAt:w.observedAt,
         sourceUrl:w.sourceUrl,currentOnly:true}:null,
@@ -158,7 +161,8 @@ export default async function handler(req,res){
     return res.status(200).json({
       ok:true,destination:trip.destination,retrieved:new Date().toISOString(),
       weather:w,place:pl,country:c,ai,verification,
-      agentWorkflow:{mode:'source-grounded',retryPolicy:'public GET once on transient failure; AI no retry',
+      timings:{publicSourcesMs:sourceElapsedMs,composerMs:Date.now()-aiStarted},
+      agentWorkflow:{mode:'source-grounded',retryPolicy:'public GET bounded and temporarily cached; AI no retry',
         flightHotelSearch:'manual opt-in only',ticketBooking:'not supported',
         fallback:'local sample itinerary retained if AI unavailable'}
     });
