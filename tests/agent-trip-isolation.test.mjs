@@ -6,8 +6,8 @@ import handler from '../api/intelligence.js';
 
 const script=readFileSync(new URL('../premium-app.js',import.meta.url),'utf8');
 const headerStart=script.indexOf('let agentRunSerial=0,agentRequestController=null;');
-const headerEnd=script.indexOf('function resetAgents(){',headerStart);
-const resetStart=script.indexOf('function resetAgents(){',headerEnd);
+const headerEnd=script.indexOf('function resetAgents(preserveContext=false){',headerStart);
+const resetStart=headerEnd;
 const cancelStart=script.indexOf('function cancelAgentResearch(){',resetStart);
 const cancelEnd=script.indexOf('function build(){',cancelStart);
 const runStart=script.indexOf('async function runAgents(){');
@@ -68,7 +68,7 @@ test('switching destinations invalidates the old research request',async()=>{
   await f.finish();
   assert.equal(await pending,false);
   assert.equal(f.applied,0);
-  assert.match(script,/function resetAgents\(\)\{\s*agentRunSerial\+\+;/);
+  assert.match(script,/function resetAgents\(preserveContext=false\)\{\s*agentRunSerial\+\+;/);
   assert.match(script,/agentRequestController\?\.abort\(\)/);
   assert.match(script,/if\(await runAgents\(\)\)view\('arrival'\)/);
 });
