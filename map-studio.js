@@ -11,9 +11,19 @@
   const valid=(lat,lon)=>typeof lat==='number'&&Number.isFinite(lat)&&Math.abs(lat)<=90&&
     typeof lon==='number'&&Number.isFinite(lon)&&Math.abs(lon)<=180;
   const bounds=(lat,lon,span)=>{
+    // Preserve geographic scale at high latitudes and a usable bbox width
+    // near the poles and International Date Line. OSM's embedded map cannot
+    // cross the ±180 seam in one bbox: shift a valid local window instead of
+    // truncating it to an almost-zero-width strip.
+    if(!valid(lat,lon))return null;
     const radius=span==='region'?.42:.075;
-    return [Math.max(-180,lon-radius),Math.max(-90,lat-radius),
-      Math.min(180,lon+radius),Math.min(90,lat+radius)].join(',');
+    const latitudeSpan=Math.min(180,radius*2);
+    const longitudeRadius=Math.min(25,radius/Math.max(.08,Math.cos(lat*Math.PI/180)));
+    const longitudeSpan=longitudeRadius*2;
+    const south=Math.max(-90,Math.min(lat-radius,90-latitudeSpan));
+    const west=Math.max(-180,Math.min(lon-longitudeRadius,180-longitudeSpan));
+    return [west,south,west+longitudeSpan,south+latitudeSpan]
+      .map(x=>Number(x.toFixed(6))).join(',');
   };
   function links(point){
     const lat=point.latitude,lon=point.longitude;
@@ -55,8 +65,9 @@
     const frame=document.createElement('iframe');
     frame.className='wf-map-frame';
     frame.title='OpenStreetMap interactive map centered on '+focus.name;
-    frame.loading='lazy';frame.referrerPolicy='strict-origin-when-cross-origin';
-    frame.setAttribute('allowfullscreen','');
+    frame.loading='lazy';frame.referrerPolicy='no-referrer';
+    // Third-party OSM remains opt-in and isolated from first-party storage.
+    frame.setAttribute('sandbox','allow-scripts allow-same-origin allow-popups');
     frame.src=src.href;
     viewport.replaceChildren(frame);
     status.textContent='Interactive OpenStreetMap centered on '+focus.name+
@@ -68,6 +79,9 @@
     focus={name:String(item.name||'Mapped place').slice(0,120),
       latitude:item.latitude,longitude:item.longitude,key:pinKey(item)};
     label.textContent=focus.name;links(focus);
+    // Keep the optional globe pointed at the same verified map coordinate;
+    // this performs no imagery request while Earth is closed.
+    window.WayfarerGlobe?.centerOn(item);
     pins.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',
       b.dataset.place===focus.key?'true':'false'));
     if(open||initialized)iframe();

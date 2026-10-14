@@ -206,3 +206,49 @@ test('map selection never relies on label-only identity or paid Google Maps SDK'
   assert.doesNotMatch(source,/const key=entry\.type\+':'\+entry\.name/);
   assert.doesNotMatch(source,/maps\.googleapis\.com|GOOGLE_MAPS_API_KEY|mapboxgl|new google\.maps/);
 });
+
+test('globe map reference has balanced non-degenerate bounds at the International Date Line',()=>{
+  const {ids,map}=setup();
+  for(const longitude of [179.98,-179.98,180,-180]){
+    map.selectDestination({name:'Pacific reference',latitude:1.25,longitude});
+    ids['wf-map-launch'].click();
+    const frame=ids['wf-map-viewport'].children[0];
+    const query=new URL(frame.src).searchParams;
+    const [west,south,east,north]=query.get('bbox').split(',').map(Number);
+    assert.ok(west>=-180&&east<=180&&east>west,
+      'Valid bounded longitude extent at '+longitude);
+    assert.ok(east-west>=.14,'Dateline must not produce a sliver map near '+longitude);
+    assert.ok(south<1.25&&north>1.25);
+    assert.ok(west<=longitude&&east>=longitude);
+    assert.equal(query.get('marker'),`1.250000,${longitude.toFixed(6)}`);
+    assert.equal(frame.referrerPolicy,'no-referrer');
+    assert.equal(frame.getAttribute('sandbox'),'allow-scripts allow-same-origin allow-popups');
+    assert.equal(frame.loading,'lazy');
+  }
+});
+test('nearby and wider regional map extents stay valid near both geographic poles',()=>{
+  const {ids,map}=setup();
+  for(const latitude of [89.99,-89.99]){
+    map.selectDestination({name:'Polar reference',latitude,longitude:26.1});
+    for(const level of ['near','region']){
+      ids['wf-map-scope'].value=level;
+      ids['wf-map-launch'].click();
+      const frame=ids['wf-map-viewport'].children[0];
+      const [w,s,e,n]=new URL(frame.src).searchParams.get('bbox').split(',').map(Number);
+      assert.ok(w>=-180&&e<=180&&e>w&&s>=-90&&n<=90&&n>s);
+      assert.ok(w<=26.1&&e>=26.1&&s<=latitude&&n>=latitude);
+      const span=level==='region'?.84:.15;
+      assert.ok(n-s>=span-.00005,'Latitude bbox cannot collapse against the pole');
+      assert.ok(e-w>=span-.00005,'Longitude bbox must account for polar convergence');
+      ids['wf-map-hide'].click();
+    }
+  }
+});
+test('map remains an explicit free provider handoff and does not infer routes or fare availability',()=>{
+  const code=read('map-studio.js');
+  assert.match(code,/latitudeSpan=Math.min\(180,radius\*2\)/);
+  assert.match(code,/longitudeRadius=Math.min\(25,radius\/Math.max/);
+  assert.match(code,/no-referrer/);
+  assert.match(code,/setAttribute\('sandbox','allow-scripts allow-same-origin allow-popups'\)/);
+  assert.doesNotMatch(code,/google\.maps\.Map|maps\.googleapis\.com|GOOGLE_MAPS_API_KEY/);
+});

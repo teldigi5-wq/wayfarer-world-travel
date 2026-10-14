@@ -582,3 +582,83 @@
 @media(max-width:650px){
  #studio .wf-nearby-origin-label{font-size:.63rem;overflow-wrap:anywhere;}
 }
+
+/* Stage 47 · genuinely NASA-sourced Earth scene. On-demand, no perpetual motion. */
+#studio #wf-earth{
+ margin:17px 0 22px;padding:clamp(17px,2.8vw,28px);
+ background:linear-gradient(135deg,rgba(6,28,28,.88),rgba(15,46,42,.8));
+ border:1px solid rgba(220,197,152,.35);border-radius:13px;
+}
+#studio #wf-earth .wf-earth-intro{
+ display:grid;grid-template-columns:minmax(0,1.4fr) minmax(205px,.7fr);
+ align-items:center;gap:clamp(15px,3vw,34px);
+}
+#studio #wf-earth h3{
+ color:#fdf6e6;font:500 clamp(1.55rem,2.65vw,2.65rem)/1.07
+ 'Cormorant Garamond',Georgia,serif;letter-spacing:-.025em;margin:7px 0 12px;
+}
+#studio #wf-earth .wf-earth-intro p{max-width:58ch;margin:0;color:#d6e2d8;line-height:1.7;font-size:.84rem;}
+#studio #wf-earth .wf-earth-intro p.wf-earth-credit{
+ margin-top:11px;font-size:.72rem;color:#d6bd90;line-height:1.5;
+}
+#studio #wf-earth .wf-earth-credit a{color:#ffe2a9;text-underline-offset:3px;}
+#studio #wf-earth .wf-earth-network-note{font-size:.7rem;color:#d7c49e;max-width:28ch;line-height:1.55;}
+#studio #wf-earth .wf-earth-actions{display:flex;flex-direction:column;gap:10px;align-items:flex-start;}
+#studio #wf-earth :is(#wf-earth-open,#wf-earth-close){
+ min-height:46px;max-width:100%;border-radius:8px;padding:11px 17px;
+ font:700 .8rem/1.35 'DM Sans',sans-serif;text-align:center;
+}
+#studio #wf-earth #wf-earth-open{color:#13382b;background:#eddbb8;border:1px solid #eddbb8;}
+#studio #wf-earth #wf-earth-close{color:#f5e7c8;background:transparent;border:1px solid rgba(242,224,188,.48);}
+#studio #wf-earth #wf-earth-status{font-size:.73rem;line-height:1.6;color:#d7dcd2;}
+#studio #wf-earth [hidden]{display:none!important;}
+#studio #wf-earth .wf-earth-stage{
+ display:grid;grid-template-columns:minmax(0,1fr) minmax(180px,.62fr);
+ gap:clamp(12px,3vw,34px);align-items:center;margin-top:21px;
+ padding-top:20px;border-top:1px solid rgba(238,217,175,.2);
+}
+#studio #wf-earth .wf-earth-scene{
+ width:min(100%,530px);min-height:210px;aspect-ratio:1;
+ display:grid;place-items:center;position:relative;isolation:isolate;
+ border-radius:50%;overflow:hidden;
+ background:radial-gradient(circle at 35% 27%,#163d58,#071b2c 69%,#07151c);
+ box-shadow:0 0 0 1px rgba(197,224,230,.15),0 0 54px rgba(54,133,158,.16);
+}
+#studio #wf-earth .wf-earth-scene:before{
+ content:"";position:absolute;inset:0;pointer-events:none;border-radius:50%;
+ box-shadow:inset -18px -21px 38px rgba(1,12,17,.35),inset 8px 7px 15px rgba(114,205,238,.13);
+ z-index:1;
+}
+#studio #wf-earth #wf-earth-canvas{
+ width:100%;aspect-ratio:1;display:block;touch-action:none;cursor:grab;
+}
+#studio #wf-earth #wf-earth-canvas:active{cursor:grabbing;}
+#studio #wf-earth #wf-earth-fallback{
+ display:block;max-width:100%;height:auto;object-fit:contain;
+ border-radius:8px;
+}
+#studio #wf-earth .wf-earth-controls{display:flex;flex-direction:column;gap:12px;align-items:flex-start;}
+#studio #wf-earth #wf-earth-caption{
+ font:600 clamp(.85rem,1vw,1rem)/1.55 'DM Sans',sans-serif;color:#f8e7c7;
+ overflow-wrap:anywhere;
+}
+#studio #wf-earth .wf-earth-controls>p:last-child{
+ font:.77rem/1.7 'DM Sans',sans-serif;color:#c9d8cf;max-width:34ch;
+}
+#studio #wf-earth .wf-earth-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;}
+#studio #wf-earth .wf-earth-buttons button{
+ min-height:46px;min-width:0;padding:9px 11px;border:1px solid rgba(241,222,182,.26);
+ color:#eee7d5;background:rgba(238,226,204,.085);border-radius:8px;
+ font:600 .78rem/1.25 'DM Sans',sans-serif;
+}
+#studio #wf-earth .wf-earth-buttons button:hover{background:rgba(238,226,204,.16);}
+#studio #wf-earth :is(button,canvas):focus-visible{outline:3px solid #f3d7a4;outline-offset:3px;}
+@media(max-width:800px){
+ #studio #wf-earth .wf-earth-intro{grid-template-columns:minmax(0,1fr);}
+ #studio #wf-earth .wf-earth-stage{grid-template-columns:minmax(0,1fr);}
+ #studio #wf-earth .wf-earth-scene{max-width:min(100%,420px);margin-inline:auto;}
+ #studio #wf-earth .wf-earth-controls{max-width:440px;margin-inline:auto;width:100%;}
+}
+@media(prefers-reduced-motion:reduce){
+ #studio #wf-earth *{animation:none!important;transition:none!important;}
+}
