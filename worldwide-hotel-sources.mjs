@@ -19,13 +19,15 @@ export function wikidataHotelQuery(lat,lon){
   // Numeric bounds and WKT generated server-side, not interpolated from raw text.
   if(!Number.isFinite(lat)||Math.abs(lat)>90||!Number.isFinite(lon)||Math.abs(lon)>180)
     throw Error('Invalid location');
+  // Use the direct hotel type rather than a globally expensive
+  // transitive subclass graph. Shared Wikidata queries must be bounded.
   return `SELECT DISTINCT ?place ?placeLabel ?location WHERE {
+    ?place wdt:P31 wd:Q27686 .
     SERVICE wikibase:around {
       ?place wdt:P625 ?location .
       bd:serviceParam wikibase:center "Point(${round(lon)} ${round(lat)})"^^geo:wktLiteral .
       bd:serviceParam wikibase:radius "25" .
     }
-    ?place wdt:P31/wdt:P279* wd:Q27686 .
     SERVICE wikibase:label { bd:serviceParam wikibase:language "en,mul". }
   } LIMIT 35`;
 }
