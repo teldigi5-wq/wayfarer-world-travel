@@ -7,12 +7,24 @@ const number=(value,min,max)=>{const n=Number(value);return Number.isFinite(n)&&
 const distance=(a,b,c,d)=>{const r=6371,p=Math.PI/180,x=(c-a)*p,y=(d-b)*p;const h=Math.sin(x/2)**2+Math.cos(a*p)*Math.cos(c*p)*Math.sin(y/2)**2;return Math.round(6371*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h))*10)/10};
 
 async function search(req){
-  const q=clean(req.query.q,80),countryCode=clean(req.query.countryCode,2).toUpperCase(),countryName=clean(req.query.countryName,80);
+  const q=clean(req.query.q,80),code=clean(req.query.countryCode,2).toUpperCase();
   if(q.length<2)return {status:400,body:{ok:false,error:'Enter at least two characters'}};
-  const r=await timedFetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(q.replace(/\s+/g,'_'))}`,{headers:{'User-Agent':'Wayfarer/1.0'}});
-  if(!r.ok)throw Error('Destination search unavailable');
-  const d=await r.json(),coord=d.coordinates,results=Number.isFinite(coord?.lat)&&Number.isFinite(coord?.lon)?[{id:d.pageid||d.title,name:clean(d.title||q),admin:clean(d.description),country:countryCode?countryName:'',countryCode,latitude:coord.lat,longitude:coord.lon,timezone:''}]:[];
-  return {status:200,body:{ok:true,provider:'Wikipedia place index',sourceUrl:'https://www.mediawiki.org/wiki/API:Search',results}};
+  if(code&&!/^[A-Z]{2}$/.test(code))return {status:400,body:{ok:false,error:'Invalid country filter'}};
+  // Geocoding is a source lookup, not an AI guess; it returns explicit coordinates
+  // and disambiguated regional names. No keys, billing or user history.
+  const url=new URL('https://geocoding-api.open-meteo.com/v1/search');
+  url.search=new URLSearchParams({name:q,count:'8',language:'en',format:'json',...(code?{countryCode:code}:{})}).toString();
+  const r=await fetch(url,{headers:{'Accept':'application/json'},signal:AbortSignal.timeout(4200)});
+  if(!r.ok)throw Error('Destination index temporarily unavailable');
+  const d=await r.json();
+  const results=(Array.isArray(d.results)?d.results:[]).filter(p=>
+    Number.isFinite(p.latitude)&&Number.isFinite(p.longitude)&&
+    (!code||p.country_code===code)).slice(0,8).map(p=>({
+      id:p.id,name:clean(p.name),admin:clean([p.admin1,p.admin2].filter(Boolean).join(', ')),
+      country:clean(p.country),countryCode:clean(p.country_code,2),
+      latitude:p.latitude,longitude:p.longitude,timezone:clean(p.timezone,70)
+    })).filter(p=>p.name.length>0);
+  return {status:200,body:{ok:true,provider:'Open-Meteo Geocoding',sourceUrl:'https://open-meteo.com/en/docs/geocoding-api',results}};
 }
 
 // Limited, auditable 2026-10-14 OpenStreetMap reference snapshot for the
@@ -27,7 +39,7 @@ const sigiriyaHotelReferences=Object.freeze([
   {name:'Sigiriya Water Cottages',lat:7.94452,lon:80.73179,url:'https://www.openstreetmap.org/node/9624421417'}
 ]);
 
-async function nearby(req){
+async function nearby(req,{airportsOnly=false}={}){
   const lat=number(req.query.lat,-90,90),lon=number(req.query.lon,-180,180);
   if(lat===null||lon===null)return {status:400,body:{ok:false,error:'Invalid coordinates'}};
 
@@ -45,11 +57,26 @@ async function nearby(req){
       price:null
     })).filter(a=>a.name&&a.distanceKm<=550).sort((a,b)=>a.distanceKm-b.distanceKm).slice(0,12);
 
+  if(airportsOnly){
+    // Immediate locally indexed result. Does not wait on map providers.
+    const nearbySigiriya=distance(lat,lon,7.9498,80.7463)<=25;
+    const giu=nearbySigiriya?[{type:'airport',name:'Sigiriya Airport',iata:'GIU',
+      distanceKm:distance(lat,lon,7.95732,80.72915),
+      source:'OpenStreetMap airport reference · 2026-10-14',
+      url:'https://www.openstreetmap.org/way/297310393',price:null}]:[];
+    const used=new Set();
+    const airports=[...giu,...indexed].sort((a,b)=>a.distanceKm-b.distanceKm)
+      .filter(x=>{if(used.has(x.iata))return false;used.add(x.iata);return true}).slice(0,8);
+    return {status:200,body:{ok:true,provider:'Bundled OurAirports reference',
+      sourceUrl:'https://ourairports.com/data/',partial:true,airports,hotels:[],
+      note:'Airport names and straight-line distances only; no operating routes or fares are verified.'}};
+  }
+
   const query=`[out:json][timeout:12];(nwr(around:35000,${lat},${lon})["tourism"="hotel"]["name"];nwr(around:140000,${lat},${lon})["aeroway"="aerodrome"]["iata"];);out center tags 160;`;
   let mapped=[],mapAvailable=false;
-  for(const host of ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter']){
+  for(const host of ['https://overpass-api.de/api/interpreter']){
     try{
-      const r=await fetch(host,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','User-Agent':'Wayfarer/1.0'},body:new URLSearchParams({data:query}),signal:AbortSignal.timeout(4500)});
+      const r=await fetch(host,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','User-Agent':'Wayfarer/1.0'},body:new URLSearchParams({data:query}),signal:AbortSignal.timeout(2800)});
       if(!r.ok)continue;
       const d=await r.json();
       if(!Array.isArray(d.elements))continue;
@@ -118,5 +145,5 @@ export default async function handler(req,res){
   res.setHeader('Cache-Control','public, s-maxage=900, stale-while-revalidate=3600');
   res.setHeader('X-Content-Type-Options','nosniff');
   if(req.method!=='GET')return res.status(405).json({ok:false,error:'Method not allowed'});
-  try{const result=req.query.mode==='nearby'?await nearby(req):await search(req);return res.status(result.status).json(result.body)}catch(e){return res.status(502).json({ok:false,error:e.message||'Discovery provider unavailable'})}
+  try{const result=req.query.mode==='airports'?await nearby(req,{airportsOnly:true}):req.query.mode==='nearby'?await nearby(req):await search(req);return res.status(result.status).json(result.body)}catch(e){return res.status(502).json({ok:false,error:e.message||'Discovery provider unavailable'})}
 }
