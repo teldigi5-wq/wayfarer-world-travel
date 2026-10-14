@@ -429,6 +429,16 @@ The new two-column forest/champagne editorial panel is responsive to narrow phon
 
 `tests/travel-comparison-snapshot.test.mjs` runs the **actual summary and UI show() functions** in a DOM-style VM against valid, mixed-currency, unavailable and replaced response fixtures. It checks no imaginary combined fare and no additional fetch/paid API usage. Full GitHub CI, exact-HEAD free Preview, and hands-on visual/keyboard mobile and desktop review remain release gates before any Production merge. This PR is draft stacked on #36.
 
+### Stage 38 — reconciled source quotes and deterministic worldwide comparison (draft)
+
+A source-integrity issue surfaced during the Stage 37 integration review: the new Research Snapshot displayed `6 usable source options` even if only two provider records had valid comparable USD amounts, because the count used **all** supplier items while the lowest quote used a subset. Detailed flight and stay sorting also passed raw `Number(...)` conversions to Array.sort, so missing or malformed totals could yield `NaN` and unstable order.
+
+The summary now uses one reusable `comparableQuote` predicate: positive finite, strictly `NN.NN`-formatted **USD** values for the corresponding outbound group estimate or hotel displayed stay total. It counts only records with such values, and displays `Not available` when no comparable source quote exists. A separate `returned` count remains available for diagnostics; the UI never describes a raw unpriced record as a usable quote or implies actual bookable inventory. It still never creates an imaginary combined trip fare.
+
+Detailed flight and stay sorting uses the same source-amount validation, placing missing, cross-currency, nonpositive and malformed prices **after** comparable quotes instead of allowing NaN to corrupt ordering. For shortest-duration and fewest-stop flight sorts, missing timing/stops sort last. Hotel name sorting works even when prices are unavailable. The original supplier payload is never mutated. The UI keeps individual results visible, with their existing source and availability caveats.
+
+`tests/travel-comparison-snapshot.test.mjs` now evaluates both the actual quote predicate/sort and first-party summary renderer with mixed currencies, invalid/zero figures, missing stop counts/durations, no-price states and old-result replacement. No API, AI, geocoder, subscription or paid provider calls were introduced. Full GitHub CI, a matching free Vercel Preview and real-browser visual/accessibility checks are required before merging this stacked draft into Production.
+
 ## Run and test
 
 Install Node.js 20+ from its official distribution. No package install, API key, environment variable, card or build dependency is needed.
