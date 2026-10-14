@@ -269,7 +269,7 @@ The existing directory contains **250 country/territory records** and **1,000 bu
 The worldwide hotel discovery pipeline now has three **independent and source-transparent** paths:
 
 1. **OpenStreetMap Overpass** public map geometry and named hotel records (best effort; can be rate limited).
-2. **Wikidata CC0 hotel entities** within a 25 km geographic search when public Overpass does not return named hotels. Only geographically located items explicitly typed as a hotel or its subclass are accepted. Place labels, approximate straight-line distances and Wikidata source links are shown, not invented reviews or inventory. Lookups time out and are cached in memory for up to 24 hours to avoid repeated public-endpoint demand.
+2. **Wikidata CC0 hotel entities** within a 25 km geographic search when public Overpass does not return named hotels. Only geographically located items explicitly typed as a hotel are accepted. Place labels, approximate straight-line distances and Wikidata source links are shown, not invented reviews or inventory. Lookups time out and are cached in memory for up to 24 hours to avoid repeated public-endpoint demand.
 3. Narrow dated **Sigiriya OpenStreetMap snapshot** already approved for user-visible fallback. Never displayed outside the Sigiriya region.
 
 These sources do **not** guarantee a hotel listing in every city. In areas without source records, the UI states that data is unavailable rather than fabricating hotel names. Public provider usage is best-effort and not an operational SLA. A production-scale, high-throughput commercial service should use a licensed supplier or self-hosted map extract rather than rely on open community query endpoints.
