@@ -51,7 +51,7 @@ function fixture(){
     selector==='.pref'?preferences:[];
   const storeCalls=[],mapCalls=[],nearbyCalls=[],viewCalls=[];
   const c=vm.createContext({
-    $,$,trips:[],selected:'Tokyo',
+    $,$$,trips:[],selected:'Tokyo',
     worldSelection:{name:'Tokyo',country:'Japan',countryCode:'JP',latitude:35.6762,longitude:139.6503},
     destinations:[],agentData:{ok:true},Number,String,Array,Date,Math,
     document:{createElement:tag=>new Element(tag)},
