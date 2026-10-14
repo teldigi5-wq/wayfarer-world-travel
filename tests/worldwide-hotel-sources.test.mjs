@@ -13,7 +13,7 @@ const responseFor=(name,id,lon,lat)=>({
 test('hotel query uses bounded numeric coordinates and actual Wikidata hotel typing',()=>{
   const query=wikidataHotelQuery(48.8566,2.3522);
   assert.match(query,/Point\(2\.3522 48\.8566\)/);
-  assert.match(query,/wdt:P31\/wdt:P279\* wd:Q27686/);
+  assert.match(query,/wdt:P31 wd:Q27686/);
   assert.match(query,/wikibase:around/);
   assert.throws(()=>wikidataHotelQuery(Infinity,5),/Invalid location/);
 });
