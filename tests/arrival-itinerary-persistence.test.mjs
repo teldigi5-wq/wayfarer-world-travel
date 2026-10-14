@@ -47,7 +47,7 @@ function fixture(){
       contains(name){return name==='on'&&this.owner.on;}}
   }));
   preferences.forEach(p=>{p.classList.owner=p;});
-  const $=selector=>selector==='.pref.on'?preferences.filter(p=>p.on):
+  const $$=selector=>selector==='.pref.on'?preferences.filter(p=>p.on):
     selector==='.pref'?preferences:[];
   const storeCalls=[],mapCalls=[],nearbyCalls=[],viewCalls=[];
   const c=vm.createContext({
