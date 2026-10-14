@@ -228,7 +228,8 @@
         const response=await fetch('/api/explore?'+new URLSearchParams({mode:'airports',...coords}),{signal:controller.signal});
         if(!response.ok)throw Error('Airport reference failed');
         const d=await response.json();
-        if(seq!==loadSeq||fullApplied||!d.ok)return;
+        if(seq!==loadSeq||fullApplied)return;
+        if(!d.ok)throw Error('Airport reference data unavailable');
         items.airports=filter(d.airports,8);
         window.WayfarerDestinationIntelligence?.show(d);
         window.WayfarerMap?.setNearby(items);
@@ -236,7 +237,7 @@
         else status(airports,'No nearby coded airports found in the bundled reference.');
       }catch(e){
         if(seq===loadSeq&&!fullApplied&&e.name!=='AbortError')
-          status(airports,'Checking regional airport references…');
+          status(airports,'Airport reference search is temporarily unavailable. No flights or airport services have been inferred.');
       }
     })();
     const detailed=(async()=>{
@@ -244,7 +245,8 @@
         const response=await fetch('/api/explore?'+new URLSearchParams({mode:'nearby',...coords}),{signal:controller.signal});
         if(!response.ok)throw Error('Nearby discovery unavailable');
         const d=await response.json();
-        if(seq!==loadSeq||!d.ok)return;
+        if(seq!==loadSeq)return;
+        if(!d.ok)throw Error('Nearby source data unavailable');
         fullApplied=true;
         items={airports:filter(d.airports,8),hotels:filter(d.hotels,10)};
         window.WayfarerDestinationIntelligence?.show(d);
