@@ -1,4 +1,5 @@
 import airportData from '../data.json' with {type:'json'};
+import airportCatalog from '../airports-index.json' with {type:'json'};
 import {lookupWikidataHotels} from '../worldwide-hotel-sources.mjs';
 const timedFetch=(url,options={})=>fetch(url,{...options,signal:AbortSignal.timeout(12000)});
 const clean=(value,max=120)=>String(value??'').replace(/[\u0000-\u001f<>]/g,' ').trim().slice(0,max);
@@ -32,7 +33,9 @@ async function nearby(req){
 
   // Always provide sourced airport reference names, even if Overpass is rate limited.
   // The bundled OurAirports-based file is an airport index, not flight availability.
-  const indexed=(Array.isArray(airportData.airports)?airportData.airports:[])
+  const airportReferences=Array.isArray(airportCatalog.airports)&&airportCatalog.airports.length>=1000?
+    airportCatalog.airports:airportData.airports;
+  const indexed=(Array.isArray(airportReferences)?airportReferences:[])
     .filter(a=>Number.isFinite(a.lat)&&Number.isFinite(a.lon)&&/^[A-Z]{3}$/.test(a.iata||''))
     .map(a=>({
       type:'airport',name:clean(a.name),iata:a.iata,
