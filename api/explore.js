@@ -72,7 +72,9 @@ async function nearby(req,{airportsOnly=false}={}){
       note:'Airport names and straight-line distances only; no operating routes or fares are verified.'}};
   }
 
-  const query=`[out:json][timeout:12];(nwr(around:35000,${lat},${lon})["tourism"="hotel"]["name"];nwr(around:140000,${lat},${lon})["aeroway"="aerodrome"]["iata"];);out center tags 160;`;
+  // Airport geography is already indexed locally. Only ask the community map
+  // for named hotel references within a practical geographic radius.
+  const query=`[out:json][timeout:8];(nwr(around:25000,${lat},${lon})["tourism"="hotel"]["name"];);out center tags 90;`;
   const queryMap=async()=>{
     try{
       const response=await fetch('https://overpass-api.de/api/interpreter',{
