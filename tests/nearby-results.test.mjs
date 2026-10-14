@@ -57,6 +57,45 @@ function domFixture(fetchOverride=null) {
   return {ids,state,public:environment.window.WayfarerNearby,textOf};
 }
 
+test('a repeated destination instantly restores public references without another network lookup',async()=>{
+  let calls=0;
+  const f=domFixture(async url=>{
+    calls++;
+    if(String(url).includes('mode=airports'))return {ok:true,json:async()=>({
+      ok:true,airports:[{name:'Paris-Orly Airport',iata:'ORY',distanceKm:14.1}]
+    })};
+    return {ok:true,json:async()=>({ok:true,mapAvailable:true,
+      airports:[{name:'Paris-Orly Airport',iata:'ORY',distanceKm:14.1}],
+      hotels:[{name:'Paris Source Hotel',distanceKm:1.7}],
+      intelligence:{mode:'deterministic-reference-agent',guidance:[]}
+    })};
+  });
+  const paris={name:'Paris',country:'France',countryCode:'FR',latitude:48.8566,longitude:2.3522};
+  await f.public.load(paris);
+  assert.equal(calls,2);
+  assert.match(f.textOf(f.ids['hotel-list']),/Paris Source Hotel/);
+  await f.public.load(paris);
+  assert.equal(calls,2,'Warm browser source cache should avoid two repeat API calls');
+  assert.match(f.textOf(f.ids['hotel-list']),/Paris Source Hotel/);
+  assert.match(f.textOf(f.ids['hotel-list']),/Price unavailable/);
+});
+
+test('similar destination names in distinct coordinates never share public location records',async()=>{
+  let calls=0;
+  const f=domFixture(async url=>{
+    calls++;
+    const params=new URL('https://example.com'+url).searchParams;
+    const closeToFrance=Number(params.get('lat'))>40;
+    return {ok:true,json:async()=>({ok:true,mapAvailable:true,
+      airports:[],hotels:[{name:closeToFrance?'Paris France Hotel':'Paris Texas Hotel',distanceKm:3}]})};
+  });
+  await f.public.load({name:'Paris',countryCode:'FR',latitude:48.8566,longitude:2.3522});
+  await f.public.load({name:'Paris',countryCode:'US',latitude:33.6609,longitude:-95.5555});
+  assert.equal(calls,4,'Distinct country and coordinates must not share a source cache');
+  assert.match(f.textOf(f.ids['hotel-list']),/Paris Texas Hotel/);
+  assert.doesNotMatch(f.textOf(f.ids['hotel-list']),/Paris France Hotel/);
+});
+
 test('airports render while slower hotel discovery is still pending',async()=>{
   let finishHotel;
   const unresolved=new Promise(resolve=>{finishHotel=resolve;});
