@@ -5,9 +5,12 @@ import {readFileSync} from 'node:fs';
 
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const source=read('travel-research.js');
+const helpersStart=source.indexOf('  const comparableQuote=(offer,kind)=>{');
+const helpersEnd=source.indexOf('  function resultPanel(title,obj,kind){',helpersStart);
 const a=source.indexOf('  function researchSnapshot(res){');
 const b=source.indexOf('  let showingSupplierResults=',a);
-assert.ok(a>0&&b>a,'real first-party comparison summary and show functions must be present');
+assert.ok(helpersStart>0&&helpersEnd>helpersStart&&a>helpersEnd&&b>a,
+  'real first-party price comparator, summary and show functions must be present');
 
 const full={
   source:'SerpApi Google Travel Search',checkedAt:'2026-10-14T11:00:00Z',
@@ -42,8 +45,8 @@ function fixture(){
     itemCard:()=>node('article','No verified price'),
     localeTime:()=> 'Checked · provider time'
   };
-  vm.runInNewContext(source.slice(a,b)+
-    '\nthis.researchSnapshot=researchSnapshot;this.show=show;',env,{timeout:1000});
+  vm.runInNewContext(source.slice(helpersStart,helpersEnd)+source.slice(a,b)+
+    '\nthis.researchSnapshot=researchSnapshot;this.show=show;this.sortSourceOffers=sortSourceOffers;',env,{timeout:1000});
   return {env,output};
 }
 function flatten(x){return [x,...x.children.flatMap(flatten)]}
@@ -101,7 +104,8 @@ test('does not mix currencies, unsupported prices or unconfirmed source statuses
    hotels:{status:'not_connected',offers:[{currency:'USD',displayedTotal:'1.00'}]}
  };
  const data=f.env.researchSnapshot(input);
- assert.equal(data.outbound.count,6,'Count describes returned options, not verified seat inventory');
+ assert.equal(data.outbound.count,2,'Only actual comparable USD source prices are counted as usable');
+ assert.equal(data.outbound.returned,6,'Raw provider record count is preserved separately');
  assert.equal(data.outbound.lowest,690);
  assert.equal(data.stays.count,0);
  assert.equal(data.stays.lowest,null);
@@ -130,4 +134,45 @@ test('comparison snapshot adds no extra API calls or external pricing assumption
  assert.match(css,/\.wf-research-snapshot-facts/);
  assert.match(css,/@media\(max-width:600px\)/);
  assert.match(source,/output\.append\(researchSnapshotPanel\(res\)\)/);
+});
+
+test('lowest-price sorting puts missing, invalid or non-USD figures after actual source quotes',()=>{
+ const f=fixture();
+ const flights=[
+   {name:'USD higher',currency:'USD',estimatedGroup:'1000.00'},
+   {name:'EU quote',currency:'EUR',estimatedGroup:'100.00'},
+   {name:'No amount',currency:'USD',estimatedGroup:null},
+   {name:'USD lower',currency:'USD',estimatedGroup:'450.00'},
+   {name:'Malformed',currency:'USD',estimatedGroup:'N/A'},
+   {name:'Zero',currency:'USD',estimatedGroup:'0.00'}
+ ];
+ const sorted=f.env.sortSourceOffers(flights,'flight','price');
+ assert.deepEqual(Array.from(sorted,x=>x.name).slice(0,2),['USD lower','USD higher']);
+ assert.deepEqual(Array.from(sorted,x=>x.name).slice(2),
+   ['EU quote','No amount','Malformed','Zero'],
+   'Unknown-priced records remain visible but cannot sort before usable prices');
+ assert.deepEqual(Array.from(flights,x=>x.name).slice(0,2),['USD higher','EU quote'],
+   'Sorting must not mutate supplier source arrays');
+});
+test('flight duration/stops and hotel name sorts are deterministic with missing fields',()=>{
+ const f=fixture();
+ const flights=[
+   {name:'Unknown',estimatedGroup:'N/A',currency:'USD'},
+   {name:'Two stops',stopCount:2,totalDurationMinutes:780,estimatedGroup:'670.00',currency:'USD'},
+   {name:'Nonstop',stopCount:0,totalDurationMinutes:530,estimatedGroup:'800.00',currency:'USD'},
+   {name:'One stop',stopCount:1,totalDurationMinutes:580,estimatedGroup:'620.00',currency:'USD'}
+ ];
+ assert.deepEqual(Array.from(f.env.sortSourceOffers(flights,'flight','stops'),x=>x.name),
+   ['Nonstop','One stop','Two stops','Unknown']);
+ assert.deepEqual(Array.from(f.env.sortSourceOffers(flights,'flight','duration'),x=>x.name),
+   ['Nonstop','One stop','Two stops','Unknown']);
+ const hotels=[
+   {name:'Zulu',currency:'USD',displayedTotal:'490.00'},
+   {name:'Alpha',currency:'EUR',displayedTotal:'100.00'},
+   {name:'Beta',currency:'USD',displayedTotal:'200.00'}
+ ];
+ assert.deepEqual(Array.from(f.env.sortSourceOffers(hotels,'hotel','price'),x=>x.name),
+   ['Beta','Zulu','Alpha']);
+ assert.deepEqual(Array.from(f.env.sortSourceOffers(hotels,'hotel','name'),x=>x.name),
+   ['Alpha','Beta','Zulu']);
 });
