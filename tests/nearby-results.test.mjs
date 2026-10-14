@@ -237,7 +237,7 @@ test('bad or unverified provider totals never become visible numeric hotel price
 test('existing project routes and supplier bridge remain intentional and protected',()=>{
   assert.match(html,/<script src="nearby-results\.js"><\/script><script src="premium-app\.js">/);
   assert.match(app,/window\.WayfarerNearby\?\.load\(place\)/);
-  assert.match(priceBridge,/WayfarerNearby\?\.applyQuotes\(payload,trip\)/);
+  assert.match(priceBridge,/WayfarerNearby\?\.applyQuotes\(payload,trip,locationAtSearch\)/);
   assert.match(priceBridge,/\[data-airport-iata\]/);
   assert.match(backend,/import airportData from '\.\.\/data\.json' with \{type:'json'\}/);
   assert.match(backend,/mapAvailable,wikidataAvailable,airports,hotels/);
