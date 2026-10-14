@@ -8,7 +8,7 @@ const source=readFileSync(new URL('../premium-app.js',import.meta.url),'utf8');
 const start=source.indexOf('const ARRIVAL_SOURCE_MAX_AGE_MS=');
 const resetStart=source.indexOf('function resetAgents(preserveContext=false){',start);
 const cancelStart=source.indexOf('function cancelAgentResearch(){',resetStart);
-const arrivalStart=source.indexOf('function arrival(){');
+const arrivalStart=source.indexOf('const arrivalChecklistTrip=');
 const arrivalEnd=source.indexOf('function applyData(d)',arrivalStart);
 const applyEnd=source.indexOf("$('#refresh').onclick",arrivalEnd);
 const dateStart=source.indexOf('function localCalendarDate(date){');
