@@ -52,6 +52,7 @@ async function nearby(req,{airportsOnly=false}={}){
     .map(a=>({
       type:'airport',name:clean(a.name),iata:a.iata,
       city:clean(a.municipality||''),countryCode:clean(a.code,2),
+      latitude:a.lat,longitude:a.lon,
       distanceKm:distance(lat,lon,a.lat,a.lon),source:'OurAirports reference',
       url:/^https:\/\/ourairports\.com\/airports\//.test(a.source||'')?a.source:'https://ourairports.com',
       price:null
@@ -62,6 +63,7 @@ async function nearby(req,{airportsOnly=false}={}){
     const nearbySigiriya=distance(lat,lon,7.9498,80.7463)<=25;
     const giu=nearbySigiriya?[{type:'airport',name:'Sigiriya Airport',iata:'GIU',
       distanceKm:distance(lat,lon,7.95732,80.72915),
+      latitude:7.95732,longitude:80.72915,
       source:'OpenStreetMap airport reference · 2026-10-14',
       url:'https://www.openstreetmap.org/way/297310393',price:null}]:[];
     const used=new Set();
@@ -89,7 +91,7 @@ async function nearby(req,{airportsOnly=false}={}){
         const iata=clean(x.tags?.iata,3).toUpperCase();
         if(type==='airport'&&!/^[A-Z]{3}$/.test(iata))return null;
         return {
-          type,name,iata:type==='airport'?iata:'',
+          type,name,iata:type==='airport'?iata:'',latitude:plat,longitude:plon,
           distanceKm:distance(lat,lon,plat,plon),
           source:'OpenStreetMap contributors',
           url:`https://www.openstreetmap.org/${x.type}/${x.id}`,
@@ -120,13 +122,15 @@ async function nearby(req,{airportsOnly=false}={}){
   const regionalAerodromes=nearbySigiriya?[{
     type:'airport',name:'Sigiriya Airport',iata:'GIU',
     distanceKm:distance(lat,lon,7.95732,80.72915),
+    latitude:7.95732,longitude:80.72915,
     source:'OpenStreetMap airport reference · 2026-10-14',
     url:'https://www.openstreetmap.org/way/297310393',price:null
   }]:[];
   const airports=uniq([...mapped.filter(a=>a.type==='airport'),...regionalAerodromes,...indexed]
     .sort((a,b)=>a.distanceKm-b.distanceKm),8);
   const referenceHotels=nearbySigiriya?sigiriyaHotelReferences.map(h=>({
-    type:'hotel',name:h.name,iata:'',distanceKm:distance(lat,lon,h.lat,h.lon),
+    type:'hotel',name:h.name,iata:'',latitude:h.lat,longitude:h.lon,
+    distanceKm:distance(lat,lon,h.lat,h.lon),
     source:'OpenStreetMap reference snapshot · 2026-10-14',url:h.url,price:null
   })).filter(h=>h.distanceKm<=35):[];
   const hotels=uniq([...mapped.filter(a=>a.type==='hotel'),...wikidataHotels,...referenceHotels]
