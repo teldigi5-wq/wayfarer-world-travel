@@ -278,6 +278,18 @@ Airport cards now label available municipality and ISO country code, while the d
 
 **Limitations:** all countries can be *searched*, but complete hotel names, price quotes, live routes, local services, photos, restaurant menus and availability worldwide cannot be guaranteed at zero operating cost. Do not present source-backed reference records as confirmed rates or real-time inventory.
 
+### Stage 23 — responsive discovery, public-source agent caching and quiet luxury (draft)
+
+**Performance model:** 
+- Selecting a mapped destination immediately requests a **local airport reference** from `GET /api/explore?mode=airports` (no provider/network lookup on the server) while the independent `nearby` hotel/mapping request runs concurrently. Airport cards can appear even when hotel research is slow, rate-limited, or unavailable. Client request cancellation and selection-sequence checks prevent stale results from replacing a newer destination.
+- Country-aware world search uses **server-side Open-Meteo geocoding** with an explicit country filter, a bounded timeout, a five-minute small browser-session cache for repeated identical queries, and cancellation on new searches/country changes. The previous browser-side geocoder fallback was incompatible with the restrictive Content Security Policy; fallback bundled hubs remain openly labeled as reference data when the public source fails.
+- The source-backed Journey Studio already runs **weather, destination and country agents in parallel** before the optional Groq composer. Weather facts now reuse **three-minute**, Wikipedia destination text **twelve-hour**, and country-reference data **24-hour** per-warm-instance public-source caches. Simultaneous identical public GETs coalesce. Errors never cache; HTTP auth headers and token/key URLs prohibit caching. AI outputs and beta-gated searches are **never cached or silently retried**. Optional AI remains a separate explicit user action and its latency is still dependent on Groq and network conditions. Visible timings report actual server source/AI stages, not invented agent animations.
+- Reduced serial public-map waits by using one bounded Overpass attempt before Wikidata reference fallback. Repeated worldwide hotel searches still depend on the availability, coverage and permitted use of public query endpoints; **faster rendering is not a promise of instant complete inventory**.
+
+**Design/perceived speed:** First-paint splash remains user-visible but clears sooner; the important hero image has high priority, offscreen editorial sections use progressive content visibility, the destination search shows truthful status, and the evergreen/champagne design has more consistent typography, contrast, touch sizing and motion-reduced styling. Does not add large UI libraries or heavy continuous 3D effects.
+
+**QA:** `tests/fast-luxury-search.test.mjs` covers source deduplication, private-token bypass, fast-airports (zero upstream calls), country-aware geocoding, and UI safeguards; `tests/nearby-results.test.mjs` verifies airports populate before the slower hotel result. CI, device/browser focus and layout checks, quota controls, and actual end-to-end timings are required before publishing to Production. No Production deployment or secrets changes in this draft.
+
 ## Run and test
 
 Install Node.js 20+ from its official distribution. No package install, API key, environment variable, card or build dependency is needed.
