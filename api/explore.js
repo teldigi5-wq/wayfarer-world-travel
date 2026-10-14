@@ -5,7 +5,18 @@ import {rankReferenceAirports,destinationIntelligence} from '../destination-inte
 import {gatherPublicHotels,cachedPublicNearby} from '../worldwide-source-coordinator.mjs';
 const timedFetch=(url,options={})=>fetch(url,{...options,signal:AbortSignal.timeout(12000)});
 const clean=(value,max=120)=>String(value??'').replace(/[\u0000-\u001f<>]/g,' ').trim().slice(0,max);
-const number=(value,min,max)=>{const n=Number(value);return Number.isFinite(n)&&n>=min&&n<=max?n:null};
+// Query coordinates must be actual decimal numbers, not empty strings,
+// nulls, booleans or JavaScript coercions that silently become zero.
+const number=(value,min,max)=>{
+  if(typeof value!=='number'&&typeof value!=='string')return null;
+  if(typeof value==='string'&&(
+    value.length>48||!/^[+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?$/.test(value.trim())
+  ))return null;
+  const n=Number(value);
+  return Number.isFinite(n)&&n>=min&&n<=max?n:null;
+};
+const validCoordinates=(lat,lon)=>typeof lat==='number'&&Number.isFinite(lat)&&Math.abs(lat)<=90&&
+  typeof lon==='number'&&Number.isFinite(lon)&&Math.abs(lon)<=180;
 const distance=(a,b,c,d)=>{const r=6371,p=Math.PI/180,x=(c-a)*p,y=(d-b)*p;const h=Math.sin(x/2)**2+Math.cos(a*p)*Math.cos(c*p)*Math.sin(y/2)**2;return Math.round(6371*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h))*10)/10};
 
 async function search(req){
@@ -19,13 +30,16 @@ async function search(req){
   const r=await fetch(url,{headers:{'Accept':'application/json'},signal:AbortSignal.timeout(4200)});
   if(!r.ok)throw Error('Destination index temporarily unavailable');
   const d=await r.json();
-  const results=(Array.isArray(d.results)?d.results:[]).filter(p=>
-    Number.isFinite(p.latitude)&&Number.isFinite(p.longitude)&&
-    (!code||p.country_code===code)).slice(0,8).map(p=>({
-      id:p.id,name:clean(p.name),admin:clean([p.admin1,p.admin2].filter(Boolean).join(', ')),
-      country:clean(p.country),countryCode:clean(p.country_code,2),
-      latitude:p.latitude,longitude:p.longitude,timezone:clean(p.timezone,70)
-    })).filter(p=>p.name.length>0);
+  // Reject malformed provider geography before it reaches World Explorer.
+  // Filter before limiting results so invalid entries do not hide valid cities.
+  const results=(Array.isArray(d.results)?d.results:[]).slice(0,80).filter(p=>
+    p&&validCoordinates(p.latitude,p.longitude)&&
+    /^[A-Z]{2}$/.test(p.country_code||'')&&(!code||p.country_code===code)
+  ).map(p=>({
+    id:p.id,name:clean(p.name),admin:clean([p.admin1,p.admin2].filter(Boolean).join(', ')),
+    country:clean(p.country),countryCode:p.country_code,
+    latitude:p.latitude,longitude:p.longitude,timezone:clean(p.timezone,70)
+  })).filter(p=>p.name.length>0).slice(0,8);
   return {status:200,body:{ok:true,provider:'Open-Meteo Geocoding',sourceUrl:'https://open-meteo.com/en/docs/geocoding-api',results}};
 }
 
@@ -87,19 +101,24 @@ async function nearby(req,{airportsOnly=false}={}){
       const payload=await response.json();
       if(!Array.isArray(payload.elements))return {mapped:[],mapAvailable:false};
       const mapped=payload.elements.slice(0,220).map(x=>{
+        // Provider data is untrusted even when the request used an Overpass
+        // radius. Invalid element IDs and faraway geometry centroids must
+        // never become local, source-linked hotel cards or map pins.
+        if(!x||x.tags?.tourism!=='hotel'||
+          !['node','way','relation'].includes(x.type)||
+          !Number.isSafeInteger(x.id)||x.id<=0)return null;
         const plat=x.lat??x.center?.lat,plon=x.lon??x.center?.lon;
-        if(!Number.isFinite(plat)||!Number.isFinite(plon))return null;
-        const type=x.tags?.tourism==='hotel'?'hotel':'airport';
+        if(!validCoordinates(plat,plon))return null;
+        const distanceKm=distance(lat,lon,plat,plon);
+        // Overpass uses a 25 km radius; allow a small tolerance for centers
+        // of large mapped areas while excluding unrelated global records.
+        if(!Number.isFinite(distanceKm)||distanceKm>35)return null;
         const name=clean(x.tags?.name||x.tags?.['name:en']);
         if(!name)return null;
-        const iata=clean(x.tags?.iata,3).toUpperCase();
-        if(type==='airport'&&!/^[A-Z]{3}$/.test(iata))return null;
         return {
-          type,name,iata:type==='airport'?iata:'',latitude:plat,longitude:plon,
-          distanceKm:distance(lat,lon,plat,plon),
-          source:'OpenStreetMap contributors',
-          url:`https://www.openstreetmap.org/${x.type}/${x.id}`,
-          price:null
+          type:'hotel',name,iata:'',latitude:plat,longitude:plon,
+          distanceKm,source:'OpenStreetMap contributors',
+          url:`https://www.openstreetmap.org/${x.type}/${x.id}`,price:null
         };
       }).filter(Boolean);
       return {mapped,mapAvailable:true};
