@@ -31,7 +31,9 @@ test('saved trip actions avoid unsafe HTML interpolation and support worldwide d
 });
 
 test('source links are https only, and provider data remains explicitly unverified',()=>{
-  assert.match(script,/url\.protocol!=='https:'/);
+  assert.match(script,/allowedResearchUrl=/);
+  assert.match(script,/url\.protocol==='https:'/);
+  assert.match(script,/url\.hostname===host/);
   assert.match(script,/noopener noreferrer/);
   assert.match(html,/Visa rules and transport schedules are not connected/);
   assert.match(html,/Local to this browser/);
