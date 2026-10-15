@@ -1,5 +1,6 @@
 import {timingSafeEqual} from 'node:crypto';
 import {readBoundedText} from '../bounded-source-response.mjs';
+import {meteredProviderLocked} from '../provider-production-lock.mjs';
 import localReference from '../data.json' with {type:'json'};
 import {getJson,scrub,validHttpsSource,verificationSummary} from '../agent-runtime.mjs';
 
@@ -190,7 +191,8 @@ export default async function handler(req,res){
     const token=process.env.WAYFARER_AI_BETA_TOKEN||'';
     const offered=String(req.headers?.['x-wayfarer-beta-token']||'');
     const actual=Buffer.from(offered),expected=Buffer.from(token);
-    const permitted=process.env.WAYFARER_INTELLIGENCE_AI_ENABLED==='true'&&
+    const permitted=!meteredProviderLocked()&&
+      process.env.WAYFARER_INTELLIGENCE_AI_ENABLED==='true'&&
       expected.length>=24&&actual.length===expected.length&&
       timingSafeEqual(actual,expected);
     const aiStarted=Date.now();
