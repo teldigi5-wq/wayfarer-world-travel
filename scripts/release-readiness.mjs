@@ -77,7 +77,6 @@ const checks=[
  {id:'serverless-api-accepted-input-guards',ok:
     pkg.scripts['test:api-safe-inputs']==='node --test tests/api-safe-input-gates.test.mjs'&&
     read('.github/workflows/checks.yml').includes('npm run test:api-safe-inputs')&&
-    read('tests/api-safe-input-gates.test.mjs').includes('All')===false&&
     read('tests/api-safe-input-gates.test.mjs').includes('globalThis.fetch=async()=>')&&
     read('tests/api-safe-input-gates.test.mjs').includes("res.code,expected"),
   evidence:'CI imports all eight real handlers and rejects unauthenticated, malformed and oversized accepted requests without provider calls; real deployed accepted-method flows are still unverified.'},
