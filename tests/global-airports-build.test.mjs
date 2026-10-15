@@ -27,13 +27,15 @@ test('airport selection uses build-time public-domain index, not just a seven-co
   assert.match(backend,/airportReferences/);
   assert.match(updater,/ourairports-data\/airports\.csv/);
   assert.match(updater,/scheduledService/);
-  assert.match(safeBuild,/preserving checked-in airport fallback/);
+  assert.match(safeBuild,/Offline build only/);
 });
 
-test('Vercel build refreshes and remains usable without an upstream provider',()=>{
+test('Vercel build only validates checked-in data; refresh remains explicit and reviewed',()=>{
   assert.equal(config.buildCommand,'npm run build');
   assert.equal(packageJson.scripts.build,'node scripts/build-airports.mjs');
-  assert.match(safeBuild,/data\.airports\.length<1000/);
+  assert.match(safeBuild,/catalog\.airports\.length<1000/);
+  assert.doesNotMatch(safeBuild,/fetch\(|execFile|scripts\/refresh-airports\.mjs'\]/);
+  assert.match(read('.github/workflows/daily-airports.yml'),/scripts\/refresh-airports\.mjs/);
   assert.doesNotMatch(safeBuild,/SERPAPI_API_KEY|GROQ_API_KEY/);
 });
 
