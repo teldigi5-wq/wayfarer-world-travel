@@ -31,6 +31,14 @@ test('scanner recognizes high-confidence secret patterns only on added diff line
  assert.deepEqual(classifyAddedLine('+SERPAPI_API_KEY="fixture-not-a-real-provider-key-12345"'),[]);
  assert.deepEqual(classifyAddedLine('+-----BEGIN '+'PRIVATE KEY-----'),['private_key_pem']);
 });
+test('an innocuous first provider assignment cannot mask a second credential on the same line',()=>{
+ const suspicious=['p9Ab','C8dE','f7Gh','I6jK','l5Mn','O4pQ','r3St','U2vW','x1Yz'].join('');
+ const line='+SERPAPI_API_KEY="fake-test-only-placeholder-abcdefghi"'+
+   '; GROQ_API_KEY="'+suspicious+'";';
+ assert.deepEqual(classifyAddedLine(line),['high_entropy_provider_literal']);
+ assert.deepEqual(classifyAddedLine('+SERPAPI_API_KEY="fake-test-only-value-1234567890123456"'),[]);
+ assert.deepEqual(classifyAddedLine('-'+line.slice(1)),[]);
+});
 test('reachable history detects a deleted credential in an earlier commit, with redacted report',async()=>{
  const f=repository();
  const fake='ghp_'+'B'.repeat(36);
