@@ -95,6 +95,15 @@ const checks=[
     read('scripts/smoke-local-chromium.mjs').includes('Emulation.setDeviceMetricsOverride')&&
     read('scripts/smoke-local-chromium.mjs').includes("wf-data-confirm"),
   evidence:'A PR-only real Chromium job exercises offline desktop/mobile navigation and browser-data controls. Exact-head CI and real Vercel, Safari/Firefox, maps, accessibility and provider QA remain separate.'},
+ {id:'readonly-integration-rehearsal-ci',ok:
+    pkg.scripts['audit:integration-rehearsal']==='node scripts/rehearse-integration.mjs'&&
+    pkg.scripts['test:integration-rehearsal']==='node --test tests/integration-merge-rehearsal.test.mjs'&&
+    read('.github/workflows/checks.yml').includes('readonly-main-integration-rehearsal')&&
+    read('.github/workflows/checks.yml').includes('npm run audit:integration-rehearsal')&&
+    read('.github/workflows/checks.yml').includes('fetch-depth: 0')&&
+    read('scripts/rehearse-integration.mjs').includes("merge-tree','--write-tree'")&&
+    read('scripts/rehearse-integration.mjs').includes('integrationApproved:false'),
+  evidence:'Separate PR CI rehearses the exact tip against fetched main without changing Git refs. Passing this check is merge feasibility, never code-owner or launch approval.'},
  {id:'no-billable-build-step',ok:pkg.scripts.build==='node scripts/build-airports.mjs'&&
     !/serpapi|groq|duffel|n8n/i.test(pkg.scripts.build),
   evidence:'Build command cannot initiate private paid-provider search.'},
@@ -104,7 +113,7 @@ const checks=[
   evidence:'Airport reference data and private-beta scopes must not be misrepresented as live ticket inventory.'}
 ];
 const manual=[
- {id:'stacked-review-and-merge-plan',status:'BLOCKED',reason:'Read-only GitHub inspection on October 15 found 51 open drafts (#8 and #11–#60), structurally consistent but 511 commits ahead of main at PR #60, touching 119 files. No code-owner/security approval or integration rehearsal.'},
+ {id:'stacked-review-and-merge-plan',status:'BLOCKED',reason:'Before Stage 64, GitHub reported 54 open draft PRs (#8 and #11–#63), with zero broken parent links. PR #63 tip was 532 commits ahead of protected main and touched 126 files. Object-level integration rehearsal is automated, but PR-by-PR code-owner/security review, merge authorization and a real candidate Preview remain outstanding.'},
  {id:'exact-sha-preview-browser-qa',status:'BLOCKED',reason:'No exact-commit candidate Vercel Preview or real mobile/desktop browser validation.'},
  {id:'deployed-api-function-routing',status:'BLOCKED',reason:'The eight API method guards pass local handler/fixture tests, but an exact-SHA Vercel Preview has not confirmed the deployed routes or real accepted-method behavior.'},
  {id:'deployed-static-artifact-isolation',status:'BLOCKED',reason:'Generated public/ static output passes source checks but actual Vercel function routing and deployed artifact exposure remain unverified; inspect exact-SHA Preview URLs and API endpoints.'},
