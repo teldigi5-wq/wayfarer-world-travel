@@ -56,6 +56,14 @@ const checks=[
     read('scripts/build-airports.mjs').includes('await stagePublicAssets()')&&
     read('.gitignore').includes('public/'),
   evidence:'Vercel static output points to clean generated public/ with only reviewed browser assets; the root API function packaging still requires exact-SHA Preview verification.'},
+ {id:'read-only-deployment-inspector',ok:
+    pkg.scripts['verify:deployment']==='node scripts/verify-vercel-static.mjs'&&
+    pkg.scripts['test:deployment-verifier']==='node --test tests/deployed-http-verification.test.mjs'&&
+    read('.github/workflows/checks.yml').includes('npm run test:deployment-verifier')&&
+    read('scripts/verify-vercel-static.mjs').includes("method:'HEAD',redirect:'error'")&&
+    read('scripts/verify-vercel-static.mjs').includes('exactCommitVerified:false')&&
+    read('scripts/verify-vercel-static.mjs').includes('serverlessApiVerified:false'),
+  evidence:'A read-only opt-in static HTTPS checker and isolated CI fixtures exist; no deployment URL, exact SHA or serverless APIs have been verified.'},
  {id:'no-billable-build-step',ok:pkg.scripts.build==='node scripts/build-airports.mjs'&&
     !/serpapi|groq|duffel|n8n/i.test(pkg.scripts.build),
   evidence:'Build command cannot initiate private paid-provider search.'},
