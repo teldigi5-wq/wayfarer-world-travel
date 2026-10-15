@@ -40,9 +40,20 @@ export function classifyAddedLine(line){
   return results;
 }
 const safeFile=file=>/^[A-Za-z0-9_./ -]{1,180}$/.test(file)?file:'(path withheld)';
-const fixturePath=file=>/^(?:tests\/|test\.mjs$|__tests__\/)/.test(file)||/\.test\.[cm]?js$/.test(file);
-const severityFor=(category,file)=>
-  category==='high_entropy_provider_literal'&&fixturePath(file)?'manual_review':'blocking';
+// Narrow historical review queue: immutable commit + exact path. These five
+// candidate locations are still NOT cleared as harmless; the scanner reports
+// them every run. A new suspicious assignment in *any* test file blocks CI.
+// Never add entries without source inspection and documented security review.
+const HISTORICAL_FIXTURE_REVIEW=new Set([
+  '0e32a9c75f329451d23559727f4ba887ac29ca78:tests/production-metered-provider-lock.test.mjs',
+  '3dabe99f63723df4382e1b66ad1e4f89cb255317:tests/security-response-bounds.test.mjs',
+  '949bdf282ad0e178a8978756cebb0cf793b54708:tests/agent-trip-isolation.test.mjs',
+  'ec769b69626e956028be11397aaddf81cc328058:test.mjs',
+  '05b831a947ea92b3a13c152d59d493e7eeae02ca:tests/worldwide-pricing-flight-times.test.mjs'
+]);
+export const severityFor=(category,file,commit)=>
+  category==='high_entropy_provider_literal'&&
+  HISTORICAL_FIXTURE_REVIEW.has(commit+':'+file)?'manual_review':'blocking';
 export async function scanHistory({cwd=process.cwd()}={}){
   // This audit intentionally rejects shallow copies rather than falsely
   // advertising a complete local reachable-history scan.
@@ -82,7 +93,7 @@ export async function scanHistory({cwd=process.cwd()}={}){
       const key=[category,commit,file].join(':');
       if(seen.has(key))continue;
       seen.add(key);
-      findings.push({category,severity:severityFor(category,file),
+      findings.push({category,severity:severityFor(category,file,commit),
         commit:commit.slice(0,12),path:safeFile(file)});
     }
   }
