@@ -151,11 +151,11 @@ async function compose(brief,tools){
         {role:'user',content:prompt}],
         response_format:{type:'json_schema',json_schema:schema},
         reasoning_effort:'low',temperature:.25,max_completion_tokens:1800}),
-      signal:AbortSignal.timeout(9500)
+      signal:AbortSignal.timeout(9500),redirect:'error'
     });
     if(!r.ok)throw Error('AI temporarily unavailable');
     if(Number(r.headers.get('content-length')||0)>16000)throw Error('AI payload too large');
-    const text=await r.text();if(Buffer.byteLength(text)>16000)throw Error('AI payload too large');
+    const text=await readBoundedText(r,16000);
     const data=JSON.parse(text);
     const draft=JSON.parse(data.choices?.[0]?.message?.content||'null');
     if(typeof draft?.title!=='string'||!Array.isArray(draft.days)||
