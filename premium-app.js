@@ -41,7 +41,19 @@ function cancelAgentResearch(){
  return true;
 }
 function build(){$('#studio-target').textContent=selected;const d=destinations.find(x=>x.name===selected),n=Number($('#days').value),budget=Math.max(25,Number($('#budget').value)||180),moods=$$('.pref.on').map(x=>x.textContent).join(' · '),generic=['Arrive and find your bearings','Neighborhoods, culture and local flavor','A slower day beyond the obvious','Architecture, markets and public spaces','Nature at the city edge','Independent exploration','A final unhurried morning'];$('#itinerary-title').textContent=`${n} days in ${selected}`;$('#itinerary').innerHTML=Array.from({length:n},(_,i)=>`<article class="day"><span>DAY 0${i+1} · SAMPLE</span><h3>${d?.days[i]||generic[i]}</h3><p>${$('#pace').value}. ${moods||'Open discovery'}. $${budget}/day working budget—not a live price.</p></article>`).join('')}$$('.pref').forEach(b=>b.onclick=()=>{b.classList.toggle('on');resetAgents();build()});['days','pace'].forEach(x=>$('#'+x).onchange=()=>{resetAgents();build()});$('#budget').oninput=()=>{resetAgents();if($('#budget').checkValidity())build();else{$('#itinerary').replaceChildren();$('#itinerary-title').textContent='Enter a valid daily budget';$('#plan-status').textContent='Budget needs attention';$('#plan-source').textContent='Enter a daily ground budget from USD 25 to USD 2,500 to compose a new sample.'}};$('#budget').onchange=()=>{resetAgents();if($('#budget').checkValidity())build()};$('#compose').onclick=()=>{if(!$('#budget').checkValidity())return $('#budget').reportValidity();resetAgents();build();toast('Sample itinerary recomposed.')};
-const esc=v=>String(v??'—').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));async function runAgents(){
+const esc=v=>String(v??'—').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));const allowedResearchUrl=(value,host)=>{
+ try{const url=new URL(value);return url.protocol==='https:'&&
+   !url.username&&!url.password&&(url.hostname===host||
+     (host==='wikipedia.org'&&url.hostname.endsWith('.wikipedia.org')))?
+   url.href:null;
+ }catch{return null;}
+};
+const sourceLink=(value,host,title)=>{
+ const trusted=allowedResearchUrl(value,host);
+ return trusted?'<a href="'+esc(trusted)+'" target="_blank" rel="noopener noreferrer">'+
+   esc(title)+'</a>':'Source link unavailable';
+};
+async function runAgents(){
  if(agentRequestController)return false;
  const serial=++agentRunSerial;
  const controller=new AbortController();agentRequestController=controller;
@@ -70,7 +82,7 @@ const esc=v=>String(v??'—').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>'
  }
  agentData=d;arrivalResearchIdentity=currentArrivalIdentity();arrivalResearchAt=Date.now();[['place','place'],['climate','weather'],['country','country']].forEach(([widget,key])=>{const ok=d[key]?.ok===true;$('#agent-'+widget).className=ok?'agent done':'agent';$('#agent-'+widget+' p').textContent=ok?(widget==='place'&&d.place?.geographyVerified!==true?
   'Name-only source · geographic identity unverified':'Sourced context received'):
-  'Source unavailable · continuing with other agents';});$('#agent-ai').className=d.ai?.ok?'agent done':'agent';$('#agent-ai p').textContent=d.ai?.ok?'AI draft created · verify before use':(d.ai?.error||'AI unavailable · local plan retained');const w=d.weather||{},p=d.place||{},c=d.country||{};$('#agent-log').innerHTML=`<div><strong>Climate Agent</strong>${w.ok?`${esc(w.temperature)} °C · wind ${esc(w.wind)} km/h<br><a href="${esc(w.sourceUrl)}" target="_blank">Open-Meteo ↗</a>`:'Unavailable'}</div><div><strong>Destination Agent</strong>${p.ok?`${esc(p.extract)}<br><a href="${esc(p.sourceUrl)}" target="_blank">Wikipedia ↗</a>`:'Unavailable'}</div><div><strong>Country Agent</strong>${c.ok?`${esc(c.currency)} · ${esc(c.language)}<br><a href="${esc(c.sourceUrl)}" target="_blank">REST Countries ↗</a>`:'Unavailable'}</div>`;
+  'Source unavailable · continuing with other agents';});$('#agent-ai').className=d.ai?.ok?'agent done':'agent';$('#agent-ai p').textContent=d.ai?.ok?'AI draft created · verify before use':(d.ai?.error||'AI unavailable · local plan retained');const w=d.weather||{},p=d.place||{},c=d.country||{};$('#agent-log').innerHTML=`<div><strong>Climate Agent</strong>${w.ok?`${esc(w.temperature)} °C · wind ${esc(w.wind)} km/h<br>${sourceLink(w.sourceUrl,'open-meteo.com','Open-Meteo ↗')}`:'Unavailable'}</div><div><strong>Destination Agent</strong>${p.ok?`${esc(p.extract)}<br>${sourceLink(p.sourceUrl,'wikipedia.org','Wikipedia ↗')}`:'Unavailable'}</div><div><strong>Country Agent</strong>${c.ok?`${esc(c.currency)} · ${esc(c.language)}<br>${sourceLink(c.sourceUrl,'restcountries.com','REST Countries ↗')}`:'Unavailable'}</div>`;
 if(p.ok&&p.geographyVerified!==true){
  const notice=document.createElement('p');notice.className='wf-country-reference';
  notice.textContent='Wikipedia article matched by name only. Its location was not independently verified against this destination; check maps and official sources before treating nearby attractions as local.';
@@ -149,8 +161,8 @@ else clearArrivalSources(agentData?
  const area=$('#arr-source');area.replaceChildren();
  const when=d.retrieved?new Date(d.retrieved):null;
  area.append(document.createTextNode('Retrieved '+(when&&!Number.isNaN(when.valueOf())?when.toLocaleString():'time unknown')+'. '));
- for(const [label,source] of [['Weather source',d.weather?.sourceUrl],['Country source',d.country?.sourceUrl]]){
-   try{const url=new URL(source);if(url.protocol!=='https:')continue;
+ for(const [label,source,host] of [['Weather source',d.weather?.sourceUrl,'open-meteo.com'],['Country source',d.country?.sourceUrl,'restcountries.com']]){
+   try{const safe=allowedResearchUrl(source,host);if(!safe)continue;const url=new URL(safe);
      const link=document.createElement('a');link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';link.textContent=label;
      area.append(link,document.createTextNode(' · '));
    }catch{}

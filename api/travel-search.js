@@ -1,4 +1,5 @@
 import { timingSafeEqual } from 'node:crypto';
+import {readBoundedText} from '../bounded-source-response.mjs';
 import {signSelection} from '../flight-selection-token.mjs';
 import {verifiedSegmentRoute} from '../flight-route-integrity.mjs';
 import countryDirectory from '../data.json' with {type:'json'};
@@ -64,11 +65,10 @@ async function search(provider,key,parameters){
   url.searchParams.set('engine',provider);
   for(const [name,value] of Object.entries(parameters))url.searchParams.set(name,String(value));
   url.searchParams.set('api_key',key);
-  const resp=await fetch(url,{signal:AbortSignal.timeout(PROVIDER_TIMEOUT)});
+  const resp=await fetch(url,{signal:AbortSignal.timeout(PROVIDER_TIMEOUT),redirect:'error'});
   if(resp.status===429){const e=Error('Search quota reached');e.quota=true;throw e}
   if(!resp.ok)throw Error('Travel search provider unavailable');
-  const raw=await resp.text();
-  if(raw.length>MAX_PROVIDER_RESPONSE)throw Error('Provider response too large');
+  const raw=await readBoundedText(resp,MAX_PROVIDER_RESPONSE);
   let parsed;try{parsed=JSON.parse(raw)}catch{throw Error('Invalid travel search response')}
   if(parsed.error||parsed.search_metadata?.status==='Error'){
     const e=Error('Travel search was rejected');

@@ -1,5 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
 import { validateTrip } from '../planner.mjs';
+import {readBoundedText} from '../bounded-source-response.mjs';
 
 // Source-controlled adapter only. Provider keys remain on the server.
 // SerpApi Google Travel search results are NOT a booking or seat/room inventory feed.
@@ -79,15 +80,14 @@ async function serpSearch(params,key) {
   for(const [name,value] of Object.entries(params))url.searchParams.set(name,String(value));
   url.searchParams.set('api_key',key);
   let res;
-  try { res=await fetch(url.href,{signal:AbortSignal.timeout(SEARCH_TIMEOUT_MS)}); }
+  try { res=await fetch(url.href,{signal:AbortSignal.timeout(SEARCH_TIMEOUT_MS),redirect:'error'}); }
   catch { throw new Error('Provider unavailable'); }
   if(!res.ok){
     const err=new Error(res.status===429?'Provider rate limit reached':'Provider request unavailable');
     err.quota=res.status===429;
     throw err;
   }
-  const text=await res.text();
-  if(text.length>SEARCH_MAX_RESPONSE)throw new Error('Provider response too large');
+  const text=await readBoundedText(res,SEARCH_MAX_RESPONSE);
   let data;
   try { data=JSON.parse(text); } catch {throw new Error('Malformed provider response');}
   if(data?.error || data?.search_metadata?.status==='Error'){

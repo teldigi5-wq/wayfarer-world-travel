@@ -1,4 +1,5 @@
 import {timingSafeEqual} from 'node:crypto';
+import {readBoundedText} from '../bounded-source-response.mjs';
 import {signSelection,verifySelection} from '../flight-selection-token.mjs';
 import {verifiedSegmentRoute} from '../flight-route-integrity.mjs';
 
@@ -41,11 +42,10 @@ async function provider(state,key){
   for(const [k,v] of Object.entries(fields))url.searchParams.set(k,String(v));
   url.searchParams.set(state.stage==='return'?'departure_token':'booking_token',state.providerToken);
   url.searchParams.set('api_key',key);
-  const response=await fetch(url,{signal:AbortSignal.timeout(TIMEOUT_MS)});
+  const response=await fetch(url,{signal:AbortSignal.timeout(TIMEOUT_MS),redirect:'error'});
   if(response.status===429){const e=Error('Provider quota reached');e.quota=true;throw e;}
   if(!response.ok)throw Error('Supplier unavailable');
-  const raw=await response.text();
-  if(raw.length>MAX_PROVIDER_BODY)throw Error('Provider payload too large');
+  const raw=await readBoundedText(response,MAX_PROVIDER_BODY);
   let data;
   try{data=JSON.parse(raw)}catch{throw Error('Provider response malformed');}
   if(data?.error||data?.search_metadata?.status==='Error'){

@@ -1,3 +1,4 @@
+import {readBoundedText} from './bounded-source-response.mjs';
 // Bounded, observable public-source requests used by Journey Studio.
 // Retry idempotent GET requests only; never retry billable AI/travel searches.
 export const scrub=(v,max=120)=>String(v??'').replace(/[\u0000-\u001f<>]/g,' ').trim().slice(0,max);
@@ -33,7 +34,7 @@ export async function getJson(url,{timeoutMs=6500,maxBytes=100000,retries=1,head
     for(let attempt=0;attempt<=retries;attempt++){
       try{
         const response=await fetch(safe.href,{method:'GET',headers,
-          signal:AbortSignal.timeout(timeoutMs)});
+          signal:AbortSignal.timeout(timeoutMs),redirect:'error'});
         const recoverable=[502,503,504].includes(response.status);
         if(!response.ok){
           last=Error('Source HTTP '+response.status);
@@ -42,8 +43,7 @@ export async function getJson(url,{timeoutMs=6500,maxBytes=100000,retries=1,head
         }
         if(Number(response.headers.get('content-length')||0)>maxBytes)
           throw Error('Source response too large');
-        const body=await response.text();
-        if(Buffer.byteLength(body,'utf8')>maxBytes)throw Error('Source response too large');
+        const body=await readBoundedText(response,maxBytes);
         return JSON.parse(body);
       }catch(e){
         last=e;
