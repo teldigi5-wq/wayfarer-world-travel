@@ -65,6 +65,15 @@ const checks=[
     read('scripts/verify-vercel-static.mjs').includes('exactCommitVerified:false')&&
     read('scripts/verify-vercel-static.mjs').includes('serverlessApiVerified:false'),
   evidence:'A read-only opt-in static HTTPS checker and isolated CI fixtures exist; no deployment URL, exact SHA or serverless APIs have been verified.'},
+ {id:'serverless-api-rejected-method-gate',ok:
+    pkg.scripts['verify:api-routing']==='node scripts/verify-vercel-api-routes.mjs'&&
+    pkg.scripts['test:api-method-gates']==='node --test tests/api-method-routing.test.mjs'&&
+    read('.github/workflows/checks.yml').includes('npm run test:api-method-gates')&&
+    read('scripts/verify-vercel-api-routes.mjs').includes('method:target.probe')&&
+    read('scripts/verify-vercel-api-routes.mjs').includes('acceptedApiMethodsVerified:false')&&
+    read('api-method-probes.mjs').includes("'/api/airline-offers'")&&
+    Object.keys(config.functions).length===8,
+  evidence:'All eight Vercel API handlers have CI-tested pre-provider rejected-method checks; future remote probes are opt-in and accepted API functionality remains unverified.'},
  {id:'no-billable-build-step',ok:pkg.scripts.build==='node scripts/build-airports.mjs'&&
     !/serpapi|groq|duffel|n8n/i.test(pkg.scripts.build),
   evidence:'Build command cannot initiate private paid-provider search.'},
@@ -76,6 +85,7 @@ const checks=[
 const manual=[
  {id:'stacked-review-and-merge-plan',status:'BLOCKED',reason:'Draft PR chain including #8 and #41–#49 has not been independently reviewed or approved for integration.'},
  {id:'exact-sha-preview-browser-qa',status:'BLOCKED',reason:'No exact-commit candidate Vercel Preview or real mobile/desktop browser validation.'},
+ {id:'deployed-api-function-routing',status:'BLOCKED',reason:'The eight API method guards pass local handler/fixture tests, but an exact-SHA Vercel Preview has not confirmed the deployed routes or real accepted-method behavior.'},
  {id:'deployed-static-artifact-isolation',status:'BLOCKED',reason:'Generated public/ static output passes source checks but actual Vercel function routing and deployed artifact exposure remain unverified; inspect exact-SHA Preview URLs and API endpoints.'},
  {id:'history-secrets-and-environment',status:'BLOCKED',reason:'Full Git-history secret scan, Vercel environment scoping, and provider-console permissions not independently verified.'},
  {id:'privacy-terms-and-operator-identity',status:'BLOCKED',reason:'Public privacy notice, acceptable terms, legitimate contact/operator identity and legal review have not been approved.'},
