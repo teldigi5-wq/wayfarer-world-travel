@@ -23,6 +23,8 @@ jobs:
         run: npm run smoke:local
       - name: Test read-only Vercel deployment inspector without remote calls
         run: npm run test:deployment-verifier
+      - name: Verify eight API rejection guards without calling any providers
+        run: npm run test:api-method-gates
       - run: npm test
       - name: Report release blockers without deploying
         run: npm run release:report
