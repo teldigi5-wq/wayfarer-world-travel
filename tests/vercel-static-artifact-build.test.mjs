@@ -88,6 +88,19 @@ test('local CSS, JS and image links from both customer pages remain in deployabl
   assert.ok((await publicRead('country-atlas.json')).length>0);
 });
 
+test('source-level deployment check passes but exact Vercel API/routing review remains blocked',async()=>{
+  const {execFileSync}=await import('node:child_process');
+  const script=new URL('../scripts/release-readiness.mjs',import.meta.url).pathname;
+  const result=JSON.parse(execFileSync(process.execPath,[script,'--json'],{
+    encoding:'utf8',timeout:10000
+  }));
+  const check=result.automatic.checks.find(x=>x.id==='vercel-allowlisted-static-output');
+  assert.equal(check?.ok,true);
+  assert.equal(result.releaseDecision,'NO_GO');
+  assert.equal(result.productionAuthorization,false);
+  assert.equal(result.manualGates.find(x=>x.id==='deployed-static-artifact-isolation')?.status,'BLOCKED');
+  assert.equal(result.manualGates.find(x=>x.id==='exact-sha-preview-browser-qa')?.status,'BLOCKED');
+});
 test('asset staging never includes external supplier calls or a way to publish arbitrary paths',async()=>{
   const src=(await rootRead('scripts/stage-public-assets.mjs')).toString();
   assert.doesNotMatch(src,/\bfetch\s*\(|\bexecFile\s*\(|https\.request\s*\(|child_process/);
