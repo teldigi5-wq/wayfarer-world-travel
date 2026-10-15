@@ -60,7 +60,8 @@ const checks=[
     pkg.scripts['verify:deployment']==='node scripts/verify-vercel-static.mjs'&&
     pkg.scripts['test:deployment-verifier']==='node --test tests/deployed-http-verification.test.mjs'&&
     read('.github/workflows/checks.yml').includes('npm run test:deployment-verifier')&&
-    read('scripts/verify-vercel-static.mjs').includes("method:'HEAD',redirect:'error'")&&
+    read('scripts/verify-vercel-static.mjs').includes("method,redirect:'error'")&&
+    read('scripts/verify-vercel-static.mjs').includes("if(method==='GET')options.headers={Range:'bytes=0-0'}")&&
     read('scripts/verify-vercel-static.mjs').includes('exactCommitVerified:false')&&
     read('scripts/verify-vercel-static.mjs').includes('serverlessApiVerified:false'),
   evidence:'A read-only opt-in static HTTPS checker and isolated CI fixtures exist; no deployment URL, exact SHA or serverless APIs have been verified.'},
