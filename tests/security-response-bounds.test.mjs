@@ -47,9 +47,9 @@ test('streaming text reader enforces the cap before accumulating untrusted chunk
  assert.equal(data.cancelled,true,'Rejected streaming content must cancel the reader');
 });
 test('bounded reader supports valid multi-chunk JSON, unicode and missing length headers',async()=>{
- const data=chunked(['{"city":"T','","value":',String(0),'}']);
+ const data=chunked(['{"city":"T','ō","value":',String(0),'}']);
  const text=await readBoundedText(data.response,100);
- assert.deepEqual(JSON.parse(text),{city:'T',value:0});
+ assert.deepEqual(JSON.parse(text),{city:'Tō',value:0});
 });
 test('advertised oversized response is refused before any body read',async()=>{
  let reads=0;
@@ -92,8 +92,7 @@ test('secret-bearing n8n requests refuse redirects; return sanitized 502 without
 });
 test('unannounced oversized n8n response is denied before its full AI findings enter memory',async()=>{
  configure();
- globalThis.fetch=async()=>chunked(['{"ok":true,"agents":[','"a".repeat(15000),
-   '"b".repeat(15000),'end']).response;
+ globalThis.fetch=async()=>chunked(['{"payload":"','x'.repeat(20000),'y'.repeat(20000),'"}']).response;
  try{
    const result=await call();
    assert.equal(result.code,502);
