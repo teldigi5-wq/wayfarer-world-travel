@@ -3,6 +3,7 @@
    scripts/refresh-airports.mjs and daily-airports GitHub workflow.
    Deployments must never make hidden build-time supplier calls. */
 import {readFile} from 'node:fs/promises';
+import {stagePublicAssets} from './stage-public-assets.mjs';
 
 const file=new URL('../airports-index.json',import.meta.url);
 const catalog=JSON.parse(await readFile(file,'utf8'));
@@ -22,3 +23,5 @@ process.stdout.write(
   ' ('+(catalog.retrievedAt||'date unavailable')+
   '). Offline build only; no external provider refresh.\n'
 );
+
+await stagePublicAssets();
