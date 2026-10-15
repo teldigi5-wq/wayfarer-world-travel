@@ -30,6 +30,13 @@ const checks=[
     read('browser-data.js').includes("'wf-checks-v2'")&&
     !/localStorage\.clear\(/.test(read('browser-data.js')),
   evidence:'An accessible beta disclosure and narrowly scoped two-step local deletion are present; formal legal notices remain a separate blocker.'},
+ {id:'production-metered-provider-lock',ok:
+    ['api/ai-plan.mjs','api/intelligence.js','api/travel-offers.mjs',
+      'api/travel-search.js','api/flight-selection.mjs','api/airline-offers.mjs']
+      .every(path=>read(path).includes('meteredProviderLocked()'))&&
+    read('provider-production-lock.mjs').includes("VERCEL_ENV==='production'")&&
+    read('provider-production-lock.mjs').includes("VERCEL_TARGET_ENV==='production'"),
+  evidence:'All six optional metered AI/travel paths include the shared fail-closed public Production gate; this is not a distributed spending quota.'},
  {id:'no-billable-build-step',ok:pkg.scripts.build==='node scripts/build-airports.mjs'&&
     !/serpapi|groq|duffel|n8n/i.test(pkg.scripts.build),
   evidence:'Build command cannot initiate private paid-provider search.'},

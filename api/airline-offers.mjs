@@ -1,5 +1,6 @@
 import {timingSafeEqual} from 'node:crypto';
 import {readBoundedText} from '../bounded-source-response.mjs';
+import {meteredProviderLocked,PRODUCTION_PROVIDER_LOCK_NOTE} from '../provider-production-lock.mjs';
 import {sealAirlineOffer,openAirlineOffer} from '../airline-offer-token.mjs';
 import {verifiedSegmentRoute} from '../flight-route-integrity.mjs';
 
@@ -138,6 +139,9 @@ export default async function handler(req,res){
         checkOut:reference.returnDate,adults:reference.adults};
     }
   }catch{return send(res,400,{ok:false,error:'Trip or offer reference is expired or invalid.'});}
+  if(meteredProviderLocked())
+    return send(res,200,{ok:true,status:'not_connected',mode:'production_locked',
+      checkedAt:null,message:PRODUCTION_PROVIDER_LOCK_NOTE,offers:[]});
   const settings=config();
   if(!settings|| (reference&&reference.mode!==settings.mode)){
     return send(res,200,{ok:true,status:'not_connected',mode:'disabled',checkedAt:null,

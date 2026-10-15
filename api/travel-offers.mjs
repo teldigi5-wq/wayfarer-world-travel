@@ -1,6 +1,7 @@
 import { timingSafeEqual } from 'node:crypto';
 import { validateTrip } from '../planner.mjs';
 import {readBoundedText} from '../bounded-source-response.mjs';
+import {meteredProviderLocked,PRODUCTION_PROVIDER_LOCK_NOTE} from '../provider-production-lock.mjs';
 
 // Source-controlled adapter only. Provider keys remain on the server.
 // SerpApi Google Travel search results are NOT a booking or seat/room inventory feed.
@@ -198,6 +199,14 @@ export default async function handler(req,res){
       'Each click may make up to two SerpApi searches and use monthly free search allowance.'
     ]
   };
+  // Never spend private provider credits on a public Production deployment,
+  // even if a key and feature flag are accidentally present.
+  if(meteredProviderLocked()){
+    payload.mode='production_locked';
+    payload.flights=category('not_connected',PRODUCTION_PROVIDER_LOCK_NOTE);
+    payload.hotels=category('not_connected',PRODUCTION_PROVIDER_LOCK_NOTE);
+    return reply(res,200,payload);
+  }
   const key=process.env.SERPAPI_API_KEY||'';
   if(process.env.WAYFARER_TRAVEL_ENABLED!=='true'||!key) return reply(res,200,payload);
   payload.mode='serpapi_search';
