@@ -21,6 +21,15 @@ const checks=[
     /connect-src 'self'/.test(header('Content-Security-Policy'))&&
     !/unsafe-inline|unsafe-eval/.test(header('Content-Security-Policy')),
   evidence:'Version-controlled Vercel headers; live browser enforcement remains unverified.'},
+ {id:'beta-browser-data-transparency',ok:
+    ['data-and-privacy.html','browser-data.js','browser-data.css'].every(path=>{
+      try{return statSync(new URL('../'+path,import.meta.url)).size>0;}catch{return false;}
+    })&&html.includes('href="data-and-privacy.html"')&&
+    read('data-and-privacy.html').includes('Beta information, not finalized legal terms')&&
+    read('browser-data.js').includes("'wf-trips-v2'")&&
+    read('browser-data.js').includes("'wf-checks-v2'")&&
+    !/localStorage\\.clear\\(/.test(read('browser-data.js')),
+  evidence:'An accessible beta disclosure and narrowly scoped two-step local deletion are present; formal legal notices remain a separate blocker.'},
  {id:'no-billable-build-step',ok:pkg.scripts.build==='node scripts/build-airports.mjs'&&
     !/serpapi|groq|duffel|n8n/i.test(pkg.scripts.build),
   evidence:'Build command cannot initiate private paid-provider search.'},
