@@ -140,12 +140,18 @@ export async function runSmoke(){
        type:'keyUp',key:'Enter',code:'Enter',
        windowsVirtualKeyCode:13,nativeVirtualKeyCode:13
      });
-     await waitFor(call,
+     await sleep(180);
+     const keyboardState=await evalBrowser(call,
+       "(()=>{const btn=document.querySelector('.nav-links [data-view="+
+       JSON.stringify(section)+"]');return {focus:document.activeElement===btn,"+
+       "visible:!!btn?.getClientRects().length,active:"+
        "document.getElementById("+JSON.stringify(section)+
-       ")?.classList.contains('active')===true",section+' keyboard navigation');
-     requireTrue(await evalBrowser(call,
-       "document.querySelector('.nav-links [data-view="+JSON.stringify(section)+
-       "]')?.getAttribute('aria-current')==='page'"),
+       ")?.classList.contains('active')===true,aria:"+
+       "btn?.getAttribute('aria-current')==='page'}})()");
+     requireTrue(keyboardState.active,
+       'Keyboard activation '+section+' (focused='+keyboardState.focus+
+       ', visible='+keyboardState.visible+', aria='+keyboardState.aria+')');
+     requireTrue(keyboardState.aria,
        'Current-page accessibility state missing for '+section);
    };
    await keyNav('studio');
