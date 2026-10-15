@@ -12,7 +12,7 @@ const checks=[
    try{return statSync(new URL('../'+f,import.meta.url)).size>0;}catch{return false;}
  }),evidence:'Nonempty original favicon and photography referenced by the home page.'},
  {id:'canonical-and-social',ok:html.includes('rel="canonical" href="https://wayfarer-world-travel.vercel.app/"')&&
-    html.includes('href="/favicon.svg"')&&html.includes('property="og:image"')&&
+    html.includes('href="favicon.svg"')&&html.includes('property="og:image"')&&
     html.includes('name="twitter:card"'),
   evidence:'Homepage has canonical, social preview and icon metadata.'},
  {id:'baseline-security-headers',ok:header('Strict-Transport-Security')==='max-age=31536000'&&
