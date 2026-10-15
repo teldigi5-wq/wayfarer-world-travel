@@ -125,8 +125,11 @@ export async function runSmoke(){
    const keyNav=async section=>{
      const focused=await evalBrowser(call,
        "(()=>{const button=document.querySelector('.nav-links [data-view="+
-       JSON.stringify(section)+"]');if(!button)return false;button.focus();"+
-       "return document.activeElement===button})()");
+       JSON.stringify(section)+"]');if(!button)return false;"+
+       "window.__wfKeyAudit={downs:0,clicks:0};"+
+       "button.addEventListener('keydown',()=>window.__wfKeyAudit.downs++,{once:true});"+
+       "button.addEventListener('click',()=>window.__wfKeyAudit.clicks++,{once:true});"+
+       "button.focus();return document.activeElement===button})()");
      requireTrue(focused,'Keyboard navigation target cannot receive focus: '+section);
      await call('Input.dispatchKeyEvent',{
        type:'rawKeyDown',key:'Enter',code:'Enter',
@@ -144,13 +147,17 @@ export async function runSmoke(){
      const keyboardState=await evalBrowser(call,
        "(()=>{const btn=document.querySelector('.nav-links [data-view="+
        JSON.stringify(section)+"]');return {focus:document.activeElement===btn,"+
+       "hasFocus:document.hasFocus(),downs:window.__wfKeyAudit?.downs??0,"+
+       "clicks:window.__wfKeyAudit?.clicks??0,"+
        "visible:!!btn?.getClientRects().length,active:"+
        "document.getElementById("+JSON.stringify(section)+
        ")?.classList.contains('active')===true,aria:"+
        "btn?.getAttribute('aria-current')==='page'}})()");
      requireTrue(keyboardState.active,
        'Keyboard activation '+section+' (focused='+keyboardState.focus+
-       ', visible='+keyboardState.visible+', aria='+keyboardState.aria+')');
+       ', pageFocus='+keyboardState.hasFocus+', down='+keyboardState.downs+
+       ', click='+keyboardState.clicks+', visible='+keyboardState.visible+
+       ', aria='+keyboardState.aria+')');
      requireTrue(keyboardState.aria,
        'Current-page accessibility state missing for '+section);
    };
