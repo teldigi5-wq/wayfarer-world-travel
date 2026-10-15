@@ -113,3 +113,12 @@ test('release decision remains blocked without finalized privacy, operator ident
  const check=JSON.parse(read('package.json')).scripts.check;
  assert.match(check,/node --check browser-data\.js/);
 });
+
+test('the additional browser-data release check remains independent of legal approval',()=>{
+ const source=read('scripts/release-readiness.mjs');
+ assert.match(source,/id:'beta-browser-data-transparency'/);
+ assert.match(source,/id:'privacy-terms-and-operator-identity',status:'BLOCKED'/);
+ assert.match(source,/productionAuthorization:false/);
+ assert.match(read('index.html'),/Browser-local drafts · not encrypted or account-synced/);
+ assert.match(read('index.html'),/Review storage and delete local drafts/);
+});
