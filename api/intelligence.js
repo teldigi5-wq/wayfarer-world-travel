@@ -1,4 +1,5 @@
 import {timingSafeEqual} from 'node:crypto';
+import {readBoundedText} from '../bounded-source-response.mjs';
 import localReference from '../data.json' with {type:'json'};
 import {getJson,scrub,validHttpsSource,verificationSummary} from '../agent-runtime.mjs';
 
