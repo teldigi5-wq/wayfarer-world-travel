@@ -14,5 +14,11 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '24'
+      - name: Offline production build validation
+        run: npm run build
+      - name: Ensure build does not modify checked-in airport data
+        run: git diff --exit-code -- airports-index.json
       - run: npm run check
       - run: npm test
+      - name: Report release blockers without deploying
+        run: npm run release:report
