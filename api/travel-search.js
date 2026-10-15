@@ -1,5 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
 import {readBoundedText} from '../bounded-source-response.mjs';
+import {meteredProviderLocked,PRODUCTION_PROVIDER_LOCK_NOTE} from '../provider-production-lock.mjs';
 import {signSelection} from '../flight-selection-token.mjs';
 import {verifiedSegmentRoute} from '../flight-route-integrity.mjs';
 import countryDirectory from '../data.json' with {type:'json'};
@@ -147,6 +148,12 @@ export default async function handler(req,res){
     food:state('not_connected','Restaurant menu prices are not yet connected.'),
     transport:state('not_connected','Transit fare schedules are not yet connected.'),
     note:'Search prices may be cached and do not verify bookability. No flights or rooms are booked.'};
+  if(meteredProviderLocked()){
+    payload.mode='production_locked';
+    payload.flights=state('not_connected',PRODUCTION_PROVIDER_LOCK_NOTE);
+    payload.hotels=state('not_connected',PRODUCTION_PROVIDER_LOCK_NOTE);
+    return json(res,200,payload);
+  }
   const key=process.env.SERPAPI_API_KEY;
   if(process.env.WAYFARER_TRAVEL_ENABLED!=='true'||!key)return json(res,200,payload);
   if(throttled(req))return json(res,429,{ok:false,error:'Too many searches from this browser. Try later. Free search quota is limited.'});
