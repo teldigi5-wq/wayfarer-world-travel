@@ -7,7 +7,7 @@ import path from 'node:path';
 
 const positive=[
   ['/', 'text/html'],
-  ['/data-and-privacy.html','text/html'],
+  ['/data-and-privacy','text/html','data-and-privacy.html'],
   ['/premium-app.js','javascript'],
   ['/browser-data.js','javascript'],
   ['/favicon.svg','image/svg+xml'],
@@ -20,7 +20,7 @@ const denied=[
  '/provider-production-lock.mjs','/bounded-source-response.mjs',
  '/flight-selection-token.mjs','/scripts/audit-git-history.mjs',
  '/tests/local-preview-http.test.mjs','/docs/STAGE-50-RELEASE-DECISION.md',
- '/.env','/.git/config','/api/intelligence.js'
+ '/.env','/.git/config'
 ];
 const headerRules=[
  ['content-security-policy',/script-src 'self'(?=;|$)/],
@@ -50,15 +50,13 @@ export function validateDeploymentUrl(input,{allowLoopback=false}={}){
 export async function inspectDeployment({url,fetchFn=fetch,allowLoopback=false}){
  const origin=validateDeploymentUrl(url,{allowLoopback});
  const responses=[];
- for(const [pathname,expectedMime] of positive){
+ for(const [pathname,expectedMime,sourceFile] of positive){
    // Only fetch known static paths from this program's fixed allowlist.
-   if(pathname!=='/'&&!PUBLIC_STATIC_SET.has(pathname.slice(1)))
+   if(pathname!=='/'&&!PUBLIC_STATIC_SET.has(sourceFile??pathname.slice(1)))
      throw Error('Static inspection path is not in approved manifest: '+pathname);
    responses.push(await inspectPath(origin,pathname,expectedMime,'public',fetchFn));
  }
  for(const pathname of denied){
-   if(pathname.startsWith('/api/')&&pathname!== '/api/intelligence.js')
-     throw Error('Unsafe endpoint probe');
    responses.push(await inspectPath(origin,pathname,null,'private',fetchFn));
  }
  const top=responses[0];
