@@ -1,5 +1,6 @@
 import {timingSafeEqual} from 'node:crypto';
 import {readBoundedText} from '../bounded-source-response.mjs';
+import {meteredProviderLocked,PRODUCTION_PROVIDER_LOCK_NOTE} from '../provider-production-lock.mjs';
 import {signSelection,verifySelection} from '../flight-selection-token.mjs';
 import {verifiedSegmentRoute} from '../flight-route-integrity.mjs';
 
@@ -131,6 +132,7 @@ export default async function handler(req,res){
   }catch{return failure(res,400,'Invalid selection request');}
   const state=verifySelection(body.selectionToken,secret);
   if(!state)return failure(res,400,'Selection expired or invalid. Search flights again.');
+  if(meteredProviderLocked())return failure(res,503,PRODUCTION_PROVIDER_LOCK_NOTE);
   const key=process.env.SERPAPI_API_KEY;
   if(process.env.WAYFARER_TRAVEL_ENABLED!=='true'||!key)
     return failure(res,503,'Flight booking research is not connected.');
