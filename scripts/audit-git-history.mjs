@@ -54,6 +54,10 @@ export async function scanHistory({cwd=process.cwd()}={}){
     '--format=WAYFARER_AUDIT_COMMIT:%H','--'],{
     cwd,stdio:['ignore','pipe','pipe'],env:{...process.env,GIT_PAGER:'cat'}
   });
+  const exitPromise=new Promise(resolve=>{
+    child.once('error',()=>resolve(1));
+    child.once('close',code=>resolve(code??1));
+  });
   let commit='',file='',commits=0,addedLines=0;
   const findings=[],seen=new Set();
   // Never include stderr: it may contain unexpected private source text.
@@ -78,10 +82,7 @@ export async function scanHistory({cwd=process.cwd()}={}){
       findings.push({category,commit:commit.slice(0,12),path:safeFile(file)});
     }
   }
-  const exit=await new Promise(resolve=>{
-    child.once('error',()=>resolve(1));
-    child.once('close',code=>resolve(code??1));
-  });
+  const exit=await exitPromise;
   if(exit!==0||commits<1)return {error:'history_scan_incomplete',commits,addedLines,findings:[]};
   return {error:null,commits,addedLines,findings};
 }
