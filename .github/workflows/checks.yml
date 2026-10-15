@@ -19,6 +19,8 @@ jobs:
       - name: Ensure build does not modify checked-in airport data
         run: git diff --exit-code -- airports-index.json
       - run: npm run check
+      - name: Verify local HTTP public-asset isolation and security headers
+        run: npm run smoke:local
       - run: npm test
       - name: Report release blockers without deploying
         run: npm run release:report
