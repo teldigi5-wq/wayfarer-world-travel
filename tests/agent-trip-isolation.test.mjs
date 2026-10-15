@@ -10,6 +10,7 @@ const headerEnd=script.indexOf('function resetAgents(preserveContext=false){',he
 const resetStart=headerEnd;
 const cancelStart=script.indexOf('function cancelAgentResearch(){',resetStart);
 const cancelEnd=script.indexOf('function build(){',cancelStart);
+const sourceHelpersStart=script.indexOf('const allowedResearchUrl=');
 const runStart=script.indexOf('async function runAgents(){');
 const runEnd=script.indexOf("$('#run-agents').onclick=runAgents;",runStart);
 assert.ok(headerStart>=0&&headerEnd>headerStart&&resetStart>=0&&cancelStart>resetStart&&cancelEnd>cancelStart&&runStart>=0&&runEnd>runStart);
@@ -35,12 +36,12 @@ function fixture(payloadOverride={}){
     worldSelection:{name:'Kyoto',country:'Japan',countryCode:'JP',latitude:35.0116,longitude:135.7681},
     $:element,$$:()=>[{textContent:'Culture'}],
     fetch:()=>promise,
-    URLSearchParams,AbortController,AbortSignal,
+    URL,URLSearchParams,AbortController,AbortSignal,
     applyData:()=>{applied++;},
     toast:()=>{},esc:value=>String(value),
     document:{createElement:()=>({className:'',textContent:'',append(){}}),querySelectorAll:()=>[{textContent:'Culture'}]}
   });
-  vm.runInContext(script.slice(headerStart,headerEnd)+'\n'+script.slice(resetStart,cancelEnd)+'\n'+script.slice(runStart,runEnd),context,{timeout:1000});
+  vm.runInContext(script.slice(headerStart,headerEnd)+'\n'+script.slice(resetStart,cancelEnd)+'\n'+script.slice(sourceHelpersStart,runStart)+'\n'+script.slice(runStart,runEnd),context,{timeout:1000});
   const run=()=>vm.runInContext('runAgents()',context,{timeout:1000});
   const finish=async()=>{
     resolveNetwork({ok:true,json:async()=>({
