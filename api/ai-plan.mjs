@@ -1,6 +1,7 @@
 import { timingSafeEqual } from 'node:crypto';
 import { validateTrip } from '../planner.mjs';
 import {readBoundedText} from '../bounded-source-response.mjs';
+import {meteredProviderLocked,PRODUCTION_PROVIDER_LOCK_NOTE} from '../provider-production-lock.mjs';
 
 const MAX_BODY_BYTES = 12000;
 const MAX_RESPONSE_BYTES = 32000;
@@ -56,6 +57,9 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return reply(res, 405, { ok: false, error: 'Method not allowed.' });
+  }
+  if(meteredProviderLocked()){
+    return reply(res,503,{ok:false,error:PRODUCTION_PROVIDER_LOCK_NOTE});
   }
   if (process.env.WAYFARER_AI_ENABLED !== 'true') {
     return reply(res, 503, { ok: false, error: 'AI beta is not configured. The free local planner is still available.' });
