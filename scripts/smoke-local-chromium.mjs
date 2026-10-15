@@ -38,7 +38,7 @@ async function browserSocket(profile,proc){
 }
 async function connect(target){
  const socket=new WebSocket(target),pending=new Map();
- let sequence=0;
+ let sequence=0,runtimeErrors=0;
  await new Promise((resolve,reject)=>{
    const limit=setTimeout(()=>reject(Error('Chrome DevTools handshake timed out')),7000);
    socket.addEventListener('open',()=>{clearTimeout(limit);resolve()},{once:true});
@@ -46,6 +46,10 @@ async function connect(target){
  });
  socket.addEventListener('message',evt=>{
    let data;try{data=JSON.parse(evt.data)}catch{return;}
+   if(data.method==='Runtime.exceptionThrown'){
+     const source=String(data.params?.exceptionDetails?.url??'');
+     if(!source||source.includes('127.0.0.1'))runtimeErrors++;
+   }
    if(!pending.has(data.id))return;
    const task=pending.get(data.id);
    pending.delete(data.id);clearTimeout(task.timer);
@@ -59,7 +63,7 @@ async function connect(target){
    pending.set(id,{resolve,reject,timer,method});
    socket.send(JSON.stringify({id,method,params}));
  });
- return {call,close:()=>socket.close()};
+ return {call,close:()=>socket.close(),getRuntimeErrors:()=>runtimeErrors};
 }
 async function evalBrowser(call,expression){
  const data=await call('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});
@@ -117,17 +121,47 @@ export async function runSmoke(){
        ")?.classList.contains('active')",section+' view');
    }
    done.push('Actual click navigation Discover → Studio → Arrival → Trips');
-   await call('Emulation.setDeviceMetricsOverride',{
-     width:390,height:844,deviceScaleFactor:2,mobile:true
-   });
-   await sleep(250);
-   const size=await evalBrowser(call,
-     "({viewport:document.documentElement.clientWidth,content:document.documentElement.scrollWidth})");
-   requireTrue(size.content<=size.viewport+4,'390px viewport horizontal overflow');
-   requireTrue(await evalBrowser(call,
-     "Boolean(document.getElementById('main-content')&&document.querySelector('.nav-links'))"),
-     'Mobile navigation or main region not rendered');
-   done.push('390px mobile browser: primary navigation present and no horizontal overflow');
+   // Keyboard interaction must be native (real Enter via DevTools), not .click().
+   const keyNav=async section=>{
+     const focused=await evalBrowser(call,
+       "(()=>{const button=document.querySelector('.nav-links [data-view="+
+       JSON.stringify(section)+"]');if(!button)return false;button.focus();"+
+       "return document.activeElement===button})()");
+     requireTrue(focused,'Keyboard navigation target cannot receive focus: '+section);
+     await call('Input.dispatchKeyEvent',{
+       type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13
+     });
+     await call('Input.dispatchKeyEvent',{
+       type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13
+     });
+     await waitFor(call,
+       "document.getElementById("+JSON.stringify(section)+
+       ")?.classList.contains('active')===true",section+' keyboard navigation');
+     requireTrue(await evalBrowser(call,
+       "document.querySelector('.nav-links [data-view="+JSON.stringify(section)+
+       "]')?.getAttribute('aria-current')==='page'"),
+       'Current-page accessibility state missing for '+section);
+   };
+   await keyNav('studio');
+   await keyNav('discover');
+   done.push('Actual keyboard Enter navigation and aria-current state');
+   for(const width of [320,390,768,1024]){
+     await call('Emulation.setDeviceMetricsOverride',{
+       width,height:844,deviceScaleFactor:2,mobile:width<=768
+     });
+     await sleep(130);
+     const size=await evalBrowser(call,
+       "({viewport:document.documentElement.clientWidth,content:document.documentElement.scrollWidth})");
+     requireTrue(size.content<=size.viewport+4,
+       width+'px viewport horizontal overflow ('+size.content+' > '+size.viewport+')');
+     requireTrue(await evalBrowser(call,
+       "Boolean(document.getElementById('main-content')&&document.querySelector('.nav-links'))"),
+       width+'px viewport missing navigation or main region');
+   }
+   done.push('Responsive browser layouts: 320px, 390px, 768px and 1024px');
+   requireTrue(devtools.getRuntimeErrors()===0,
+     'Uncaught Wayfarer JavaScript error detected on homepage or navigation');
+   done.push('No uncaught local JavaScript exceptions on main journey');
    await call('Page.navigate',{url:base+'/data-and-privacy.html'});
    await waitFor(call,"document.readyState==='complete'&&!!document.getElementById('wf-data-open')",
      'browser data page');
@@ -152,6 +186,16 @@ export async function runSmoke(){
      requireTrue(passed===true,'Privacy UI failed: '+test);
    requireTrue(Object.keys(privacy??{}).length===4,'Privacy UI was not exercised');
    done.push('Real browser confirmation/cancel, deletion and unrelated-key retention');
+   const privacySemantics=await evalBrowser(call,
+     "Boolean(document.querySelector('a.skip[href=\\\"#main\\\"]')&&"+
+     "document.getElementById('main')&&"+
+     "document.getElementById('wf-data-open')?.tagName==='BUTTON'&&"+
+     "document.getElementById('wf-data-confirm')?.tagName==='BUTTON'&&"+
+     "document.getElementById('wf-data-cancel')?.tagName==='BUTTON')");
+   requireTrue(privacySemantics,'Privacy page skip-navigation or semantic controls missing');
+   requireTrue(devtools.getRuntimeErrors()===0,
+     'Uncaught local JavaScript error on privacy page');
+   done.push('Semantic privacy controls and no uncaught local JavaScript exceptions');
    return {status:'PASS',checks:done.length,results:done,
      browser:binary.split('/').at(-1),
      limits:'Offline Chrome with remote HTTPS blocked. No Vercel, external imagery, paid API, Firefox, Safari or screen-reader validation.'};
