@@ -13,7 +13,7 @@ test('release gate reports NO-GO while owner, browser, legal and security eviden
  assert.equal(report.releaseDecision,'NO_GO');
  assert.equal(report.productionAuthorization,false);
  assert.equal(report.automatic.passed,report.automatic.total,
-   'Version-controlled release checks must be green; manual gates stay separately blocked');
+   'Version-controlled release checks must be green: '+JSON.stringify(report.automatic.checks.filter(x=>!x.ok)));
  const blocked=report.manualGates.filter(x=>x.status==='BLOCKED').map(x=>x.id);
  for(const required of [
   'stacked-review-and-merge-plan','exact-sha-preview-browser-qa',
