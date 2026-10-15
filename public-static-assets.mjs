@@ -1,0 +1,47 @@
+/* Explicitly public browser assets for the *local* static preview server.
+ * Not a Vercel output manifest or permission for server-side source exposure.
+ * Keep this list aligned with assets referenced by index.html and the
+ * beta browser-data page; never glob the project root or expose api/*. */
+export const PUBLIC_STATIC_FILES=Object.freeze([
+  'index.html',
+  'data-and-privacy.html',
+  'favicon.svg',
+  'robots.txt',
+  'sitemap.xml',
+  'wayfarer-hero-v2.jpg',
+  'wayfarer-hero-v3.jpg',
+  'data.json',
+  'airports-index.json',
+  'country-atlas.json',
+  'premium-base.css',
+  'premium-motion.css',
+  'experience-layer.css',
+  'art-direction.css',
+  'arrival-journeys.css',
+  'legibility-system.css',
+  'wayfarer-product.css',
+  'travel-comparison.css',
+  'editorial-pages.css',
+  'country-atlas.css',
+  'splash-screen.css',
+  'clarity-polish.css',
+  'premium-refinement.css',
+  'browser-data.css',
+  'splash-screen.js',
+  'premium-motion.js',
+  'travel-research.js',
+  'experience-layer.js',
+  'art-direction.js',
+  'wayfarer-product.js',
+  'airline-offers.js',
+  'editorial-pages.js',
+  'country-atlas.js',
+  'journey-integrity.js',
+  'earth-globe.js',
+  'map-studio.js',
+  'destination-intelligence.js',
+  'nearby-results.js',
+  'premium-app.js',
+  'browser-data.js'
+]);
+export const PUBLIC_STATIC_SET=new Set(PUBLIC_STATIC_FILES);

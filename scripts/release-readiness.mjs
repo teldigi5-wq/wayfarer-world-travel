@@ -37,6 +37,13 @@ const checks=[
     read('provider-production-lock.mjs').includes("VERCEL_ENV==='production'")&&
     read('provider-production-lock.mjs').includes("VERCEL_TARGET_ENV==='production'"),
   evidence:'All six optional metered AI/travel paths include the shared fail-closed public Production gate; this is not a distributed spending quota.'},
+ {id:'local-http-asset-isolation',ok:
+    read('server.mjs').includes('PUBLIC_STATIC_SET.has(file)')&&
+    read('server.mjs').includes('createStaticServer')&&
+    read('public-static-assets.mjs').includes('PUBLIC_STATIC_FILES')&&
+    pkg.scripts['smoke:local']==='node --test tests/local-preview-http.test.mjs'&&
+    read('.github/workflows/checks.yml').includes('npm run smoke:local'),
+  evidence:'The local HTTP server uses an explicit client-asset allowlist and CI exercises real GET/HEAD/404 behavior; deployed Vercel output still requires inspection.'},
  {id:'no-billable-build-step',ok:pkg.scripts.build==='node scripts/build-airports.mjs'&&
     !/serpapi|groq|duffel|n8n/i.test(pkg.scripts.build),
   evidence:'Build command cannot initiate private paid-provider search.'},
@@ -47,7 +54,8 @@ const checks=[
 ];
 const manual=[
  {id:'stacked-review-and-merge-plan',status:'BLOCKED',reason:'Draft PR chain including #8 and #41–#49 has not been independently reviewed or approved for integration.'},
- {id:'exact-sha-preview-browser-qa',status:'BLOCKED',reason:'No exact-commit Stage 50 Vercel Preview or real mobile/desktop browser validation.'},
+ {id:'exact-sha-preview-browser-qa',status:'BLOCKED',reason:'No exact-commit candidate Vercel Preview or real mobile/desktop browser validation.'},
+ {id:'deployed-static-artifact-isolation',status:'BLOCKED',reason:'Local HTTP allowlist has not been proven to govern Vercel deployment assets; inspect actual deployed URLs for server code, private metadata and tests.'},
  {id:'history-secrets-and-environment',status:'BLOCKED',reason:'Full Git-history secret scan, Vercel environment scoping, and provider-console permissions not independently verified.'},
  {id:'privacy-terms-and-operator-identity',status:'BLOCKED',reason:'Public privacy notice, acceptable terms, legitimate contact/operator identity and legal review have not been approved.'},
  {id:'production-performance-and-accessibility',status:'BLOCKED',reason:'Real-browser keyboard, screen reader, low-end device and load/performance audits are not complete.'},
