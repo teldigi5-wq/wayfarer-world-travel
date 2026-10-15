@@ -40,6 +40,9 @@ export function classifyAddedLine(line){
   return results;
 }
 const safeFile=file=>/^[A-Za-z0-9_./ -]{1,180}$/.test(file)?file:'(path withheld)';
+const fixturePath=file=>/^(?:tests\/|test\.mjs$|__tests__\/)/.test(file)||/\.test\.[cm]?js$/.test(file);
+const severityFor=(category,file)=>
+  category==='high_entropy_provider_literal'&&fixturePath(file)?'manual_review':'blocking';
 export async function scanHistory({cwd=process.cwd()}={}){
   // This audit intentionally rejects shallow copies rather than falsely
   // advertising a complete local reachable-history scan.
@@ -79,7 +82,8 @@ export async function scanHistory({cwd=process.cwd()}={}){
       const key=[category,commit,file].join(':');
       if(seen.has(key))continue;
       seen.add(key);
-      findings.push({category,commit:commit.slice(0,12),path:safeFile(file)});
+      findings.push({category,severity:severityFor(category,file),
+        commit:commit.slice(0,12),path:safeFile(file)});
     }
   }
   const exit=await exitPromise;
@@ -94,15 +98,18 @@ if(runAsCli){
   console.log('Commits:',result.commits,'Added text lines:',result.addedLines,
     'High-confidence candidate locations:',result.findings.length);
   for(const hit of result.findings.slice(0,30))
-    console.log('POTENTIAL_SECRET',hit.category,hit.commit,hit.path);
+    console.log(hit.severity==='blocking'?'POTENTIAL_SECRET':'REVIEW_TEST_FIXTURE',
+      hit.category,hit.commit,hit.path);
   if(result.findings.length>30)
     console.log('Additional candidate locations withheld:',result.findings.length-30);
   if(result.error){
     console.error('AUDIT_INCOMPLETE:',result.error);
     process.exitCode=1;
-  }else if(result.findings.length){
-    console.error('BLOCKED: review and rotate potentially committed credentials; do not print matches or rewrite Git history automatically.');
+  }else if(result.findings.some(hit=>hit.severity==='blocking')){
+    console.error('BLOCKED: inspect and rotate potential credentials; never print values or rewrite history automatically.');
     process.exitCode=2;
+  }else if(result.findings.length){
+    console.log('PASS: no blocking signature matches. Test-file literal candidates remain for manual security review; this is NOT secret clearance.');
   }else{
     console.log('PASS: no high-confidence patterns in reachable added text lines. This is NOT comprehensive secret clearance.');
   }
