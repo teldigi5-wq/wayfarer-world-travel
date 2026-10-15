@@ -133,7 +133,7 @@ export async function runSmoke(){
      requireTrue(focused,'Keyboard navigation target cannot receive focus: '+section);
      await call('Input.dispatchKeyEvent',{
        type:'keyDown',key:'Enter',code:'Enter',
-       text:'\\r',unmodifiedText:'\\r',
+       text:'\r',unmodifiedText:'\r',
        windowsVirtualKeyCode:13,nativeVirtualKeyCode:13
      });
      await call('Input.dispatchKeyEvent',{
