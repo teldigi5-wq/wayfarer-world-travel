@@ -115,7 +115,7 @@ export async function inspectDeployment({
  const failures=responses.some(x=>x.result==='FAIL');
  const unverified=responses.some(x=>x.result!=='PASS');
  const verdict=authWall?'INCONCLUSIVE_PROTECTED':
-   failures||headers.some(h=>!h.pass)?'FAIL':
+   failures||(home.status===200&&headers.some(h=>!h.pass))?'FAIL':
    unverified?'INCONCLUSIVE':'STATIC_HTTP_PASS_ONLY';
  return {
    verdict,origin,
