@@ -1,4 +1,5 @@
 import {timingSafeEqual} from 'node:crypto';
+import {readBoundedText} from '../bounded-source-response.mjs';
 import {sealAirlineOffer,openAirlineOffer} from '../airline-offer-token.mjs';
 import {verifiedSegmentRoute} from '../flight-route-integrity.mjs';
 
@@ -65,12 +66,11 @@ async function callDuffel(method,path,key,body){
   const opts={method,headers:{Authorization:'Bearer '+key,
     'Duffel-Version':'v2','Accept':'application/json',
     ...(body?{'Content-Type':'application/json'}:{})},
-    signal:AbortSignal.timeout(SEARCH_TIMEOUT)};
+    signal:AbortSignal.timeout(SEARCH_TIMEOUT),redirect:'error'};
   if(body)opts.body=JSON.stringify({data:body});
   const response=await fetch(url,opts);
   if(response.status===429){const e=Error('quota');e.quota=true;throw e}
-  const raw=await response.text();
-  if(raw.length>RESPONSE_LIMIT)throw Error('Response too large');
+  const raw=await readBoundedText(response,RESPONSE_LIMIT);
   let json;try{json=JSON.parse(raw)}catch{throw Error('Malformed supplier response')}
   if(!response.ok){
     const str=JSON.stringify(json?.errors||[]);
