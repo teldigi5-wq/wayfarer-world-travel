@@ -33,7 +33,7 @@ function makeFetch({exposed=null,protect=false,noHeader=null,badMime=null,offlin
      target.pathname.endsWith('.json')?'application/json':'text/html';
    const values={
      ...headers,
-     'content-type':status===200?mime:'text/plain',
+     'content-type':status===200||status===206?mime:'text/plain',
    };
    if(noHeader||(publicGetHeaderMissing===target.pathname&&opts.method==='GET'))
      delete values[noHeader??'content-security-policy'];
