@@ -13,7 +13,7 @@ const headers={
 };
 const url='https://wayfarer-world-travel-git-smoke-teldigi5-wq.vercel.app/';
 const knownPaths=[...STATIC_POSITIVE_PATHS,...STATIC_DENIED_PATHS];
-function makeFetch({exposed=null,protect=false,noHeader=null,badMime=null,offline=false,headOnlyHidden=null,getOnlyHidden=null}={}){
+function makeFetch({exposed=null,protect=false,noHeader=null,badMime=null,offline=false,headOnlyHidden=null,getOnlyHidden=null,publicGetMissing=null,publicGetPartial=null,publicGetHeaderMissing=null}={}){
  const calls=[];
  const call=async(input,opts)=>{
    const target=new URL(input);
@@ -21,7 +21,9 @@ function makeFetch({exposed=null,protect=false,noHeader=null,badMime=null,offlin
      redirects:opts.redirect,credentials:opts.credentials,cache:opts.cache,headers:opts.headers});
    if(offline)throw Error('Synthetic network outage');
    const isPublic=STATIC_POSITIVE_PATHS.includes(target.pathname);
-   const status=protect?401:exposed===target.pathname?200:
+   const status=protect?401:publicGetMissing===target.pathname&&opts.method==='GET'?404:
+     publicGetPartial===target.pathname&&opts.method==='GET'?206:
+     exposed===target.pathname?200:
      headOnlyHidden===target.pathname&&opts.method==='GET'?200:
      getOnlyHidden===target.pathname&&opts.method==='HEAD'?200:
      isPublic?200:404;
@@ -33,7 +35,8 @@ function makeFetch({exposed=null,protect=false,noHeader=null,badMime=null,offlin
      ...headers,
      'content-type':status===200?mime:'text/plain',
    };
-   if(noHeader)delete values[noHeader];
+   if(noHeader||(publicGetHeaderMissing===target.pathname&&opts.method==='GET'))
+     delete values[noHeader??'content-security-policy'];
    return new Response(null,{status,headers:values});
  };
  return {call,calls};
@@ -68,16 +71,16 @@ test('good simulated static deployment yields only limited static HTTP result, n
  assert.equal(data.serverlessApiVerified,false);
  assert.equal(data.browserBehaviorVerified,false);
  assert.equal(data.productionApproval,false);
- assert.equal(f.calls.length,STATIC_POSITIVE_PATHS.length+STATIC_DENIED_PATHS.length*2);
+ assert.equal(f.calls.length,STATIC_POSITIVE_PATHS.length*2+STATIC_DENIED_PATHS.length*2);
  assert.deepEqual(f.calls.map(x=>x.path),[
-   ...STATIC_POSITIVE_PATHS,...STATIC_DENIED_PATHS.flatMap(x=>[x,x])
+   ...STATIC_POSITIVE_PATHS.flatMap(x=>[x,x]),...STATIC_DENIED_PATHS.flatMap(x=>[x,x])
  ]);
  assert.ok(f.calls.every(x=>['HEAD','GET'].includes(x.method)&&x.redirects==='error'&&
    x.credentials==='omit'&&x.cache==='no-store'&&
    (x.method==='HEAD'?!x.headers:x.headers.Range==='bytes=0-0')));
- assert.equal(f.calls.filter(x=>x.method==='GET').length,STATIC_DENIED_PATHS.length);
+ assert.equal(f.calls.filter(x=>x.method==='GET').length,STATIC_DENIED_PATHS.length+STATIC_POSITIVE_PATHS.length);
  assert.equal(data.deploymentOwnershipVerified,false);
- assert.equal(data.metadataHostnameMatched,true);
+ assert.equal(data.suppliedHostnameMatched,true);
  assert.ok(f.calls.every(x=>!x.path.startsWith('/api/')),
    'No AI, SerpApi, Duffel, booking or public source API endpoint gets called');
 });
@@ -155,4 +158,26 @@ test('all inspected source content remains unread even if GET headers indicate a
  assert.equal(result.deploymentOwnershipVerified,false);
  assert.equal(f.calls.some(x=>x.path.startsWith('/api/')),false);
  assert.doesNotMatch(JSON.stringify(result),/secret|credential.*value/i);
+});
+
+
+test('public files require working GET as well as HEAD',async()=>{
+ const f=makeFetch({publicGetMissing:'/premium-app.js'});
+ const result=await inspectDeployment({url,fetchFn:f.call,expectedHostname:new URL(url).hostname});
+ assert.equal(result.verdict,'FAIL');
+ assert.equal(result.probes.find(p=>p.path==='/premium-app.js'&&p.method==='HEAD').result,'PASS');
+ assert.equal(result.probes.find(p=>p.path==='/premium-app.js'&&p.method==='GET').result,'FAIL');
+ assert.equal(result.counts.staticPassed,result.counts.staticTotal-1);
+});
+test('bounded public GET may legitimately return partial-content 206 with expected MIME',async()=>{
+ const f=makeFetch({publicGetPartial:'/premium-app.js'});
+ const result=await inspectDeployment({url,fetchFn:f.call,expectedHostname:new URL(url).hostname});
+ assert.equal(result.verdict,'STATIC_HTTP_PASS_ONLY');
+ assert.equal(result.probes.find(p=>p.path==='/premium-app.js'&&p.method==='GET').status,206);
+});
+test('homepage GET cannot omit CSP even when HEAD presents good security headers',async()=>{
+ const f=makeFetch({publicGetHeaderMissing:'/'});
+ const result=await inspectDeployment({url,fetchFn:f.call,expectedHostname:new URL(url).hostname});
+ assert.equal(result.verdict,'FAIL');
+ assert.ok(result.headers.some(x=>x.id==='content-security-policy'&&!x.pass));
 });
