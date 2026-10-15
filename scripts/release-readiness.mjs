@@ -80,6 +80,13 @@ const checks=[
     read('tests/api-safe-input-gates.test.mjs').includes('globalThis.fetch=async()=>')&&
     read('tests/api-safe-input-gates.test.mjs').includes("res.code,expected"),
   evidence:'CI imports all eight real handlers and rejects unauthenticated, malformed and oversized accepted requests without provider calls; real deployed accepted-method flows are still unverified.'},
+ {id:'integrated-static-dependency-closure',ok:
+    pkg.scripts['audit:public-assets']==='node scripts/audit-public-asset-graph.mjs'&&
+    pkg.scripts['test:release-integration']==='node --test tests/release-integration-gates.test.mjs'&&
+    read('.github/workflows/checks.yml').includes('npm run audit:public-assets')&&
+    read('.github/workflows/checks.yml').includes('npm run test:release-integration')&&
+    pkg.scripts['audit:pr-stack']==='node scripts/audit-pr-stack.mjs',
+  evidence:'CI checks direct HTML/CSS/JS public dependencies and offline PR ancestry fixtures; live PR owner review, Vercel routing and browser QA are separate blockers.'},
  {id:'no-billable-build-step',ok:pkg.scripts.build==='node scripts/build-airports.mjs'&&
     !/serpapi|groq|duffel|n8n/i.test(pkg.scripts.build),
   evidence:'Build command cannot initiate private paid-provider search.'},
@@ -89,7 +96,7 @@ const checks=[
   evidence:'Airport reference data and private-beta scopes must not be misrepresented as live ticket inventory.'}
 ];
 const manual=[
- {id:'stacked-review-and-merge-plan',status:'BLOCKED',reason:'Draft PR chain including #8 and #41–#49 has not been independently reviewed or approved for integration.'},
+ {id:'stacked-review-and-merge-plan',status:'BLOCKED',reason:'Read-only GitHub inspection on October 15 found 51 open drafts (#8 and #11–#60), structurally consistent but 511 commits ahead of main at PR #60, touching 119 files. No code-owner/security approval or integration rehearsal.'},
  {id:'exact-sha-preview-browser-qa',status:'BLOCKED',reason:'No exact-commit candidate Vercel Preview or real mobile/desktop browser validation.'},
  {id:'deployed-api-function-routing',status:'BLOCKED',reason:'The eight API method guards pass local handler/fixture tests, but an exact-SHA Vercel Preview has not confirmed the deployed routes or real accepted-method behavior.'},
  {id:'deployed-static-artifact-isolation',status:'BLOCKED',reason:'Generated public/ static output passes source checks but actual Vercel function routing and deployed artifact exposure remain unverified; inspect exact-SHA Preview URLs and API endpoints.'},
