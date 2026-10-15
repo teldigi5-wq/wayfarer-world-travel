@@ -1,5 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
 import { validateTrip } from '../planner.mjs';
+import {readBoundedText} from '../bounded-source-response.mjs';
 
 const MAX_BODY_BYTES = 12000;
 const MAX_RESPONSE_BYTES = 32000;
@@ -92,7 +93,7 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Wayfarer-Secret': webhookAuth },
       body: JSON.stringify({ trip: input }),
-      signal: AbortSignal.timeout(25000)
+      signal: AbortSignal.timeout(25000),redirect:'error'
     });
     if (!upstream.ok) {
       return reply(res, upstream.status === 429 ? 429 : 502, {
@@ -100,8 +101,7 @@ export default async function handler(req, res) {
       });
     }
     if (Number(upstream.headers.get('content-length') || 0) > MAX_RESPONSE_BYTES) throw Error('oversize');
-    const responseText = await upstream.text();
-    if (Buffer.byteLength(responseText) > MAX_RESPONSE_BYTES) throw Error('oversize');
+    const responseText = await readBoundedText(upstream,MAX_RESPONSE_BYTES);
     const result = cleanResult(JSON.parse(responseText));
     if (!result) throw Error('malformed');
     return reply(res, 200, result);
