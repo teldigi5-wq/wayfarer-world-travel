@@ -4,7 +4,9 @@
  * require actual browser and Vercel Preview verification.
  */
 import {readFile} from 'node:fs/promises';
-import {PUBLIC_STATIC_FILES,PUBLIC_STATIC_SET} from '../public-static-assets.mjs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {PUBLIC_STATIC_FILES} from '../public-static-assets.mjs';
 
 function localReference(raw){
  if(typeof raw!=='string')return null;
@@ -16,7 +18,7 @@ function localReference(raw){
    !/^[a-zA-Z0-9_.-]+$/.test(value)||value.startsWith('.'))return null;
  // Only inspect actual file-like browser asset references, not routes or
  // arbitrary copy text. Root-relative /api always remains a serverless path.
- if(!/\.(?:html|js|css|json|svg|jpg|jpeg|png|webp|xml|txt)$/i.test(value))
+ if(!/\.(?:html|js|mjs|css|json|svg|jpg|jpeg|png|webp|xml|txt)$/i.test(value))
    return null;
  return value;
 }
@@ -40,7 +42,7 @@ export function directClientDependencies(filename,contents){
      add(m[1]);
    // Plain literal root file references used by catalog/image fallback
    // loaders (not every JS expression is statically discoverable).
-   for(const m of contents.matchAll(/["'`]((?:\.\/|\/)?[a-zA-Z0-9_.-]+\.(?:json|css|js|jpg|jpeg|png|webp|svg))(?:(?:\?[^"'`]*)?)["'`]/g))
+   for(const m of contents.matchAll(/["'`]((?:\.\/|\/)?[a-zA-Z0-9_.-]+\.(?:json|css|js|mjs|jpg|jpeg|png|webp|svg))(?:(?:\?[^"'`]*)?)["'`]/g))
      add(m[1]);
  }
  return [...refs].sort();
@@ -65,7 +67,7 @@ export async function auditPublicAssetGraph({read=async name=>
    missing,edges,
    limitation:'Direct literal HTML/CSS/JS local references only; computed URLs, Vercel API packaging, browser execution and external CDNs need separate checks.'};
 }
-if(process.argv[1]&&new URL('file://'+process.argv[1]).pathname===new URL(import.meta.url).pathname){
+if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const report=await auditPublicAssetGraph();
  console.log(JSON.stringify({ok:report.ok,manifestFiles:report.manifestFiles,
   inspectedFiles:report.inspectedFiles,edgeCount:report.edgeCount,missing:report.missing,
