@@ -43,6 +43,7 @@ test('a broken static import or linked image fails the generated browser asset c
  const result=await auditPublicAssetGraph({files,read:async file=>fake[file]});
  assert.equal(result.ok,false);
  assert.ok(result.missing.some(x=>x.asset==='missing-cover.webp'));
+ assert.ok(result.missing.some(x=>x.asset==='secret-server.mjs'));
 });
 test('single correctly linked draft PR chain is structurally consistent but never authorized to merge',()=>{
  const stack=createStack(5);
