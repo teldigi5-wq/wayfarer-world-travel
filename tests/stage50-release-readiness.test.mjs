@@ -33,7 +33,7 @@ test('branded favicon, OG image, canonical, description and semantic title use r
  const html=read('index.html');
  assert.match(html,/<title>Wayfarer — Travel, composed around you<\/title>/);
  assert.match(html,/<meta name="description" content="Wayfarer/);
- assert.match(html,/<link rel="icon" type="image\/svg\+xml" href="\/favicon.svg"/);
+ assert.match(html,/<link rel="icon" type="image\/svg\+xml" href="favicon.svg"/);
  assert.match(html,/<link rel="canonical" href="https:\/\/wayfarer-world-travel\.vercel\.app\/"/);
  assert.match(html,/<meta property="og:image" content="https:\/\/wayfarer-world-travel\.vercel\.app\/wayfarer-hero-v3\.jpg"/);
  assert.match(html,/<meta property="og:description" content="[^"]*No guaranteed flight or hotel inventory/);
