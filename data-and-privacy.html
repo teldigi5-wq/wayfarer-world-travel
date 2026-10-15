@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#102c28">
+<meta name="robots" content="noindex,follow">
+<meta name="description" content="Wayfarer beta browser data controls and source transparency.">
+<title>Browser data &amp; privacy | Wayfarer</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="stylesheet" href="browser-data.css">
+<script src="browser-data.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to details</a>
+<header class="mast">
+<a class="brand" href="index.html" aria-label="Wayfarer homepage"><span aria-hidden="true">✦</span> wayfarer.</a>
+<a class="back" href="index.html">Return to Wayfarer ↗</a>
+</header>
+<main id="main">
+<section class="opening">
+<span class="eyebrow">WAYFARER / DATA TRANSPARENCY</span>
+<h1>Your journeys.<br><em>Your device.</em></h1>
+<p class="intro">An explanation of the travel-planning data stored in this browser and the external services used when you choose to request research.</p>
+<p class="notice"><strong>Beta information, not finalized legal terms.</strong> Operator identity, a support contact, region-specific privacy rights, retention practices for server/provider requests and legal notices require verification and approval before commercial launch.</p>
+</section>
+<div class="content">
+<section aria-labelledby="stored">
+<span class="eyebrow">01 / ON THIS DEVICE</span>
+<h2 id="stored">What is saved locally</h2>
+<p>Wayfarer stores saved trip preferences and day-by-day itinerary drafts under <code>wf-trips-v2</code>, and arrival checklist progress under <code>wf-checks-v2</code>. This information stays in the current browser profile unless you export or share it yourself. It is <strong>not encrypted, account-synced or confidential from other scripts on the same website</strong>. Other people sharing this browser profile may be able to see it.</p>
+<p>A local itinerary is a planning draft, not evidence of a booking, confirmed transport, live price or entry permission. Avoid entering passport numbers, payment details, private identity numbers or medical information into the planner.</p>
+</section>
+<section aria-labelledby="shared">
+<span class="eyebrow">02 / WHEN YOU REQUEST RESEARCH</span>
+<h2 id="shared">Information that leaves this browser</h2>
+<p>When you request worldwide destinations, hotel/airport references, an AI journey or supplier travel research, your destination, related geographic coordinates or entered trip criteria may be sent to Wayfarer's server and then to relevant data providers. AI and paid supplier features are separately credential-gated and may be unavailable. Results can be incomplete, cached or outdated; they are not verified inventory.</p>
+<p>Opening the map or photographic Earth can contact OpenStreetMap, NASA or a public image mirror. Following links to airlines, travel sites, Wikipedia, Google or other providers opens their websites, which have their own privacy practices. We do not represent third-party services as operated by Wayfarer.</p>
+</section>
+<section aria-labelledby="control" class="control">
+<span class="eyebrow">03 / YOUR CONTROL</span>
+<h2 id="control">Clear saved Wayfarer drafts</h2>
+<p>This deletes <strong>only</strong> the two Wayfarer trip/checklist keys listed above in this browser profile. It does not delete other websites' data, other tabs' already loaded in-memory copies, any exported files, third-party provider records or server-side logs. Close or reload any other Wayfarer tabs afterward.</p>
+<div class="actions">
+<button type="button" id="wf-data-open">Delete saved journeys and checklists</button>
+<a href="index.html">Keep my data · Back to Wayfarer</a>
+</div>
+<div id="wf-data-confirmation" class="confirmation" hidden>
+<p><strong>Confirm local deletion</strong> — saved drafts and checklist progress in this browser will be removed. This cannot be undone here.</p>
+<div class="actions">
+<button type="button" id="wf-data-confirm">Yes, delete both local records</button>
+<button type="button" class="subtle" id="wf-data-cancel">Cancel</button>
+</div>
+</div>
+<p class="feedback" id="wf-data-result" role="status" aria-live="polite">No deletion has been requested.</p>
+</section>
+<section aria-labelledby="more">
+<span class="eyebrow">04 / IMPORTANT LIMITS</span>
+<h2 id="more">Before you travel</h2>
+<p>Always confirm passports, visas, entry rules, official advisories, opening hours, airline schedules and final hotel prices directly with authoritative providers. A successful Wayfarer research result does not create a ticket or hotel reservation.</p>
+<p>Formal privacy/terms, verified operator contact information and any rights-request process are <strong>outstanding launch requirements</strong>. This page is a transparency feature for the development beta, not a claim that those requirements are complete.</p>
+</section>
+</div>
+</main>
+<footer><span>WAYFARER · SOURCE-LED TRAVEL RESEARCH</span><a href="index.html">Back to the journey</a><span>Research beta · No paid booking checkout</span></footer>
+</body>
+</html>
