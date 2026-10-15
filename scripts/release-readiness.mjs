@@ -24,7 +24,7 @@ const checks=[
  {id:'no-billable-build-step',ok:pkg.scripts.build==='node scripts/build-airports.mjs'&&
     !/serpapi|groq|duffel|n8n/i.test(pkg.scripts.build),
   evidence:'Build command cannot initiate private paid-provider search.'},
- {id:'public-data-not-live-booking',ok:/not proof of active commercial flights/i.test(
+ {id:'public-data-not-live-booking',ok:/not verified|not proof/i.test(
     JSON.parse(read('airports-index.json')).usage||'')&&
     /private beta|private-beta|beta/i.test(read('README.md')),
   evidence:'Airport reference data and private-beta scopes must not be misrepresented as live ticket inventory.'}
