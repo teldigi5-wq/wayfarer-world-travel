@@ -27,6 +27,17 @@ Connected GitHub metadata confirmed the repository is **public**, has `main` as 
 - The `Checks` GitHub Actions workflow adds a separate `credential-history-pattern-audit` job for **pull requests only**. It checks out full Git history using `fetch-depth: 0`, with persisted GitHub credentials disabled, then runs `npm run security:history`. Normal push checks stay lightweight. The principal build/test workflow remains separate.
 - Unit tests create isolated temporary Git repositories to ensure a deleted-from-HEAD synthetic token is found in an earlier commit, scans redact token bytes, clean history passes, incomplete or shallow history fails closed, and known placeholder assignments do not masquerade as verified incidents.
 
+### First actual PR scan — redacted evidence
+
+On reviewed commit `ff21086de01f75461f4c57c60ca1bedc51506ea9`, GitHub [PR workflow #38687626569](https://github.com/teldigi5-wq/wayfarer-world-travel/actions/runs/38687626569) completed **SUCCESS** with both CI jobs passing:
+
+- **553 reachable commits** and **30,727 added textual diff lines** examined from the full-fetch GitHub Actions checkout;
+- **zero blocking signature matches** in the supported high-confidence detectors;
+- **five high-entropy provider-variable assignments found in historical test files**, preserved as `REVIEW_TEST_FIXTURE` entries without disclosing credential values. They occurred in `tests/production-metered-provider-lock.test.mjs`, `tests/security-response-bounds.test.mjs`, `tests/agent-trip-isolation.test.mjs`, `test.mjs`, and `tests/worldwide-pricing-flight-times.test.mjs`. **Their status as synthetic fixtures has not been independently attested**, so they remain manual-review candidates. Any recognizable credential-shaped literal or high-entropy provider assignment in non-test source continues to **fail CI**.
+- Functional/build CI at the same SHA reported **345 passed, 0 failed**.
+
+This is a historical point-in-time audit. Later branch changes require new exact-SHA checks. The test-file candidates and broader platform/provider credential audit **remain open**, even when this signature scan is green.
+
 ### Explicit limitations
 
 **Not a comprehensive secret clearance.** The scan covers **reachable textual diff additions in refs fetched into the GitHub Actions checkout**, not orphan/unreachable objects, all deleted remote refs, binary archives, encoded/encrypted secrets, low-confidence unknown credential formats, external provider stores, Vercel runtime variables or GitHub Actions settings. Even a green pattern scan must **not** turn the Stage 50 combined `history-secrets-and-environment` manual gate green on its own.
