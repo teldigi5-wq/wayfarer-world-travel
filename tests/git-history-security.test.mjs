@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';
+import {mkdtempSync,writeFileSync,rmSync,mkdirSync} from 'node:fs';
 import {tmpdir} from 'node:os';
-import {join} from 'node:path';
+import {join,dirname} from 'node:path';
 import {execFileSync,spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {classifyAddedLine,scanHistory} from '../scripts/audit-git-history.mjs';
@@ -15,6 +15,7 @@ function repository(){
  git(cwd,'config','user.email','security-test@example.invalid');
  git(cwd,'config','user.name','Wayfarer Security Fixture');
  return {cwd,commit(name,content){
+   mkdirSync(join(cwd,dirname(name)),{recursive:true});
    writeFileSync(join(cwd,name),content);
    git(cwd,'add',name);
    git(cwd,'commit','-qm','fixture commit');
@@ -48,6 +49,30 @@ test('reachable history detects a deleted credential in an earlier commit, with 
    assert.equal(report.status,2,'Any high-confidence credential should fail the audit');
    assert.match(report.stdout,/POTENTIAL_SECRET github_classic/);
    assert.doesNotMatch(report.stdout+report.stderr,new RegExp(fake));
+ }finally{f.clean();}
+});
+test('high-entropy fixture assignments remain visible for manual review; the same assignment in app source is blocking',async()=>{
+ const f=repository();
+ const synthetic=['p9Ab','C8dE','f7Gh','I6jK','l5Mn','O4pQ','r3St','U2vW','x1Yz'].join('');
+ try{
+   f.commit('tests/sample.test.mjs','SERPAPI_API_KEY="'+synthetic+'"\\n');
+   const first=await scanHistory({cwd:f.cwd});
+   assert.equal(first.error,null);
+   assert.equal(first.findings.length,1);
+   assert.equal(first.findings[0].category,'high_entropy_provider_literal');
+   assert.equal(first.findings[0].severity,'manual_review');
+   const review=spawnSync(process.execPath,[script],{cwd:f.cwd,encoding:'utf8',timeout:30000});
+   assert.equal(review.status,0,'Test fixtures do not masquerade as confirmed credential incidents');
+   assert.match(review.stdout,/REVIEW_TEST_FIXTURE high_entropy_provider_literal/);
+   assert.doesNotMatch(review.stdout+review.stderr,new RegExp(synthetic));
+   f.commit('src/config.mjs','SERPAPI_API_KEY="'+synthetic+'"\\n');
+   const second=await scanHistory({cwd:f.cwd});
+   assert.ok(second.findings.some(x=>x.severity==='blocking'&&x.path==='src/config.mjs'));
+   assert.ok(second.findings.some(x=>x.severity==='manual_review'&&x.path==='tests/sample.test.mjs'));
+   const denied=spawnSync(process.execPath,[script],{cwd:f.cwd,encoding:'utf8',timeout:30000});
+   assert.equal(denied.status,2);
+   assert.match(denied.stdout,/POTENTIAL_SECRET high_entropy_provider_literal/);
+   assert.doesNotMatch(denied.stdout+denied.stderr,new RegExp(synthetic));
  }finally{f.clean();}
 });
 test('clean history passes and empty checkout cannot masquerade as inspected',async()=>{
