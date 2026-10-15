@@ -26,8 +26,8 @@ test('configured Vercel output is only the generated reviewed public folder; API
   }
   const pkg=JSON.parse(await rootRead('package.json'));
   assert.equal(pkg.scripts.build,'node scripts/build-airports.mjs');
-  assert.match(await rootRead('scripts/build-airports.mjs'),/await stagePublicAssets\(\)/);
-  assert.match(await rootRead('.gitignore'),/^public\/$/m);
+  assert.match((await rootRead('scripts/build-airports.mjs')).toString(),/await stagePublicAssets\(\)/);
+  assert.match((await rootRead('.gitignore')).toString(),/^public\/$/m);
 });
 
 test('public output exactly matches the reviewed manifest with identical file bytes',async()=>{
