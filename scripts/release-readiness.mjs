@@ -1,10 +1,12 @@
 /* Stage 50 release readiness: offline evidence gate, not an authorization to deploy.
    The manual gates never silently turn green from passing unit tests. */
-import {readFileSync,statSync} from 'node:fs';
+import {readFileSync,statSync,readdirSync} from 'node:fs';
+import {PUBLIC_STATIC_FILES,PUBLIC_STATIC_SET} from '../public-static-assets.mjs';
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const config=JSON.parse(read('vercel.json'));
 const html=read('index.html'),pkg=JSON.parse(read('package.json'));
 const header=key=>config.headers.find(x=>x.source==='/(.*)')?.headers.find(x=>x.key===key)?.value||'';
+const stagedNames=(()=>{try{return readdirSync(new URL('../public/',import.meta.url));}catch{return [];}})();
 const checks=[
  {id:'offline-build',ok:!/(?:fetch\s*\(|execFile\s*\(|https\.request\s*\()/.test(read('scripts/build-airports.mjs')),
   evidence:'The Vercel build only reads the checked-in airport reference; the daily refresh remains separately reviewed.'},
@@ -44,6 +46,16 @@ const checks=[
     pkg.scripts['smoke:local']==='node --test tests/local-preview-http.test.mjs'&&
     read('.github/workflows/checks.yml').includes('npm run smoke:local'),
   evidence:'The local HTTP server uses an explicit client-asset allowlist and CI exercises real GET/HEAD/404 behavior; deployed Vercel output still requires inspection.'},
+ {id:'vercel-allowlisted-static-output',ok:
+    config.outputDirectory==='public'&&
+    PUBLIC_STATIC_FILES.length===PUBLIC_STATIC_SET.size&&
+    stagedNames.length===PUBLIC_STATIC_FILES.length&&
+    stagedNames.every(name=>PUBLIC_STATIC_SET.has(name))&&
+    !stagedNames.some(name=>name.endsWith('.mjs')||
+      /^(?:vercel\.json|package\.json|server\.mjs|\.env)$/.test(name))&&
+    read('scripts/build-airports.mjs').includes('await stagePublicAssets()')&&
+    read('.gitignore').includes('public/'),
+  evidence:'Vercel static output points to clean generated public/ with only reviewed browser assets; the root API function packaging still requires exact-SHA Preview verification.'},
  {id:'no-billable-build-step',ok:pkg.scripts.build==='node scripts/build-airports.mjs'&&
     !/serpapi|groq|duffel|n8n/i.test(pkg.scripts.build),
   evidence:'Build command cannot initiate private paid-provider search.'},
@@ -55,7 +67,7 @@ const checks=[
 const manual=[
  {id:'stacked-review-and-merge-plan',status:'BLOCKED',reason:'Draft PR chain including #8 and #41–#49 has not been independently reviewed or approved for integration.'},
  {id:'exact-sha-preview-browser-qa',status:'BLOCKED',reason:'No exact-commit candidate Vercel Preview or real mobile/desktop browser validation.'},
- {id:'deployed-static-artifact-isolation',status:'BLOCKED',reason:'Local HTTP allowlist has not been proven to govern Vercel deployment assets; inspect actual deployed URLs for server code, private metadata and tests.'},
+ {id:'deployed-static-artifact-isolation',status:'BLOCKED',reason:'Generated public/ static output passes source checks but actual Vercel function routing and deployed artifact exposure remain unverified; inspect exact-SHA Preview URLs and API endpoints.'},
  {id:'history-secrets-and-environment',status:'BLOCKED',reason:'Full Git-history secret scan, Vercel environment scoping, and provider-console permissions not independently verified.'},
  {id:'privacy-terms-and-operator-identity',status:'BLOCKED',reason:'Public privacy notice, acceptable terms, legitimate contact/operator identity and legal review have not been approved.'},
  {id:'production-performance-and-accessibility',status:'BLOCKED',reason:'Real-browser keyboard, screen reader, low-end device and load/performance audits are not complete.'},
