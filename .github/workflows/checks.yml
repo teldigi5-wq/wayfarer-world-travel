@@ -50,3 +50,20 @@ jobs:
           node-version: '24'
       - name: Audit reachable Git history without printing credential values
         run: npm run security:history
+
+  browser-smoke:
+    if: github.event_name == 'pull_request'
+    name: offline-real-chromium-journey-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Prepare local static site with approved public assets
+        run: npm run build
+      - name: Execute real offline Chrome browser journey at desktop and mobile sizes
+        run: npm run smoke:browser

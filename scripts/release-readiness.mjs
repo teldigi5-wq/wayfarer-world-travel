@@ -87,6 +87,14 @@ const checks=[
     read('.github/workflows/checks.yml').includes('npm run test:release-integration')&&
     pkg.scripts['audit:pr-stack']==='node scripts/audit-pr-stack.mjs',
   evidence:'CI checks direct HTML/CSS/JS public dependencies and offline PR ancestry fixtures; live PR owner review, Vercel routing and browser QA are separate blockers.'},
+ {id:'offline-real-chromium-smoke',ok:
+    pkg.scripts['smoke:browser']==='node scripts/smoke-local-chromium.mjs'&&
+    read('.github/workflows/checks.yml').includes('offline-real-chromium-journey-smoke')&&
+    read('.github/workflows/checks.yml').includes('npm run smoke:browser')&&
+    read('scripts/smoke-local-chromium.mjs').includes("Network.setBlockedURLs")&&
+    read('scripts/smoke-local-chromium.mjs').includes('Emulation.setDeviceMetricsOverride')&&
+    read('scripts/smoke-local-chromium.mjs').includes("wf-data-confirm"),
+  evidence:'A PR-only real Chromium job exercises offline desktop/mobile navigation and browser-data controls. Exact-head CI and real Vercel, Safari/Firefox, maps, accessibility and provider QA remain separate.'},
  {id:'no-billable-build-step',ok:pkg.scripts.build==='node scripts/build-airports.mjs'&&
     !/serpapi|groq|duffel|n8n/i.test(pkg.scripts.build),
   evidence:'Build command cannot initiate private paid-provider search.'},
