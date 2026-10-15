@@ -14,7 +14,8 @@
     "verify:deployment": "node scripts/verify-vercel-static.mjs",
     "test:deployment-verifier": "node --test tests/deployed-http-verification.test.mjs",
     "verify:api-routing": "node scripts/verify-vercel-api-routes.mjs",
-    "test:api-method-gates": "node --test tests/api-method-routing.test.mjs"
+    "test:api-method-gates": "node --test tests/api-method-routing.test.mjs",
+    "test:api-safe-inputs": "node --test tests/api-safe-input-gates.test.mjs"
   },
   "engines": {
     "node": "24.x"

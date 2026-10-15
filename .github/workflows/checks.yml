@@ -25,6 +25,8 @@ jobs:
         run: npm run test:deployment-verifier
       - name: Verify eight API rejection guards without calling any providers
         run: npm run test:api-method-gates
+      - name: Verify safe accepted-method input and authentication gates
+        run: npm run test:api-safe-inputs
       - run: npm test
       - name: Report release blockers without deploying
         run: npm run release:report
