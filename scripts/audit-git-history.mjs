@@ -20,17 +20,21 @@ const PATTERNS=[
   ['gitlab_token',/\bglpat-[A-Za-z0-9_-]{20,}\b/],
   ['private_key_pem',/-----BEGIN (?:(?:RSA|EC|DSA|OPENSSH|PGP) )?PRIVATE KEY(?: BLOCK)?-----/]
 ];
-const ASSIGNMENT=/\b(?:SERPAPI_API_KEY|GROQ_API_KEY|DUFFEL_ACCESS_TOKEN|N8N_WEBHOOK_AUTH|WAYFARER_AI_BETA_TOKEN|AWS_SECRET_ACCESS_KEY)\s*[:=]\s*['"]([A-Za-z0-9_/+=.-]{28,})['"]/;
+const ASSIGNMENT=/\b(?:SERPAPI_API_KEY|GROQ_API_KEY|DUFFEL_ACCESS_TOKEN|N8N_WEBHOOK_AUTH|WAYFARER_AI_BETA_TOKEN|AWS_SECRET_ACCESS_KEY)\s*[:=]\s*['"]([A-Za-z0-9_/+=.-]{28,})['"]/g;
 const BLOCK_WORDS=/placeholder|example|not[_-]?real|test[_-]?only|dummy|fixture|fake|change[_-]?me|your[_-]?(?:api|secret|key)/i;
 function likelyLiteralSecret(text){
-  const matched=ASSIGNMENT.exec(text);
-  if(!matched||BLOCK_WORDS.test(matched[1]))return false;
-  const s=matched[1],counts=new Map();
-  for(const char of s)counts.set(char,(counts.get(char)||0)+1);
-  const bits=[...counts.values()].reduce((sum,n)=>{
-    const p=n/s.length;return sum-p*Math.log2(p);
-  },0);
-  return bits>=3.7;
+  // One minified/fixture line may set several environment variables. Scan
+  // every assignment so a benign first value cannot hide a later secret.
+  for(const matched of text.matchAll(ASSIGNMENT)){
+    if(BLOCK_WORDS.test(matched[1]))continue;
+    const s=matched[1],counts=new Map();
+    for(const char of s)counts.set(char,(counts.get(char)||0)+1);
+    const bits=[...counts.values()].reduce((sum,n)=>{
+      const p=n/s.length;return sum-p*Math.log2(p);
+    },0);
+    if(bits>=3.7)return true;
+  }
+  return false;
 }
 export function classifyAddedLine(line){
   if(typeof line!=='string'||!line.startsWith('+')||line.startsWith('+++'))return [];
