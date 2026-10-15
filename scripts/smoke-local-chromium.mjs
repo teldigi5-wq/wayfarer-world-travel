@@ -129,10 +129,16 @@ export async function runSmoke(){
        "return document.activeElement===button})()");
      requireTrue(focused,'Keyboard navigation target cannot receive focus: '+section);
      await call('Input.dispatchKeyEvent',{
-       type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13
+       type:'rawKeyDown',key:'Enter',code:'Enter',
+       windowsVirtualKeyCode:13,nativeVirtualKeyCode:13
      });
      await call('Input.dispatchKeyEvent',{
-       type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13
+       type:'char',key:'Enter',code:'Enter',text:'\\r',
+       unmodifiedText:'\\r',windowsVirtualKeyCode:13
+     });
+     await call('Input.dispatchKeyEvent',{
+       type:'keyUp',key:'Enter',code:'Enter',
+       windowsVirtualKeyCode:13,nativeVirtualKeyCode:13
      });
      await waitFor(call,
        "document.getElementById("+JSON.stringify(section)+
