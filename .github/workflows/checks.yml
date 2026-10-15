@@ -21,6 +21,8 @@ jobs:
       - run: npm run check
       - name: Verify local HTTP public-asset isolation and security headers
         run: npm run smoke:local
+      - name: Test read-only Vercel deployment inspector without remote calls
+        run: npm run test:deployment-verifier
       - run: npm test
       - name: Report release blockers without deploying
         run: npm run release:report
