@@ -106,7 +106,7 @@ test('missing security headers or incorrect content type fails while preserving 
 });
 test('outage or redirect rejection is reported inconclusively, never treated as a passed exposure check',async()=>{
  const data=await inspectDeployment({url,fetchFn:makeFetch({offline:true}).call,expectedHostname:new URL(url).hostname});
- assert.equal(data.verdict,'FAIL');
+ assert.equal(data.verdict,'INCONCLUSIVE');
  assert.ok(data.probes.every(x=>x.result==='INCONCLUSIVE_NETWORK'));
  assert.equal(data.counts.staticPassed,0);
  assert.equal(data.counts.privateDenied,0);
