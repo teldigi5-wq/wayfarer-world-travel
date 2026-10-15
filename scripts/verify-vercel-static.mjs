@@ -78,8 +78,9 @@ async function probe(origin,pathname,mime,kind,method,fetchFn){
    response=await fetchFn(origin+pathname,options);
    const status=response.status;
    const type=(response.headers?.get('content-type')??'').toLowerCase();
+   const publicStatus=method==='GET'?(status===200||status===206):status===200;
    const result=kind==='private'?denial(status):
-     status===200&&type.includes(mime)?'PASS':
+     publicStatus&&type.includes(mime)?'PASS':
      status===401||status===403?'INCONCLUSIVE':'FAIL';
    const headers=pathname==='/'?Object.fromEntries(
      [...new Set(headerRules.map(([key])=>key))].map(key=>[
@@ -101,26 +102,30 @@ export async function inspectDeployment({
    if(pathname!=='/'&&!PUBLIC_STATIC_SET.has(sourceFile??pathname.slice(1)))
      throw Error('Static inspection path is not in reviewed public manifest: '+pathname);
    responses.push(await probe(origin,pathname,mime,'public','HEAD',fetchFn));
+   responses.push(await probe(origin,pathname,mime,'public','GET',fetchFn));
  }
  for(const pathname of denied){
    responses.push(await probe(origin,pathname,null,'private','HEAD',fetchFn));
    responses.push(await probe(origin,pathname,null,'private','GET',fetchFn));
  }
- const home=responses[0];
+ const home=responses[0],homeGet=responses[1];
  const headers=headerRules.map(([key,re],i)=>({
-   id:key+(i===1?'-frame-ancestors':''),pass:re.test(home.headers?.[key]??'')
+   id:key+(i===1?'-frame-ancestors':''),
+   pass:re.test(home.headers?.[key]??'')&&re.test(homeGet.headers?.[key]??'')
  }));
  const statuses=responses.filter(x=>x.status!==401&&x.status!==403);
  const authWall=statuses.length===0;
  const failures=responses.some(x=>x.result==='FAIL');
  const unverified=responses.some(x=>x.result!=='PASS');
  const verdict=authWall?'INCONCLUSIVE_PROTECTED':
-   failures||(home.status===200&&headers.some(h=>!h.pass))?'FAIL':
+   failures||((home.status===200||homeGet.status===200||homeGet.status===206)&&
+     headers.some(h=>!h.pass))?'FAIL':
    unverified?'INCONCLUSIVE':'STATIC_HTTP_PASS_ONLY';
  return {
    verdict,origin,
    counts:{
-     staticPassed:responses.filter(x=>x.kind==='public'&&x.result==='PASS').length,
+     staticPassed:positive.filter(([p])=>responses.filter(r=>r.path===p).every(
+       x=>x.result==='PASS')).length,
      staticTotal:positive.length,
      privateDenied:denied.filter(p=>responses.filter(r=>r.path===p).every(
        x=>x.result==='PASS')).length,
@@ -130,7 +135,7 @@ export async function inspectDeployment({
    },
    probes:responses.map(({path,kind,method,status,result})=>({path,kind,method,status,result})),
    headers:headers.map(({id,pass})=>({id,pass})),
-   metadataHostnameMatched:Boolean(expectedHostname),
+   suppliedHostnameMatched:Boolean(expectedHostname),
    deploymentOwnershipVerified:false,
    exactCommitVerified:false,serverlessApiVerified:false,
    browserBehaviorVerified:false,productionApproval:false,
