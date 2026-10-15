@@ -1,6 +1,7 @@
 import test,{before,after} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,statSync} from 'node:fs';
+import {execFileSync} from 'node:child_process';
 import {createStaticServer} from '../server.mjs';
 import {PUBLIC_STATIC_FILES,PUBLIC_STATIC_SET} from '../public-static-assets.mjs';
 
@@ -148,4 +149,19 @@ test('local static preview does not impersonate real Vercel serverless APIs',asy
   const status=await request('/data-and-privacy.html');
   assert.equal(status.status,200);
   assert.match(await status.text(),/Beta information, not finalized legal terms/);
+});
+
+test('release report treats the local runtime guard as tested but Vercel asset exposure as an unresolved gate',()=>{
+  const raw=execFileSync(process.execPath,[
+    new URL('../scripts/release-readiness.mjs',import.meta.url).pathname,'--json'
+  ],{encoding:'utf8',timeout:10000});
+  const report=JSON.parse(raw);
+  assert.equal(report.releaseDecision,'NO_GO');
+  assert.equal(report.productionAuthorization,false);
+  const local=report.automatic.checks.find(x=>x.id==='local-http-asset-isolation');
+  assert.equal(local?.ok,true,'Local HTTP isolation must be checked in release source gate');
+  assert.match(local.evidence,/deployed Vercel output still requires inspection/i);
+  const actual=report.manualGates.find(x=>x.id==='deployed-static-artifact-isolation');
+  assert.equal(actual?.status,'BLOCKED','Real Vercel source visibility is not certified by local tests');
+  assert.ok(report.manualGates.some(x=>x.id==='exact-sha-preview-browser-qa'&&x.status==='BLOCKED'));
 });
