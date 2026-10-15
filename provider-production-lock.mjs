@@ -7,6 +7,8 @@
 export function meteredProviderLocked(env=process.env){
   return env?.VERCEL_ENV==='production' ||
     env?.VERCEL_TARGET_ENV==='production' ||
+    // Vercel without a known target is not proof of a safe private preview.
+    (env?.VERCEL==='1'&&!['preview','development'].includes(env?.VERCEL_ENV)) ||
     env?.WAYFARER_DISABLE_METERED_PROVIDERS==='true';
 }
 
