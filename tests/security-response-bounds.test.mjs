@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
 import {readBoundedText} from '../bounded-source-response.mjs';
 import {getJson} from '../agent-runtime.mjs';
 import handler from '../api/ai-plan.mjs';
@@ -108,6 +109,33 @@ test('configured paid and secret-bearing upstream calls always disable auto-foll
    assert.match(code,/redirect:'error'/,path+' lacks fail-closed redirect protection');
    assert.match(code,/readBoundedText\(/,path+' lacks bounded source reading');
  }
+});
+test('source-link renderer rejects javascript, phishing and credential-laden URL inputs',()=>{
+ const source=readFileSync(new URL('../premium-app.js',import.meta.url),'utf8');
+ const begin=source.indexOf('const allowedResearchUrl='),end=source.indexOf('async function runAgents(){',begin);
+ assert.ok(begin>0&&end>begin);
+ const ctx=vm.createContext({URL,esc:val=>String(val).replaceAll('"','&quot;')});
+ vm.runInContext(source.slice(begin,end),ctx,{timeout:1000});
+ const link=(href,host)=>vm.runInContext(
+   'sourceLink('+JSON.stringify(href)+','+JSON.stringify(host)+',"Reference")',ctx);
+ for(const value of [
+  'javascript:alert(1)',
+  'data:text/html,<script>alert(1)</script>',
+  'https://restcountries.com.evil.example/steal',
+  'http://restcountries.com/',
+  'https://user:password@restcountries.com/v3.1/all',
+  '//restcountries.com/v3.1/all',
+  'https://evil.example/',
+  'https://restcountries.com@evil.example/'
+ ]){
+   assert.equal(link(value,'restcountries.com'),'Source link unavailable',value);
+ }
+ const safe=link('https://restcountries.com/v3.1/alpha/JP','restcountries.com');
+ assert.match(safe,/href="https:\/\/restcountries\.com\/v3\.1\/alpha\/JP"/);
+ assert.match(safe,/rel="noopener noreferrer"/);
+ assert.match(safe,/target="_blank"/);
+ const wikipedia=link('https://en.wikipedia.org/wiki/Paris','wikipedia.org');
+ assert.match(wikipedia,/href="https:\/\/en\.wikipedia\.org/);
 });
 test('Vercel global response policy enforces secure transport, frame denial and fixed origin isolation',()=>{
  const config=JSON.parse(readFileSync(new URL('../vercel.json',import.meta.url),'utf8'));
