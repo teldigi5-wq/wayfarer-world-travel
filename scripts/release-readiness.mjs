@@ -28,7 +28,7 @@ const checks=[
     read('data-and-privacy.html').includes('Beta information, not finalized legal terms')&&
     read('browser-data.js').includes("'wf-trips-v2'")&&
     read('browser-data.js').includes("'wf-checks-v2'")&&
-    !/localStorage\\.clear\\(/.test(read('browser-data.js')),
+    !/localStorage\.clear\(/.test(read('browser-data.js')),
   evidence:'An accessible beta disclosure and narrowly scoped two-step local deletion are present; formal legal notices remain a separate blocker.'},
  {id:'no-billable-build-step',ok:pkg.scripts.build==='node scripts/build-airports.mjs'&&
     !/serpapi|groq|duffel|n8n/i.test(pkg.scripts.build),
