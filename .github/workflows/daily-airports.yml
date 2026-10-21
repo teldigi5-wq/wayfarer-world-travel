@@ -37,7 +37,15 @@ jobs:
           git switch -C automation/daily-airport-index
           git add airports-index.json
           git commit -m "data: refresh public airport reference"
+          # Fetch the exact remote review-branch tip before using --force-with-lease.
+          # Without this ref, checkout's shallow main-only clone always reports stale info.
+          if git ls-remote --exit-code --heads origin automation/daily-airport-index >/dev/null; then
+            git fetch --no-tags origin +refs/heads/automation/daily-airport-index:refs/remotes/origin/automation/daily-airport-index
+          fi
           git push --force-with-lease origin HEAD:automation/daily-airport-index
           if ! gh pr list --head automation/daily-airport-index --json number --jq '.[0].number' | grep -Eq '^[0-9]+$'; then
-            gh pr create --base main --head automation/daily-airport-index --title "data: update public worldwide airport reference" --body "Automated daily check of the OurAirports public-domain directory. Review source, size, coverage and tests before merging. **This is reference data, not live flight schedules or ticket availability.**"
+            gh pr create --base main --head automation/daily-airport-index --title "data: update public worldwide airport reference" --body "Automated daily check of the OurAirports public-domain directory. Review source, size, coverage and tests before merging. **This is reference data, not live flight schedules or ticket availability.**" || {
+              echo "::warning::Generated review branch, but GitHub did not permit automated PR creation. Open the PR manually after checking repository Actions permissions."
+              exit 0
+            }
           fi
