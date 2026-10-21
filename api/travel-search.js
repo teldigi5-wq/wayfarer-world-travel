@@ -1,3 +1,4 @@
+import { meteredProviderLocked, PRODUCTION_PROVIDER_LOCK_NOTE } from '../provider-production-lock.mjs';
 import { timingSafeEqual } from 'node:crypto';
 
 // Source-grounded, opt-in Google Travel searches via SerpApi.
@@ -108,6 +109,7 @@ export default async function handler(req,res){
     food:state('not_connected','Restaurant menu prices are not yet connected.'),
     transport:state('not_connected','Transit fare schedules are not yet connected.'),
     note:'Search prices may be cached and do not verify bookability. No flights or rooms are booked.'};
+  if(meteredProviderLocked()){payload.mode='production_locked';return json(res,200,payload)}
   const key=process.env.SERPAPI_API_KEY;
   if(process.env.WAYFARER_TRAVEL_ENABLED!=='true'||!key)return json(res,200,payload);
   if(throttled(req))return json(res,429,{ok:false,error:'Too many searches from this browser. Try later. Free search quota is limited.'});
