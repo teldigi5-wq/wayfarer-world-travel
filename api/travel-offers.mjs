@@ -1,3 +1,4 @@
+import { meteredProviderLocked, PRODUCTION_PROVIDER_LOCK_NOTE } from '../provider-production-lock.mjs';
 import { timingSafeEqual } from 'node:crypto';
 import { validateTrip } from '../planner.mjs';
 
@@ -198,6 +199,7 @@ export default async function handler(req,res){
       'Each click may make up to two SerpApi searches and use monthly free search allowance.'
     ]
   };
+  if(meteredProviderLocked()){payload.mode='production_locked';return reply(res,200,payload)}
   const key=process.env.SERPAPI_API_KEY||'';
   if(process.env.WAYFARER_TRAVEL_ENABLED!=='true'||!key) return reply(res,200,payload);
   payload.mode='serpapi_search';
