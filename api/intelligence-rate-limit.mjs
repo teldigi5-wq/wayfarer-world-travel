@@ -9,7 +9,7 @@ export function createIntelligenceLimiter({
   return function overLimit(req) {
     const forwarded = process.env.VERCEL === '1' ? req.headers?.['x-vercel-forwarded-for'] : null;
     const verifiedHeader = typeof forwarded === 'string' &&
-      /^[a-f\\d:.]{3,45}$/i.test(forwarded) ? forwarded : null;
+      /^[a-f0-9:.]{3,45}$/i.test(forwarded) ? forwarded : null;
     const key = String(verifiedHeader || req.socket?.remoteAddress ||
       req.connection?.remoteAddress || 'shared-edge').slice(0, 90);
     const time = now();
