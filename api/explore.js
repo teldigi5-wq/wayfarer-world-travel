@@ -3,8 +3,12 @@
 const WINDOW_MS=60_000, MAX_REQUESTS=20, MAX_KEYS=500;
 const requests=new Map();
 function tooMany(req){
-  // A transport peer cannot be spoofed using a user-supplied X-Forwarded-For header.
-  const peer=String(req.socket?.remoteAddress||req.connection?.remoteAddress||'shared-edge').slice(0,90);
+  // Vercel overwrites x-forwarded-for and provides x-vercel-forwarded-for as
+  // the client address. Accept that header only within the Vercel runtime;
+  // direct/local requests use their transport peer instead.
+  const platformIp=process.env.VERCEL==='1'?req.headers?.['x-vercel-forwarded-for']:null;
+  const safeIp=typeof platformIp==='string'&&/^[a-f\d:.]{3,45}$/i.test(platformIp)?platformIp:null;
+  const peer=String(safeIp||req.socket?.remoteAddress||req.connection?.remoteAddress||'shared-edge').slice(0,90);
   const now=Date.now();
   const entry=requests.get(peer);
   const fresh=entry&&now-entry.start<WINDOW_MS;
