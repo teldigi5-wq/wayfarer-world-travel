@@ -6,6 +6,37 @@ const MAX_BODY_BYTES = 12000;
 const MAX_RESPONSE_BYTES = 32000;
 const cleanText = (value, max = 120) => String(value ?? '').trim().slice(0, max);
 
+async function boundedResponseText(response) {
+  const announced = response.headers?.get?.('content-length');
+  if (announced !== null && announced !== undefined && announced !== '') {
+    const length = Number(announced);
+    if (Number.isFinite(length) && length > MAX_RESPONSE_BYTES) throw Error('oversize');
+  }
+  const reader = response.body?.getReader?.();
+  if (!reader) {
+    const text = await response.text();
+    if (Buffer.byteLength(text, 'utf8') > MAX_RESPONSE_BYTES) throw Error('oversize');
+    return text;
+  }
+  const chunks = [];
+  let bytes = 0;
+  let finished = false;
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) { finished = true; break; }
+      bytes += value.byteLength;
+      if (bytes > MAX_RESPONSE_BYTES) throw Error('oversize');
+      chunks.push(value);
+    }
+  } finally {
+    if (!finished) await reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+
 function reply(res, status, body) {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -94,6 +125,7 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Wayfarer-Secret': webhookAuth },
       body: JSON.stringify({ trip: input }),
+      redirect: 'error',
       signal: AbortSignal.timeout(25000)
     });
     if (!upstream.ok) {
@@ -101,9 +133,7 @@ export default async function handler(req, res) {
         ok: false, error: upstream.status === 429 ? 'AI limit reached. Try again later.' : 'AI agents are temporarily unavailable.'
       });
     }
-    if (Number(upstream.headers.get('content-length') || 0) > MAX_RESPONSE_BYTES) throw Error('oversize');
-    const responseText = await upstream.text();
-    if (Buffer.byteLength(responseText) > MAX_RESPONSE_BYTES) throw Error('oversize');
+    const responseText = await boundedResponseText(upstream);
     const result = cleanResult(JSON.parse(responseText));
     if (!result) throw Error('malformed');
     return reply(res, 200, result);
