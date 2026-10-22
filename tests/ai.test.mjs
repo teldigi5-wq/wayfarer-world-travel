@@ -112,3 +112,46 @@ test('oversized AI reports are rejected instead of returning incomplete text',as
     assert.equal(result.code,502);
   } finally {globalThis.fetch=originalFetch;}
 });
+
+test('AI webhook refuses redirects before secret-bearing requests follow another origin', async () => {
+  configure();
+  const originalFetch=globalThis.fetch;
+  let redirectPolicy;
+  try {
+    globalThis.fetch=async (_url, init)=>{
+      redirectPolicy=init.redirect;
+      return Response.redirect('https://other.example.org/collect',302);
+    };
+    const result=await call({trip:validTrip});
+    assert.equal(redirectPolicy,'error');
+    assert.equal(result.code,502);
+    assert.equal(JSON.stringify(result.body).includes('a-long-secret-for-n8n-only'),false);
+  } finally {globalThis.fetch=originalFetch;}
+});
+
+test('AI webhook rejects streamed response above 32KiB regardless of declared length', async () => {
+  configure();
+  const originalFetch=globalThis.fetch;
+  try {
+    globalThis.fetch=async()=>new Response('x'.repeat(33000),{status:200,headers:{'content-length':'10'}});
+    const result=await call({trip:validTrip});
+    assert.equal(result.code,502);
+    assert.match(result.body.error,/invalid response/);
+  } finally {globalThis.fetch=originalFetch;}
+});
+
+test('AI webhook rejects oversized Content-Length without reading the body', async () => {
+  configure();
+  const originalFetch=globalThis.fetch;
+  let readerAccessed=false;
+  try {
+    globalThis.fetch=async()=>({
+      ok:true,
+      headers:{get:(name)=>name==='content-length'?'32001':null},
+      body:{getReader(){readerAccessed=true;throw Error('should not be read')}}
+    });
+    const result=await call({trip:validTrip});
+    assert.equal(result.code,502);
+    assert.equal(readerAccessed,false);
+  } finally {globalThis.fetch=originalFetch;}
+});
