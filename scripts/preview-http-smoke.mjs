@@ -5,8 +5,25 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
+import {PUBLIC_ASSETS} from '../static-asset-manifest.mjs';
 
 const config=JSON.parse(readFileSync(new URL('../vercel.json',import.meta.url),'utf8'));
+const expectedAssetTypes=Object.freeze({
+  html:/^text\/html(?:;|$)/, css:/^text\/css(?:;|$)/,
+  js:/^(?:application|text)\/javascript(?:;|$)/,
+  json:/^application\/json(?:;|$)/, webp:/^image\/webp(?:;|$)/,
+  jpg:/^image\/jpeg(?:;|$)/, txt:/^text\/plain(?:;|$)/,
+  xml:/^(?:application|text)\/xml(?:;|$)/
+});
+const internalFiles=Object.freeze([
+  '/server.mjs','/tests/security-static-output.test.mjs',
+  '/tests/security-explore-cache-policy.test.mjs',
+  '/scripts/preview-http-smoke.mjs','/scripts/stage-public-assets.mjs',
+  '/.github/workflows/checks.yml','/docs/release-security-preflight.md',
+  '/docs/static-output-release-gate.md','/package.json','/vercel.json',
+  '/.env','/.git/config','/static-asset-manifest.mjs',
+  '/provider-production-lock.mjs'
+]);
 const sharedHeaders=Object.fromEntries(config.headers
   .find(rule=>rule.source==='/(.*)').headers
   .map(entry=>[entry.key.toLowerCase(),entry.value]));
@@ -53,6 +70,20 @@ export async function previewSmoke({url,oidcToken,transport=fetch}){
   }
   checks.push({check:'configured edge security headers',result:'pass'});
 
+  // Check the ENTIRE reviewed browser manifest against the real Vercel output,
+  // rather than treating the homepage and optimized hero as proof of coverage.
+  for(const name of PUBLIC_ASSETS){
+    if(name==='wayfarer-hero-v3.webp')continue; // checked including magic below
+    const asset=await get('/'+name);
+    assertCode(asset,200,'browser asset '+name);
+    const extension=name.split('.').at(-1);
+    const expectedType=expectedAssetTypes[extension];
+    assert.ok(expectedType,'Unknown browser asset type: '+name);
+    assert.match(asset.headers.get('content-type')||'',expectedType,
+      'Wrong Content-Type for '+name);
+    await asset.body?.cancel();
+  }
+
   const webp=await get('/wayfarer-hero-v3.webp');
   assertCode(webp,200,'real optimized hero');
   assert.match(webp.headers.get('content-type')||'',/^image\/webp(?:;|$)/);
@@ -68,18 +99,30 @@ export async function previewSmoke({url,oidcToken,transport=fetch}){
   checks.push({check:'invalid geographic input is not cached',result:'pass'});
   assert.equal((await invalidGeo.json()).ok,false);
 
+  // Do not confuse a missing Vercel Function (404) with safe validation (400).
+  for(const route of ['/api/intelligence?destination=Unlisted&lat=invalid',
+    '/api/hotels']){
+    const response=await get(route);
+    assertCode(response,400,'serverless validation '+route);
+    assert.match(response.headers.get('content-type')||'',/^application\/json(?:;|$)/);
+    assert.equal(response.headers.get('cache-control'),'no-store',
+      'Invalid API input must not be edge cached: '+route);
+    await response.body?.cancel();
+  }
+
   // Wrong HTTP method cannot initiate billing, webhook calls, or authenticated search.
   for(const route of ['/api/ai-plan','/api/travel-offers','/api/travel-search']){
     const response=await get(route);
     assertCode(response,405,'safe method rejection '+route);
     assert.equal(response.headers.get('allow'),'POST');
+    assert.equal(response.headers.get('cache-control'),'no-store',
+      'Rejected method must not be edge cached: '+route);
+    await response.body?.cancel();
   }
 
   // Build output is a browser-asset allowlist. Internal implementation,
   // workflow configuration, docs and test scripts must not be static URLs.
-  for(const file of ['/server.mjs','/tests/security-static-output.test.mjs',
-    '/scripts/preview-http-smoke.mjs','/.github/workflows/checks.yml',
-    '/docs/release-security-preflight.md']){
+  for(const file of internalFiles){
     const result=await get(file);
     assertCode(result,404,'internal static file not published '+file);
   }
