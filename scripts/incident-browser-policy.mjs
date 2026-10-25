@@ -25,8 +25,12 @@ export function classifyIncidentBrowserRequest(raw,method='GET'){
   let u;
   try{u=new URL(raw)}catch{return 'block-invalid'}
   if(u.origin!==INCIDENT_BROWSER_ORIGIN)return 'block-external';
-  if(u.pathname==='/api'||u.pathname.startsWith('/api/'))
-    return 'block-api';
+  // Treat encoded route separators and encoded API paths as API traffic too.
+  let path;
+  try{path=decodeURIComponent(u.pathname).replace(/\\/g,'/');}
+  catch{return 'block-invalid'}
+  if(path==='/api'||path.startsWith('/api/')||
+     path.includes('/../')||path.includes('/./'))return 'block-api';
   if(!['GET','HEAD'].includes(method))return 'block-mutation';
   if(u.username||u.password)return 'block-credentials';
   return 'allow-static';
