@@ -46,7 +46,7 @@ button,input,select {touch-action:manipulation}
 .hero-copy .light:hover{background:#ffffff;box-shadow:0 14px 38px #0005}
 .hero-copy .ghost:hover{background:#fff2}
 .hero-card{right:5%;bottom:51px;padding:24px 25px 25px;width:min(365px,35vw);border-radius:9px;background:#071d19cf;border-color:#ecdec24a;box-shadow:0 22px 60px #00160f3e}
-.hero-card h3{font-size:20px;letter-spacing:-.025em}
+.hero-card h2{font-size:20px;letter-spacing:-.025em}
 .hero-card p{font-size:12px;line-height:1.7}
 .hero-meta{font-size:9px;letter-spacing:.11em}
 .hero-chapter{position:absolute;right:5%;top:135px;z-index:3;display:flex;align-items:center;gap:11px;font:600 9px/1.4 'DM Sans',sans-serif;letter-spacing:.17em;color:#ffffffb7}
@@ -160,7 +160,7 @@ button,input,select {touch-action:manipulation}
  .hero-copy .light,.hero-copy .ghost{padding:13px 16px;min-height:45px;font-size:11px}
  .hero-chapter{top:95px;right:22px;font-size:8px}.hero-chapter .chapter-line{width:18px}
  .hero-card{bottom:92px;left:22px;right:22px;width:auto;padding:16px 19px}
- .hero-card h3{font-size:17px;margin:9px 0 5px}.hero-card p{font-size:11px;margin:0}
+ .hero-card h2{font-size:17px;margin:9px 0 5px}.hero-card p{font-size:11px;margin:0}
  .hero-scroll{display:none}
  .section{padding:70px 22px}.section .head h2,.method h2{font-size:clamp(38px,9vw,56px)}
  .head p{font-size:13px}.destination{border-radius:8px;min-width:80vw}.trust{grid-template-columns:1fr 1fr}.trust div{padding:20px 14px}.trust b{font-size:13px}.trust span{font-size:10px}
