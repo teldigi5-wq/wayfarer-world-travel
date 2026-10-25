@@ -151,3 +151,98 @@ test('manual stage audits exact staged URL after identity gate and before succes
   assert.match(w,/workflow_dispatch:/);
   assert.doesNotMatch(w,/^\s+push:\s*$/m);
 });
+
+
+test('one transient 403 on a denied internal GET is retried, then strict 404 succeeds',async()=>{
+  const mock=mockedHttp();
+  let attempts=0;
+  const transport=async(url,opts)=>{
+    if(new URL(url).pathname==='/.gitignore'&&opts.method==='GET'){
+      attempts++;
+      if(attempts===1)return new Response(null,{status:403});
+    }
+    return mock.transport(url,opts);
+  };
+  const result=await verifyStagedHttpSurface({deploymentUrl:origin,
+    bypassSecret:bypass,transport});
+  assert.equal(attempts,2);
+  assert.equal(result.transientAccessDenialsRetried,1);
+  assert.equal(result.productionPromotionAuthorized,false);
+  assert.match(result.warning,/transient edge denials/);
+});
+
+test('one transient 429 on an internal GET is retried then strict 404 succeeds',async()=>{
+  const mock=mockedHttp();
+  let attempts=0;
+  const transport=async(url,opts)=>{
+    if(new URL(url).pathname==='/vercel.json'&&opts.method==='GET'&&++attempts===1){
+      return new Response(null,{status:429});
+    }
+    return mock.transport(url,opts);
+  };
+  const result=await verifyStagedHttpSurface({deploymentUrl:origin,
+    bypassSecret:bypass,transport});
+  assert.equal(attempts,2);
+  assert.equal(result.transientAccessDenialsRetried,1);
+});
+
+test('persistent 403 on sensitive internal GET still fails after only one retry',async()=>{
+  const mock=mockedHttp();
+  let attempts=0;
+  const transport=async(url,opts)=>{
+    if(new URL(url).pathname==='/vercel.json'&&opts.method==='GET'){
+      attempts++;
+      return new Response(null,{status:403});
+    }
+    return mock.transport(url,opts);
+  };
+  await assert.rejects(verifyStagedHttpSurface({deploymentUrl:origin,
+    bypassSecret:bypass,transport}),err=>{
+      assert.match(String(err.message),/GET \/vercel\.json expected HTTP 404; received HTTP 403/);
+      assert.doesNotMatch(String(err.message),/synthetic-protection-bypass/);
+      return true;
+    });
+  assert.equal(attempts,2,'Retry must be strictly bounded');
+});
+
+test('HTTP 200 source exposure is never retried or converted into a pass',async()=>{
+  const mock=mockedHttp();
+  let attempts=0;
+  const transport=async(url,opts)=>{
+    if(new URL(url).pathname==='/server.mjs'&&opts.method==='GET'){
+      attempts++;
+      return new Response(null,{status:200});
+    }
+    return mock.transport(url,opts);
+  };
+  await assert.rejects(verifyStagedHttpSurface({deploymentUrl:origin,
+    bypassSecret:bypass,transport}),/GET \/server\.mjs expected HTTP 404; received HTTP 200/);
+  assert.equal(attempts,1);
+});
+
+test('HTTP rate-limit retry cannot turn a denied API or POST into a paid call',async()=>{
+  const mock=mockedHttp();
+  let calls=0;
+  const transport=async(url,opts)=>{
+    if(new URL(url).pathname==='/api/travel-offers'){
+      calls++;
+      return new Response(null,{status:403});
+    }
+    return mock.transport(url,opts);
+  };
+  await assert.rejects(verifyStagedHttpSurface({deploymentUrl:origin,
+    bypassSecret:bypass,transport}),/API handler not safely responding.*received HTTP 403/);
+  assert.equal(calls,1,'No retries for API endpoints');
+});
+
+test('live pacing is present only on the immutable-host staged HTTP adapter',()=>{
+  const source=readFileSync(new URL('../scripts/verify-staged-http.mjs',import.meta.url),'utf8');
+  assert.match(source,/const liveNetwork=transport===fetch/);
+  assert.match(source,/await pause\(250\)/);
+  assert.match(source,/await pause\(2000\)/);
+  assert.match(source,/accessDeniedRetries\+\+/);
+  assert.match(source,/request\.origin!==origin/);
+  assert.match(source,/request\.pathname\.startsWith\('\/api\/'\)/);
+  assert.match(source,/redirect:'error'/);
+  assert.doesNotMatch(source,/continue-on-error|vercel deploy/);
+});
