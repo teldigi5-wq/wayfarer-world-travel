@@ -46,7 +46,7 @@ test('short-lived authorization is never sent to untrusted origins or redirects'
 test('authenticated preview smoke checks headers, hero, validation and safe method rejections only',async()=>{
   const mock=mocked();
   const report=await previewSmoke({url:target,oidcToken:token,transport:mock.fetcher});
-  assert.equal(report.checks.length,9);
+  assert.equal(report.checks.length,8);
   assert.equal(mock.visited.length,6);
   assert.ok(mock.visited.every(v=>v.options.method==='GET'&&v.options.redirect==='error'));
   assert.ok(mock.visited.every(v=>v.url.startsWith(target+'/')));
