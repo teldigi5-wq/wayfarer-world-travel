@@ -1,0 +1,49 @@
+name: Offline API performance baseline
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/benchmark-api.mjs'
+      - 'package.json'
+      - '.github/workflows/api-benchmark.yml'
+      - 'api/**'
+      - 'planner.mjs'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/benchmark-api.mjs'
+      - 'package.json'
+      - '.github/workflows/api-benchmark.yml'
+      - 'api/**'
+      - 'planner.mjs'
+permissions:
+  contents: read
+concurrency:
+  group: offline-api-bench-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  offline-api-benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout source without persistent credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Use Node.js 24
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+      - name: Validate benchmark source
+        run: node --check scripts/benchmark-api.mjs
+      - name: Benchmark mocked request handling only
+        run: npm run benchmark:offline
+      - name: Attach machine-readable measurements
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: wayfarer-offline-api-benchmark
+          path: benchmark-results.json
+          if-no-files-found: warn
+          retention-days: 14
