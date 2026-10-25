@@ -30,7 +30,7 @@ button,a{transition:background-color .25s,border-color .25s,color .25s,box-shado
 #discover .hero .buttons .ghost:hover{background:#fbf3e91b;transform:translateY(-3px)}
 #discover .hero-card{right:clamp(28px,4vw,88px);bottom:112px;left:auto;width:300px;padding:18px 19px;border-radius:13px;background:#021915a3;border:1px solid #faedd23f;z-index:3;backdrop-filter:blur(14px)}
 #discover .hero-card .hero-meta{letter-spacing:.12em;font-size:9px;color:#edd8b7}
-#discover .hero-card h3{font:500 24px/1.1 var(--wf-serif);margin:13px 0 8px}
+#discover .hero-card h2{font:500 24px/1.1 var(--wf-serif);margin:13px 0 8px}
 #discover .hero-card p{font-size:12px;line-height:1.6;color:#f8f5edd7}
 .wf-hero-signature{position:absolute;z-index:3;right:5.1vw;top:150px;font:italic 500 25px/1.02 var(--wf-serif);letter-spacing:-.02em;color:#fff3dc;text-align:right;transform:rotate(-8deg);text-shadow:0 3px 30px #051711}.wf-hero-signature span{color:var(--wf-light)}
 .wf-hero-trust{position:absolute;z-index:3;bottom:49px;left:clamp(30px,5.2vw,94px);width:min(790px,58%);display:grid;grid-template-columns:repeat(3,minmax(0,1fr));color:#f4f4e9}
@@ -201,7 +201,7 @@ button,a{transition:background-color .25s,border-color .25s,color .25s,box-shado
 #discover .hero .buttons .light,#discover .hero .buttons .ghost{height:48px;min-width:0;flex:1 1 auto;min-height:48px;font-size:11px;padding-inline:13px}
 #discover .hero-card{position:absolute;left:22px;right:22px;width:auto;bottom:145px;padding:14px 17px;background:#041e1bc5}
 #discover .hero-card .hero-meta{font-size:8px}
-#discover .hero-card h3{font-size:21px}
+#discover .hero-card h2{font-size:21px}
 #discover .hero-card p{font-size:11px;margin-bottom:0}
 .wf-hero-trust{bottom:28px;left:23px;right:23px;width:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .wf-hero-trust div{padding:0 7px;border:0}.wf-hero-trust strong{font-size:10px}.wf-hero-trust span{font-size:9px}
