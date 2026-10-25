@@ -29,6 +29,42 @@ async function runCli(args){
     child.once('exit',(code,signal)=>{clearTimeout(timer);if(code===0)done();else reject(Error('Lighthouse failed: '+code+' '+signal+' '+err))});
   });
 }
+// Compact, actionable Lighthouse diagnostics extracted from raw audit artifacts.
+const auditDiagnostics=report=>{
+  const audits=report.audits||{};
+  const failed=(report.categories?.accessibility?.auditRefs||[])
+    .filter(ref=>ref.weight>0&&audits[ref.id]?.score!==null&&
+      typeof audits[ref.id]?.score==='number'&&audits[ref.id].score<1)
+    .map(ref=>{
+      const audit=audits[ref.id], items=audit.details?.items||[];
+      return {id:ref.id,title:audit.title,score:audit.score,weight:ref.weight,
+        examples:items.slice(0,4).map(item=>({
+          selector:item.node?.selector||null,
+          snippet:String(item.node?.snippet||'').slice(0,160),
+          explanation:String(item.node?.explanation||item.explanation||'').slice(0,180)
+        }))};
+    }).sort((a,b)=>b.weight-a.weight).slice(0,12);
+  const topList=id=>(audits[id]?.details?.items||[]).slice(0,12).map(item=>({
+    url:String(item.url||item.attributableURL||'').slice(0,160),
+    group:String(item.group||'').slice(0,60),
+    totalMs:item.total??null,
+    durationMs:item.duration??null,
+    scriptingMs:item.scripting??null,
+    scriptParseCompileMs:item.scriptParseCompile??null,
+    startTimeMs:item.startTime??null
+  }));
+  return {
+    failedAccessibilityAudits:failed,
+    mainThreadWork:topList('mainthread-work-breakdown'),
+    scriptExecution:topList('bootup-time'),
+    longTasks:topList('long-tasks'),
+    longTaskCount:(audits['long-tasks']?.details?.items||[]).length,
+    largestContentfulPaintElement:(
+      audits['largest-contentful-paint-element']?.details?.items||[]
+    ).slice(0,2).map(x=>({selector:x.node?.selector||null,snippet:String(x.node?.snippet||'').slice(0,150)}))
+  };
+};
+
 const profiles=[
   {name:'mobile',args:[]},
   {name:'tablet',args:['--form-factor=mobile','--screenEmulation.width=768','--screenEmulation.height=1024','--screenEmulation.deviceScaleFactor=1','--screenEmulation.mobile=true']},
@@ -65,11 +101,12 @@ try {
       .filter(x=>x.score!=null && x.score<0.9 && x.scoreDisplayMode==='numeric')
       .sort((a,b)=>(a.score??1)-(b.score??1))
       .slice(0,7).map(x=>({id:x.id,title:x.title,score:x.score,display:x.displayValue||null}));
-    const row={profile:profile.name,requestedEmulation:profile.args,
+    const row={profile:profile.name,diagnostics:auditDiagnostics(report),requestedEmulation:profile.args,
       actualEmulation:report.configSettings?.screenEmulation||null,
       lighthouseVersion:report.lighthouseVersion,chromeUserAgent:report.userAgent,
       auditWallTimeMs:Math.round(performance.now()-started),scores,metrics,priorityAudits:problems};
-    console.log('LIGHTHOUSE_BENCH '+JSON.stringify(row));
+    console.log('LIGHTHOUSE_BENCH '+JSON.stringify({...row,diagnostics:undefined}));
+    console.log('LIGHTHOUSE_DIAGNOSTICS '+JSON.stringify({profile:profile.name,...row.diagnostics}));
     results.push(row);
   }
   const summary={title:'Wayfarer local-only browser Lighthouse baseline',
