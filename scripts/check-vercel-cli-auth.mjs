@@ -8,7 +8,7 @@ import {PROJECT_ID, TEAM_ID} from './check-staging-aliases.mjs';
 const ENDPOINTS=Object.freeze([
   ['/v9/projects/'+encodeURIComponent(PROJECT_ID)+'?teamId='+encodeURIComponent(TEAM_ID),'project'],
   ['/v2/user','user'],
-  ['/teams/'+encodeURIComponent(TEAM_ID),'team']
+  ['/v2/teams/'+encodeURIComponent(TEAM_ID),'team']
 ]);
 
 export async function assertVercelCliIdentityAccess({token,transport=fetch}={}){

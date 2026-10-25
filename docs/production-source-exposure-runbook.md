@@ -73,10 +73,13 @@ The manual workflow now includes a read-only CLI identity preflight immediately 
 
 - GET /v9/projects/{reviewed-project-id}?teamId={reviewed-team-id}
 - GET /v2/user
-- GET /teams/{reviewed-team-id}
+- GET /v2/teams/{reviewed-team-id} (Vercel's documented Get a Team endpoint)
 
 Only three HTTP 200 results permit proceeding to vercel pull. A project-access success paired with user/team failure produces an actionable, non-secret diagnostic and deliberately blocks staging. The preflight **does not make a scoped token broader, fix the upstream Vercel CLI, verify deployment rights, or bypass later security checks**. A wider team token may work, but broadens the attack surface across projects. The owner must explicitly approve any credential-scope change in the existing protected GitHub environment; never paste tokens into chat, code, run logs, or PR comments.
 
 Alternatives to review separately if limited-scope Vercel CLI remains unavailable: (1) request an upstream CLI resolution, (2) use a short-lived, least-privilege team-scoped credential with bounded rotation and strict environment approval if accepted, or (3) design and fully test a project-scoped Build Output API pipeline without automatic domain assignment. Do **not** substitute an unreviewed direct production API deployment, unprotected token or generic target=production call for the --skip-domain safety boundary.
 
 After reviewing a compatible credential configuration, manually dispatch a **new** exact-SHA staging workflow. A passing preflight is only an authorization compatibility observation, not production release authorization. Verify immutable staged deployment, static paths, API routes, CSP, mobile/desktop journeys, provider controls, aliases, and rollback before seeking a separate owner-approved promotion. Until then the public alias remains on the older source-disclosing build and the release is still **NO-GO**.
+
+
+**25 October preflight erratum:** The initial PR #95 preflight used the unversioned `/teams/{teamId}` URL and its unit mocks reproduced that mistake. The correct Vercel endpoint is `/v2/teams/{teamId}`; this correction uses an independent regression assertion against the published API path. The API-path correction does not prove that the existing protected token has the required scope or that `vercel pull` will succeed. The original CLI 404 remains unresolved until an approved staging run verifies a compatible token and completes safely.
