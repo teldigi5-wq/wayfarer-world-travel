@@ -63,6 +63,18 @@ jobs:
             exit 1
           fi
 
+      # INCIDENT HOLD: run #40190153790 reassigned a default production alias
+      # despite the documented --skip-domain flag. Do not allow another live
+      # deployment until a new strategy is validated without domain mutation.
+      - name: BLOCKED - protect production aliases after unexpected assignment
+        run: |
+          echo 'BLOCKED: staging changed a production alias in run 40190153790.'
+          echo 'This workflow is intentionally halted BEFORE checkout, credentials, build, or deployment.'
+          echo 'The second project alias currently points to dpl_8S1c3YMYJixGPid1i8bdwmz8DXHT.'
+          echo 'Review default Vercel production alias behavior and approve a new isolation plan.'
+          echo 'Do not remove this gate without a reviewed security PR and owner release decision.'
+          exit 1
+
       - name: Check out only the immutable reviewed main SHA
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
