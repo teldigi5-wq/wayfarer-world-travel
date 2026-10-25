@@ -11,6 +11,37 @@ const cut = (value, max = 160) => String(value ?? '').trim().slice(0, max);
 const category = (status, message, results = []) => ({ status, message, results });
 const dollars = value => Math.round(value * 100) / 100;
 const isIata = value => /^[A-Z]{3}$/.test(value || '');
+
+async function boundedSerpJson(response) {
+  const declared = response.headers?.get?.('content-length');
+  if (declared !== null && declared !== undefined && declared !== '') {
+    const announced = Number(declared);
+    if (Number.isFinite(announced) && announced > SEARCH_MAX_RESPONSE) throw new Error('Provider response too large');
+  }
+  const reader = response.body?.getReader?.();
+  if (!reader) {
+    const raw = await response.text();
+    if (Buffer.byteLength(raw, 'utf8') > SEARCH_MAX_RESPONSE) throw new Error('Provider response too large');
+    return JSON.parse(raw);
+  }
+  const chunks = [];
+  let bytes = 0;
+  let finished = false;
+  try {
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) { finished = true; break; }
+      bytes += value.byteLength;
+      if (bytes > SEARCH_MAX_RESPONSE) throw new Error('Provider response too large');
+      chunks.push(value);
+    }
+  } finally {
+    if (!finished) await reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
+  return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+}
+
 const validPrice = value => (typeof value === 'string' || typeof value === 'number') &&
   Number.isFinite(Number(value)) && Number(value) > 0 && Number(value) < 1e8;
 function reply(res, status, payload) {
@@ -80,17 +111,19 @@ async function serpSearch(params,key) {
   for(const [name,value] of Object.entries(params))url.searchParams.set(name,String(value));
   url.searchParams.set('api_key',key);
   let res;
-  try { res=await fetch(url.href,{signal:AbortSignal.timeout(SEARCH_TIMEOUT_MS)}); }
+  try { res=await fetch(url.href,{redirect:'error',signal:AbortSignal.timeout(SEARCH_TIMEOUT_MS)}); }
   catch { throw new Error('Provider unavailable'); }
   if(!res.ok){
     const err=new Error(res.status===429?'Provider rate limit reached':'Provider request unavailable');
     err.quota=res.status===429;
     throw err;
   }
-  const text=await res.text();
-  if(text.length>SEARCH_MAX_RESPONSE)throw new Error('Provider response too large');
   let data;
-  try { data=JSON.parse(text); } catch {throw new Error('Malformed provider response');}
+  try { data=await boundedSerpJson(res); }
+  catch (error) {
+    if (error.message==='Provider response too large') throw error;
+    throw new Error('Malformed provider response');
+  }
   if(data?.error || data?.search_metadata?.status==='Error'){
     const err=new Error('Provider search reported an error');
     err.quota=/limit|quota|credits|searches left/i.test(String(data.error || ''));
