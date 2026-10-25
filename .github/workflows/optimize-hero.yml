@@ -1,0 +1,52 @@
+name: Encode optimized Wayfarer hero on trusted feature branch
+on:
+  push:
+    branches:
+      - perf/hero-webp-fidelity-20261025
+    paths:
+      - '.github/workflows/optimize-hero.yml'
+      - 'scripts/optimize-hero.mjs'
+permissions:
+  contents: write
+jobs:
+  encode-review-asset:
+    if: github.repository == 'teldigi5-wq/wayfarer-world-travel' && github.ref == 'refs/heads/perf/hero-webp-fidelity-20261025'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout only reviewed feature branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: perf/hero-webp-fidelity-20261025
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Setup Node 24
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+      - name: Install reviewed image encoder on CI only
+        run: npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund sharp@0.34.5
+      - name: Encode and verify image quality, size and source integrity
+        run: |
+          set -euo pipefail
+          test ! -e wayfarer-hero-v3.webp
+          node --check scripts/optimize-hero.mjs
+          node scripts/optimize-hero.mjs
+          git diff --exit-code -- wayfarer-hero-v3.jpg
+          test -s wayfarer-hero-v3.webp
+      - name: Commit only optimized output to existing review branch
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- wayfarer-hero-v3.webp
+          git commit -m 'perf(media): add fidelity-gated hero WebP while keeping original JPEG'
+          git push origin HEAD:refs/heads/perf/hero-webp-fidelity-20261025
+      - name: Publish conversion evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: wayfarer-hero-encoding-metrics
+          path: hero-optimization-summary.json
+          if-no-files-found: warn
+          retention-days: 14
