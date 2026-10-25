@@ -1,0 +1,114 @@
+name: Browser-check existing Wayfarer incident artifact (no providers)
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: "Exact current reviewed main SHA"
+        required: true
+        type: string
+      confirmation:
+        description: "Type BROWSER_INCIDENT_ONLY; do not deploy or promote"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wayfarer-existing-incident-browser-check
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Confirm approved immutable main checkout
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          ACTUAL_SHA: ${{ github.sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+          GIT_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          node --input-type=module -e '
+            import assert from "node:assert/strict";
+            const {EXPECTED_SHA,ACTUAL_SHA,CONFIRMATION,GIT_REF}=process.env;
+            assert.equal(GIT_REF,"refs/heads/main");
+            assert.match(EXPECTED_SHA||"",/^[0-9a-f]{40}$/);
+            assert.equal(EXPECTED_SHA,ACTUAL_SHA,"Re-review main SHA");
+            assert.equal(CONFIRMATION,"BROWSER_INCIDENT_ONLY");
+            console.log("Read-only existing-artifact browser checks approved.");
+          '
+
+  browser:
+    name: existing-immutable-artifact-browser-check
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: wayfarer-production-stage
+    env:
+      STAGING_ENABLED: ${{ vars.WAYFARER_PRODUCTION_STAGING_ENABLED }}
+      WAYFARER_INCIDENT_BROWSER_ORIGIN: https://wayfarer-world-travel-m4ce3pzyx-teldigi5-wq.vercel.app
+    steps:
+      - name: Keep protected incident hold and environment authorization
+        run: |
+          set -euo pipefail
+          if [ "$STAGING_ENABLED" != "true" ]; then
+            echo 'BLOCKED: protected Wayfarer environment not enabled'
+            exit 1
+          fi
+
+      - name: Checkout immutable main without persisted Git credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Pin Node 24
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+
+      - name: Validate scripts, security holds and unit tests
+        run: |
+          set -euo pipefail
+          node --check scripts/browser-incident-remote-e2e.mjs
+          node --check scripts/incident-browser-policy.mjs
+          npm run check
+          npm test
+
+      - name: Use installed Chrome, without downloading a browser
+        run: |
+          set -euo pipefail
+          command -v google-chrome
+          google-chrome --version
+
+      - name: Install pinned browser test driver (not an application dependency)
+        run: npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright-core@1.55.1
+
+      - name: Four viewport existing-artifact browser smoke — no real API or providers
+        run: node scripts/browser-incident-remote-e2e.mjs
+
+      - name: Upload non-sensitive public-screen evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: wayfarer-immutable-incident-browser-evidence
+          path: incident-browser-evidence/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Record browser-only result, not a production release approval
+        if: success()
+        run: |
+          {
+            echo '### Existing Wayfarer incident artifact: browser-only checks passed'
+            echo ''
+            echo 'Immutable deployment: dpl_8S1c3YMYJixGPid1i8bdwmz8DXHT'
+            echo 'Four responsive viewport flows checked with all real APIs and third parties blocked.'
+            echo 'No deployment, domain reassignment, provider calls, or promotion.'
+            echo 'The secondary alias incident and primary source exposure remain.'
+            echo '**RELEASE NO-GO** without independent live HTTP, runtime and owner-approved promotion gates.'
+          } >> "$GITHUB_STEP_SUMMARY"
