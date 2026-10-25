@@ -1,10 +1,30 @@
 # Wayfarer release preflight and rollback
 
-Release candidate reviewed on October 25, 2026:
-- GitHub main at start of this review: `e31abeb08c3a935765bc72e341d8c695b5a6e5ca`.
-- Protected preview: `wayfarer-world-travel-4hagcdgkv-teldigi5-wq.vercel.app`, READY for that commit.
-- Public production previously served `2b2c27aae6a9044e538e9140c105920edd733b38`.
-Always refresh both commit IDs before release. Do not infer that READY means functional or authenticated.
+## Verified protected-preview runtime checks — October 25, 2026
+
+**Source commit:** `e0f20cbbb4c158015c2ed8b7e6ca27e1d8029068` (Wayfarer PR #87 merged).  
+**Protected preview:** `https://wayfarer-world-travel-iispd8w7y-teldigi5-wq.vercel.app`  
+**Vercel deployment ID:** `dpl_9jqhVjD9H5eTvJ8AbD7Yi86hrkWf` — READY, target `null` (preview).  
+**Production rollback candidate:** `dpl_2oiz1XqGtWSTzswD5DzqEhrvLVuT`, commit `2b2c27aae6a9044e538e9140c105920edd733b38`, still attached to `wayfarer-world-travel.vercel.app` at verification time.
+
+An authenticated first-party Vercel account fetch of the protected URL confirmed **actual deployed GET responses** (not mocked or source-only tests):
+
+| Runtime route | Expected | Observed |
+| --- | --- | --- |
+| `/` | Public app HTML | HTTP 200, real Wayfarer HTML |
+| `/wayfarer-hero-v3.webp` | Optimized media | HTTP 200, `image/webp` and valid RIFF/WEBP |
+| `/api/explore?mode=nearby&lat=%20&lon=0` | Validation rejection | HTTP 400, `Cache-Control: no-store`, `x-vercel-cache: MISS` |
+| `/api/explore?mode=search&q=A` | Minimum text length | HTTP 400, `Cache-Control: no-store` |
+| `/api/explore?mode=search&q=Kyoto` | Successful, sourced result | HTTP 200, Kyoto from Wikipedia place index, `x-vercel-cache: HIT` on repeat |
+| `/api/ai-plan` GET | No AI POST side effects | HTTP 405, `Allow: POST`, `no-store` |
+| `/api/travel-offers` GET | No travel POST side effects | HTTP 405, `Allow: POST`, `no-store` |
+| `/api/travel-search` GET | No travel POST side effects | HTTP 405, `Allow: POST`, `no-store` |
+| `/data.json` | Public country dataset | HTTP 200, 1-day cache |
+| Unknown asset | Proper static 404 | HTTP 404 |
+
+Landing page, WebP, geo-response, AI endpoint and country dataset were checked against all four shared `vercel.json` security headers (CSP, nosniff, Referrer-Policy, Permissions-Policy), with **no mismatches**. The actual successful-result browser-visible cache header was `public`; Vercel reported a cache HIT with an `Age` header, as expected for public CDN caching.
+
+**Important limits:** These tests use an authenticated Vercel fetch capability that can create a short-lived preview share link; no link secret or authentication value is recorded in this document. Requests were GET-only, and no paid travel provider, webhook, student data, trading system, or real booking was invoked. Protected-preview **interactive browser**, authenticated POST beta modes and staged production-target runtime tests are **not certified**. Keep Deployment Protection enabled and obtain explicit release approval before attaching the new candidate to the public production domain. The previous production deployment ID is preserved above for controlled rollback.
 
 ## Automated, credential-free gates
 
