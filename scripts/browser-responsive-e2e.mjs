@@ -48,6 +48,19 @@ try {
     const jsErrors=[];
     const page=await context.newPage();
     page.setDefaultTimeout(17000);
+    // Vercel CSP is mirrored by the local server; catch blocked executable code
+    // without confusing intentionally-aborted third-party images/fonts with defects.
+    await page.addInitScript(()=>{
+      window.__wayfarerCspViolations=[];
+      document.addEventListener('securitypolicyviolation',event=>{
+        const kind=String(event.effectiveDirective||'');
+        if(/^(script-src|style-src|object-src|base-uri|form-action)/.test(kind)){
+          window.__wayfarerCspViolations.push({
+            directive:kind,blocked:String(event.blockedURI||'').slice(0,120)
+          });
+        }
+      });
+    });
     page.on('pageerror',e=>jsErrors.push(String(e.message||e)));
     await page.route('**/*',async route=>{
       const url=route.request().url();
@@ -118,6 +131,8 @@ try {
       ensure((await page.evaluate(()=>localStorage.getItem('wf-visual-motion-v1')))===(after==='true'?'on':'off'),
         'Motion preference must persist to local storage');
       assert.deepEqual(jsErrors,[],'No page JavaScript exceptions allowed');
+      const policyViolations=await page.evaluate(()=>window.__wayfarerCspViolations||[]);
+      assert.deepEqual(policyViolations,[],'No executable script/style CSP violations allowed');
 
       const row={profile:profile.name,viewport:[profile.width,profile.height],
         result:'pass',elapsedMs:Math.round(performance.now()-started),
