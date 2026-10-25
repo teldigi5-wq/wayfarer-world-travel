@@ -1,0 +1,62 @@
+name: Browser responsive release checks
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/browser-responsive-e2e.mjs'
+      - '.github/workflows/browser-responsive-e2e.yml'
+      - 'package.json'
+      - 'index.html'
+      - '*.css'
+      - '*.js'
+      - '*.mjs'
+      - 'wayfarer-hero-v3.webp'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/browser-responsive-e2e.mjs'
+      - '.github/workflows/browser-responsive-e2e.yml'
+      - 'package.json'
+      - 'index.html'
+      - '*.css'
+      - '*.js'
+      - '*.mjs'
+      - 'wayfarer-hero-v3.webp'
+permissions:
+  contents: read
+jobs:
+  responsive-chrome:
+    name: chrome-responsive-journeys
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout with no persisted credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up Node.js 24
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+      - name: Check host Chrome
+        run: |
+          set -euo pipefail
+          command -v google-chrome
+          google-chrome --version
+      - name: Install browser controller only
+        run: npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright-core@1.56.1
+      - name: Validate source syntax
+        run: |
+          node --check scripts/browser-responsive-e2e.mjs
+          npm run check
+      - name: Test UI in local Chrome across device widths
+        run: npm run test:browser:offline
+      - name: Upload screenshots and JSON evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: wayfarer-offline-responsive-browser
+          path: browser-e2e-results/
+          if-no-files-found: warn
+          retention-days: 14
