@@ -15,3 +15,6 @@
 
 
 .ghost-light{color:#fff;border-color:#ffffff55}.eyebrow-gold{color:var(--gold)}.buttons-offset{margin-top:16px}
+
+/* Clear privacy provenance next to worldwide search without cluttering the form. */
+#studio .world-search-disclosure{color:#e8e7de;font:400 12px/1.55 Manrope,sans-serif;margin:9px 0 1px;position:relative}
