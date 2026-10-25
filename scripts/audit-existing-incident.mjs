@@ -50,11 +50,12 @@ export async function auditExistingIncident({token,transport=fetch}={}){
 
   const primary=await readMetadata(token,
     '/v4/aliases/'+encodeURIComponent(PRIMARY_ALIAS),transport);
-  const secondary=await readMetadata(token,
-    '/v4/aliases/'+encodeURIComponent(SECONDARY_ALIAS),transport);
   requireValue(primary?.alias===PRIMARY_ALIAS&&primary?.projectId===PROJECT_ID&&
     primary?.deploymentId===EXPECTED_PRODUCTION_DEPLOYMENT,
     'primary domain mapping changed: stop and re-review');
+  // Fail fast: never query the secondary alias after primary domain drift.
+  const secondary=await readMetadata(token,
+    '/v4/aliases/'+encodeURIComponent(SECONDARY_ALIAS),transport);
   requireValue(secondary?.alias===SECONDARY_ALIAS&&secondary?.projectId===PROJECT_ID&&
     secondary?.deploymentId===INCIDENT_DEPLOYMENT_ID,
     'secondary incident domain mapping changed: stop and re-review');
