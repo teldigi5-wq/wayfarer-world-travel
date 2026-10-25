@@ -1,0 +1,60 @@
+name: Local browser performance baseline
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/browser-lighthouse-benchmark.mjs'
+      - '.github/workflows/browser-benchmark.yml'
+      - 'package.json'
+      - 'index.html'
+      - '*.css'
+      - '*.js'
+      - '*.mjs'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/browser-lighthouse-benchmark.mjs'
+      - '.github/workflows/browser-benchmark.yml'
+      - 'package.json'
+      - 'index.html'
+      - '*.css'
+      - '*.js'
+      - '*.mjs'
+permissions:
+  contents: read
+jobs:
+  browser-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout reviewed source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install Node.js 24
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+      - name: Check Chrome availability
+        run: |
+          set -euo pipefail
+          command -v google-chrome
+          google-chrome --version
+      - name: Install benchmark-only Lighthouse (not a production dependency)
+        run: npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund lighthouse@12.8.2
+      - name: Check benchmark syntax and project scripts
+        run: |
+          node --check scripts/browser-lighthouse-benchmark.mjs
+          npm run check
+      - name: Audit LOCAL static site without paid providers
+        run: npm run benchmark:browser
+      - name: Upload scores and raw Lighthouse evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: wayfarer-local-browser-benchmark
+          path: browser-benchmark-reports/
+          if-no-files-found: warn
+          retention-days: 14
