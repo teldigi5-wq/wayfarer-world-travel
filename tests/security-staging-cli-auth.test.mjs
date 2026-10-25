@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {assertVercelCliIdentityAccess} from '../scripts/check-vercel-cli-auth.mjs';
 
 const token='synthetic-token-only-for-tests-012345';
-const routes=['/v9/projects/prj_7wNYs34jlDD6s4IrI1kWSDpbyn7b','/v2/user','/teams/team_l9Hkxp0VvUgcGjJmTaCdRW1a'];
+const routes=['/v9/projects/prj_7wNYs34jlDD6s4IrI1kWSDpbyn7b','/v2/user','/v2/teams/team_l9Hkxp0VvUgcGjJmTaCdRW1a'];
 function transportFor(statusCodes,visits){
   return async (url,options)=>{
     const parsed=new URL(url);
@@ -67,4 +67,18 @@ test('manual workflow performs read-only CLI identity check after alias guard bu
   assert.match(workflow,/workflow_dispatch:/);
   assert.match(workflow,/vercel deploy --prebuilt --prod --skip-domain/);
   assert.doesNotMatch(workflow,/^\s+push:\s*$/m);
+});
+
+
+test('team identity uses the documented Vercel REST /v2/teams/{teamId} API',async()=>{
+  const seen=[];
+  await assertVercelCliIdentityAccess({token,transport:async(url,opts)=>{
+    const p=new URL(url);
+    assert.equal(opts.method,'GET');
+    assert.ok(p.pathname==='/v2/user'||p.pathname==='/v2/teams/team_l9Hkxp0VvUgcGjJmTaCdRW1a'||p.pathname==='/v9/projects/prj_7wNYs34jlDD6s4IrI1kWSDpbyn7b');
+    assert.doesNotMatch(p.pathname,/^\/teams\//);
+    seen.push(p.pathname);
+    return new Response(null,{status:200});
+  }});
+  assert.ok(seen.includes('/v2/teams/team_l9Hkxp0VvUgcGjJmTaCdRW1a'));
 });
