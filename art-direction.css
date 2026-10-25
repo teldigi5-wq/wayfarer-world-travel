@@ -258,3 +258,23 @@ button,a{transition:background-color .25s,border-color .25s,color .25s,box-shado
 .motion-off #discover .hero-media{animation:none!important;transform:none!important}
 .motion-off #discover .hero-copy>*{animation:none!important}
 .motion-off #reel>.destination>img{transition:none!important}
+
+
+/* Mobile motion preference control stays available even when the desktop
+   utility section is hidden by the compact bottom navigation. */
+.mobile-motion-toggle{display:none}
+@media(max-width:650px){
+  .mobile-motion-toggle{
+    position:fixed;z-index:130;
+    top:max(12px,env(safe-area-inset-top));right:12px;
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    min-height:44px;padding:8px 12px;
+    border:1px solid #eadfce80;border-radius:10px;
+    background:#071f1bf2;color:#fff6e4;
+    box-shadow:0 9px 30px #06130fa8;
+    font-size:11px;font-weight:600;letter-spacing:.02em;
+  }
+  .mobile-motion-toggle:focus-visible{
+    outline:3px solid #f0d6a4;outline-offset:3px;
+  }
+}

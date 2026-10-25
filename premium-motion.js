@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const root = document.documentElement;
-  const toggle = document.getElementById('motion-toggle');
+  const toggles = [...document.querySelectorAll('[data-motion-toggle]')];
   const progress = document.getElementById('reading-progress-fill');
   const nav = document.querySelector('.nav');
   const hero = document.querySelector('.hero');
@@ -17,7 +17,7 @@
 
   function applyPreference() {
     root.classList.toggle('motion-off', !enabled);
-    if (toggle) {
+    for (const toggle of toggles) {
       toggle.setAttribute('aria-pressed', String(enabled));
       toggle.setAttribute('aria-label', enabled ? 'Turn off decorative motion' : 'Turn on decorative motion');
       toggle.querySelector('.motion-toggle-text').textContent = enabled ? 'Motion on' : 'Motion off';
@@ -25,7 +25,7 @@
     if (heroImage && !enabled) heroImage.style.setProperty('--hero-offset', '0px');
   }
   applyPreference();
-  toggle?.addEventListener('click', () => {
+  for (const toggle of toggles) toggle.addEventListener('click', () => {
     enabled = !enabled;
     stored = enabled ? 'on' : 'off';
     try { localStorage.setItem(STORAGE_KEY, stored); } catch {}
