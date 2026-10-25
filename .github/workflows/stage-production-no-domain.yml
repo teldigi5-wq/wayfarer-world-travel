@@ -92,6 +92,11 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
+      - name: Verify Vercel CLI user/team/project access before pulling production config
+        run: node scripts/check-vercel-cli-auth.mjs
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
       - name: Pull actual production configuration for staged build only
         run: vercel pull --yes --environment=production --scope teldigi5-wq
         env:
