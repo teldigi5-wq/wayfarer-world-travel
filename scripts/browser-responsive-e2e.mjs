@@ -107,9 +107,13 @@ try {
       await page.screenshot({path:resolve(output,profile.name+'-journeys.png'),animations:'disabled'});
 
       // User motion preference is a functional accessibility control.
-      const initial=await page.locator('#motion-toggle').getAttribute('aria-pressed');
-      await page.locator('#motion-toggle').click();
-      const after=await page.locator('#motion-toggle').getAttribute('aria-pressed');
+      const motionSelector=profile.width<=650?'#mobile-motion-toggle':'#motion-toggle';
+      ensure(await page.locator(motionSelector).isVisible(),'Motion control must be visible');
+      const initial=await page.locator(motionSelector).getAttribute('aria-pressed');
+      await page.locator(motionSelector).click();
+      const after=await page.locator(motionSelector).getAttribute('aria-pressed');
+      assert.equal(await page.locator('#motion-toggle').getAttribute('aria-pressed'),after);
+      assert.equal(await page.locator('#mobile-motion-toggle').getAttribute('aria-pressed'),after);
       assert.notEqual(after,initial,'Motion preference toggle must update aria-pressed');
       ensure((await page.evaluate(()=>localStorage.getItem('wf-visual-motion-v1')))===(after==='true'?'on':'off'),
         'Motion preference must persist to local storage');
