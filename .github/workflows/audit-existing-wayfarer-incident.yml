@@ -1,0 +1,103 @@
+name: Audit existing Wayfarer incident deployment (read only)
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: "Exact reviewed main SHA (40 lowercase hexadecimal characters)"
+        required: true
+        type: string
+      confirmation:
+        description: "Type AUDIT_EXISTING_ONLY (never deploys or assigns a domain)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wayfarer-incident-read-only-audit
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    if: github.ref == 'refs/heads/main'
+    name: approved-read-only-incident-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Reject incorrect branch, SHA or confirmation
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          ACTUAL_SHA: ${{ github.sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+          GIT_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          node --input-type=module -e '
+            import assert from "node:assert/strict";
+            const {EXPECTED_SHA,ACTUAL_SHA,CONFIRMATION,GIT_REF}=process.env;
+            assert.equal(GIT_REF,"refs/heads/main");
+            assert.match(EXPECTED_SHA||"",/^[a-f0-9]{40}$/);
+            assert.equal(EXPECTED_SHA,ACTUAL_SHA,"Re-review the exact current main commit");
+            assert.equal(CONFIRMATION,"AUDIT_EXISTING_ONLY");
+            console.log("Exact source SHA approved for read-only incident audit.");
+          '
+
+  audit:
+    needs: preflight
+    name: existing-artifact-only-no-deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    environment: wayfarer-production-stage
+    env:
+      STAGING_ENABLED: ${{ vars.WAYFARER_PRODUCTION_STAGING_ENABLED }}
+    steps:
+      - name: Require existing protected environment guard
+        run: |
+          set -euo pipefail
+          if [ "$STAGING_ENABLED" != "true" ]; then
+            echo "BLOCKED: protected environment disabled"
+            exit 1
+          fi
+
+      - name: Check out immutable reviewed main without persisted Git credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Use pinned Node 24
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+
+      - name: Recheck offline security scripts and tests before credentials
+        run: |
+          set -euo pipefail
+          npm run check
+          npm test
+
+      - name: Audit existing Vercel artifact and unexpected aliases (GET only)
+        run: node scripts/audit-existing-incident.mjs
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Audit exact existing artifact HTTP surface (GET and HEAD only)
+        run: node scripts/verify-staged-http.mjs
+        env:
+          STAGED_URL: https://wayfarer-world-travel-m4ce3pzyx-teldigi5-wq.vercel.app
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+
+      - name: Record audit status, never certify release or change aliases
+        if: success()
+        run: |
+          {
+            echo '### Existing Wayfarer production-targeted deployment: READ-ONLY AUDIT PASS'
+            echo ''
+            echo 'Immutable build: dpl_8S1c3YMYJixGPid1i8bdwmz8DXHT'
+            echo 'Reviewed artifact source SHA: 4a09d5c8fb98b25f5e8f0d4877ea386e42eb14a0'
+            echo 'HTTP exposure audit passed, but the SECONDARY ALIAS INCIDENT REMAINS.'
+            echo 'Not a cross-device/browser, real-provider or promotion certification.'
+            echo 'No deploy, aliases, rollback, provider activation or promotion was performed.'
+            echo 'Primary production remains on a known source-exposing artifact; RELEASE NO-GO.'
+          } >> "$GITHUB_STEP_SUMMARY"
