@@ -65,7 +65,9 @@ test('canonical production source denylist checks legacy paths without providers
   assert.equal(result.prohibitedInternalPaths,INTERNAL_SOURCE_PATHS.length);
   assert.equal(result.apiGuards,6);
   assert.equal(mock.calls.length,2*(18+INTERNAL_SOURCE_PATHS.length)+6);
-  assert.ok(mock.calls.every(x=>!x.url.includes('serpapi')&&!x.url.includes('groq')));
+  assert.ok(mock.calls.every(x=>new URL(x.url).origin===
+    'https://wayfarer-world-travel.vercel.app'),
+  'All audit requests must remain on the fixed production origin');
   assert.equal(result.deploymentCommitVerified,false);
   assert.equal(result.productionReleaseAuthorized,false);
 });
