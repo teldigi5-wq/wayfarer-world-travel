@@ -16,6 +16,14 @@ export async function verifyStagedHttpSurface({
     throw Error('BLOCKED: automation bypass secret is invalid; do not use a partial credential');
   }
   const hasBypass=typeof bypassSecret==='string'&&bypassSecret.length>=16;
+  // The incident deployment has seen intermittent 403 edge denials on GETs for
+  // internal files while the authorized Vercel fetch returns 404. Reduce the
+  // CI scan's request rate, and retry a *single* denied/throttled read once.
+  // Do not accept 403/429 as success; the shared verifier still requires 404.
+  const liveNetwork=transport===fetch;
+  const pause=ms=>liveNetwork?new Promise(done=>setTimeout(done,ms)):
+    Promise.resolve();
+  let accessDeniedRetries=0;
   const stageTransport=async (requestUrl,opts)=>{
     const request=new URL(requestUrl);
     if(request.origin!==origin||request.username||request.password||
@@ -27,18 +35,32 @@ export async function verifyStagedHttpSurface({
     }
     const headers={...opts.headers};
     if(hasBypass)headers['x-vercel-protection-bypass']=bypassSecret;
-    return transport(requestUrl,{...opts,redirect:'error',headers});
+    const requestOptions={...opts,redirect:'error',headers};
+    // HEAD and Range GETs are sequential, not a burst of parallel probes.
+    await pause(250);
+    let response=await transport(requestUrl,requestOptions);
+    const denied=response?.status===403||response?.status===429;
+    if(denied&&!request.pathname.startsWith('/api/')){
+      accessDeniedRetries++;
+      try{await response.body?.cancel?.()}catch{}
+      await pause(2000);
+      response=await transport(requestUrl,requestOptions);
+    }
+    return response;
   };
-  // Shared review inventory: all historical internal paths, the public manifest,
-  // safe invalid-method/input API guards, headers and expected MIME types.
+  // The original strict verifier still rejects any persistent 403/429 as well
+  // as 200/206 source responses, and never reads or prints response bodies.
   const report=await verifyHttpSurface({origin,transport:stageTransport});
   return {...report,status:'STAGED_HTTP_SURFACE_PASS_ONLY',origin,
     protectionBypassUsed:hasBypass,
+    transientAccessDenialsRetried:accessDeniedRetries,
     readOnly:true,stagedDeploymentIdentityVerified:false,
     realBrowserJourneysVerified:false,
     runtimeProviderLocksVerified:false,
     productionPromotionAuthorized:false,
-    warning:'HTTP surface only; separate identity, browser, runtime and rollback release gates are still required.'};
+    warning:accessDeniedRetries>0?
+      'HTTP surface passed after transient edge denials; investigate repeatability, identity, browser, runtime and rollback separately.':
+      'HTTP surface only; separate identity, browser, runtime and rollback release gates are still required.'};
 }
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
