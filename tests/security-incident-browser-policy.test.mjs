@@ -27,7 +27,8 @@ test('only safe static GET and HEAD to exact immutable origin can leave browser'
 
 test('all real APIs are blocked even for safe-method GET',()=>{
   for(const path of ['/api','/api/','/api/hotels','/api/ai-plan?x=1',
-    '/api/travel-offers','/api/travel-search','/api/explore','/api/intelligence']){
+    '/api/travel-offers','/api/travel-search','/api/explore','/api/intelligence',
+    '/api%2Ftravel-offers','/%61pi/travel-offers']){
     assert.equal(classifyIncidentBrowserRequest(origin+path,'GET'),'block-api');
     assert.equal(classifyIncidentBrowserRequest(origin+path,'POST'),'block-api');
   }
