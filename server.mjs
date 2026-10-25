@@ -40,4 +40,8 @@ http.createServer(async(req,res)=>{
     res.writeHead(404,{...headers,'Cache-Control':'no-store','Content-Type':'text/plain; charset=utf-8'});
     res.end(req.method==='HEAD'?undefined:'Not found');
   }
-}).listen(4173,'127.0.0.1');
+}).listen((()=>{
+  const port=Number(process.env.WAYFARER_LOCAL_PORT||4173);
+  if(!Number.isInteger(port)||port<1024||port>65535)throw Error('Invalid local port');
+  return port;
+})(),'127.0.0.1');
