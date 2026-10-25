@@ -54,7 +54,7 @@ try {
       window.__wayfarerCspViolations=[];
       document.addEventListener('securitypolicyviolation',event=>{
         const kind=String(event.effectiveDirective||'');
-        if(/^(script-src|style-src|object-src|base-uri|form-action)/.test(kind)){
+        if(/^(script-src|style-src|connect-src|object-src|base-uri|form-action)/.test(kind)){
           window.__wayfarerCspViolations.push({
             directive:kind,blocked:String(event.blockedURI||'').slice(0,120)
           });
@@ -96,6 +96,33 @@ try {
       await page.locator('#studio').waitFor({state:'visible'});
       await page.locator('#itinerary .day').first().waitFor({state:'visible'});
       const studio=await checkFit('studio');
+      // A valid Wikipedia response without coordinates MUST fall through to
+      // the approved public geocoding source; keep both network calls synthetic.
+      let primaryQueries=0, fallbackQueries=0;
+      const primaryFixture=async route=>{
+        primaryQueries++;
+        await route.fulfill({status:200,contentType:'application/json',
+          body:JSON.stringify({ok:true,provider:'Wikipedia place index',results:[]})});
+      };
+      const geocodingFixture=async route=>{
+        fallbackQueries++;
+        await route.fulfill({status:200,contentType:'application/json',
+          body:JSON.stringify({results:[{id:987651,name:'WayfarerMockTown',
+            country:'Japan',country_code:'JP',admin1:'Test Prefecture',
+            latitude:35.0,longitude:135.0,timezone:'Asia/Tokyo'}]})});
+      };
+      await page.route('**/api/explore?*',primaryFixture);
+      await page.route('https://geocoding-api.open-meteo.com/v1/search?*',geocodingFixture);
+      await page.locator('#world-query').fill('WayfarerMockTown');
+      await page.locator('#world-form button[type="submit"]').click();
+      await page.locator('#world-results .world-result').first().waitFor({state:'visible'});
+      ensure((await page.locator('#world-results').innerText()).includes('WayfarerMockTown'),
+        'Fallback geocoding must render the mocked worldwide result');
+      assert.equal(primaryQueries,1,'Wikipedia lookup should be attempted once');
+      assert.equal(fallbackQueries,1,'Geocoding fallback should be attempted once');
+      await page.unroute('**/api/explore?*',primaryFixture);
+      await page.unroute('https://geocoding-api.open-meteo.com/v1/search?*',geocodingFixture);
+
       await page.locator('#save-trip').click();
       const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('wf-trips-v2')||'[]'));
       ensure(saved.some(x=>x.destination==='Kyoto'),'Save journey must persist locally');
