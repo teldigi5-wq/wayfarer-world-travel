@@ -30,13 +30,13 @@ const invalidApiPaths=Object.freeze([
   {path:'/api/travel-search',status:405,allow:'POST'}
 ]);
 
-async function probe(transport,path,method){
+async function probe(transport,origin,path,method){
   const options={
     method,redirect:'error',signal:AbortSignal.timeout(10000),
     headers:method==='GET'?{'Range':'bytes=0-0','Accept':'*/*'}:{'Accept':'*/*'}
   };
   try{
-    return await transport(PRODUCTION_ORIGIN+path,options);
+    return await transport(origin+path,options);
   }catch{
     throw Error('Request failed or redirected: '+method+' '+path);
   }
@@ -70,7 +70,11 @@ function expectType(response,name){
     'Unexpected Content-Type for '+name);
 }
 
-export async function verifyProductionSurface({transport=fetch}={}){
+export async function verifyHttpSurface({transport=fetch,origin=PRODUCTION_ORIGIN}={}){
+  let parsedOrigin;
+  try{parsedOrigin=new URL(origin)}catch{throw Error('Invalid HTTP audit origin')}
+  assert.equal(parsedOrigin.protocol,'https:','HTTP audit requires HTTPS');
+  assert.equal(parsedOrigin.origin,origin,'HTTP audit must use an exact origin');
   assert.equal(typeof transport,'function','A fetch-compatible transport is required');
   assert.equal(new Set(PUBLIC_ASSETS).size,PUBLIC_ASSETS.length,
     'Public manifest contains duplicates');
@@ -87,14 +91,14 @@ export async function verifyProductionSurface({transport=fetch}={}){
   // Check internal source paths first: a single successful source response is a NO-GO.
   for(const path of INTERNAL_SOURCE_PATHS){
     for(const method of ['HEAD','GET']){
-      const response=await probe(transport,path,method);
+      const response=await probe(transport,origin,path,method);
       try{expectStatus(response,404,'Internal file exposed: '+method+' '+path);}
       finally{await discard(response);}
     }
   }
   for(const path of ['/',...PUBLIC_ASSETS.map(name=>'/'+name)]){
     for(const method of ['HEAD','GET']){
-      const response=await probe(transport,path,method);
+      const response=await probe(transport,origin,path,method);
       try{
         expectStatus(response,200,'Missing public asset: '+method+' '+path,method==='GET');
         expectType(response,path==='/'?'index.html':path.slice(1));
@@ -105,7 +109,7 @@ export async function verifyProductionSurface({transport=fetch}={}){
   // These deliberately invalid inputs must be rejected before provider calls.
   // Never send a valid search, paid provider request, POST or beta credentials.
   for(const {path,status,allow} of invalidApiPaths){
-    const response=await probe(transport,path,'GET');
+    const response=await probe(transport,origin,path,'GET');
     try{
       expectStatus(response,status,'API handler not safely responding: '+path);
       assert.match(response.headers.get('content-type')||'',contentTypes.json,
@@ -118,7 +122,7 @@ export async function verifyProductionSurface({transport=fetch}={}){
   }
   return {
     status:'PRODUCTION_HTTP_SURFACE_PASS_ONLY',
-    origin:PRODUCTION_ORIGIN,
+    origin,
     publicResources:1+PUBLIC_ASSETS.length,
     prohibitedInternalPaths:INTERNAL_SOURCE_PATHS.length,
     apiGuards:invalidApiPaths.length,
@@ -130,6 +134,11 @@ export async function verifyProductionSurface({transport=fetch}={}){
     productionReleaseAuthorized:false,
     warning:'HTTP surface only. Independently verify live deployment identity, full journeys, performance and rollback.'
   };
+}
+
+// Public production entrypoint remains hard-pinned; callers cannot redirect the CLI audit.
+export async function verifyProductionSurface({transport=fetch}={}){
+  return verifyHttpSurface({transport,origin:PRODUCTION_ORIGIN});
 }
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
