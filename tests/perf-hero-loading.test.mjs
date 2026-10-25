@@ -13,11 +13,9 @@ test('first-view hero has a single, consistent high-priority local image',()=>{
   assert.equal((html.match(/wayfarer-hero-v3\.jpg/g)||[]).length,2);
 });
 
-test('mobile avoids continuous full-screen hero repaint while keeping text entrances',()=>{
-  const part=css.slice(css.indexOf('/* Mobile hero performance:'));
-  assert.ok(part.includes('@media (max-width:650px)'));
-  assert.match(part,/#discover \.hero-media\s*\{\s*animation: none;/);
-  assert.ok(part.includes('transform: scale(1.025)'));
+test('original cinematic motion and reduced-motion support stay intact',()=>{
+  assert.match(css, /#discover \.hero-media\{[^}]*animation:heroCinema/);
   assert.match(css,/#discover \.hero-copy>\*\{animation:wfRise/);
   assert.match(css, /@media\(prefers-reduced-motion:reduce\)/);
+  assert.doesNotMatch(css, /\/\* Mobile hero performance:/);
 });
