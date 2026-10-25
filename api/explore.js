@@ -48,7 +48,7 @@ const safePublicUrl=(raw,fallback)=>{
     return (url.protocol==='https:'||url.protocol==='http:')&&!url.username&&!url.password?url.href:fallback;
   }catch{return fallback;}
 };
-const number=(value,min,max)=>{const n=Number(value);return Number.isFinite(n)&&n>=min&&n<=max?n:null};
+const number=(value,min,max)=>{if(typeof value!=='number'&&typeof value!=='string')return null;const text=String(value).trim();if(!text||text.length>30||!/^[-+]?(?:[0-9]+(?:[.][0-9]*)?|[.][0-9]+)(?:[eE][-+]?[0-9]+)?$/.test(text))return null;const n=Number(text);return Number.isFinite(n)&&n>=min&&n<=max?n:null};
 const distance=(a,b,c,d)=>{const r=6371,p=Math.PI/180,x=(c-a)*p,y=(d-b)*p;const h=Math.sin(x/2)**2+Math.cos(a*p)*Math.cos(c*p)*Math.sin(y/2)**2;return Math.round(6371*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h))*10)/10};
 
 async function search(req){
@@ -72,5 +72,5 @@ export default async function handler(req,res){
   res.setHeader('X-Content-Type-Options','nosniff');
   if(req.method!=='GET')return res.status(405).json({ok:false,error:'Method not allowed'});
   if(tooMany(req)){res.setHeader('Retry-After','60');res.setHeader('Cache-Control','no-store');return res.status(429).json({ok:false,error:'Discovery request limit reached. Please retry shortly.'});}
-  try{const result=req.query.mode==='nearby'?await nearby(req):await search(req);return res.status(result.status).json(result.body)}catch(e){return res.status(502).json({ok:false,error:e.message||'Discovery provider unavailable'})}
+  try{const result=req.query.mode==='nearby'?await nearby(req):await search(req);return res.status(result.status).json(result.body)}catch{return res.status(502).json({ok:false,error:'Discovery provider unavailable. Please retry later.'})}
 }
