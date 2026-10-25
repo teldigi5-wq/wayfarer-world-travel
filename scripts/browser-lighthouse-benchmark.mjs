@@ -48,6 +48,7 @@ try {
     const started=performance.now();
     await runCli([origin,'--quiet','--output=json','--output-path='+dest,
       '--only-categories=performance,accessibility,best-practices,seo',
+      '--blocked-url-patterns=https://*',
       '--chrome-flags=--headless=new --no-sandbox --disable-dev-shm-usage --disable-gpu',
       '--max-wait-for-load=45000',...profile.args]);
     const report=JSON.parse(readFileSync(dest,'utf8'));
