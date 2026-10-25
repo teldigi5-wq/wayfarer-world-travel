@@ -27,6 +27,19 @@ Check:
 - Probe malformed geo inputs and metered-provider-lock behaviors only with synthetic payloads, never secrets or real paid searches.
 - Verify the exact Git commit SHA, production environment variable *names* and disabled-provider posture without showing secret values.
 
+## Executable protected-preview HTTP preflight
+
+After confirming the target deployment is the reviewed commit in Vercel and linking the *same project* with the Vercel CLI, execute from the repository in an authorized environment:
+
+```bash
+WAYFARER_PREVIEW_URL="https://wayfarer-world-travel-6atilophd-teldigi5-wq.vercel.app" \
+  vercel env run -- npm run test:preview:authorized
+```
+
+Refresh the preview URL to the exact current immutable deployment before executing. The script fails closed if `VERCEL_OIDC_TOKEN` is unavailable, the hostname is not an immutable same-team Wayfarer preview, the identity token cannot pass Vercel protection, HTTP redirects occur, or the CSP/media/API boundaries differ from the reviewed configuration. It prints only validated status metadata—not the OIDC token or any request headers. It uses GET requests only, rejects malformed coordinates *before* provider calls and probes paid-provider routes with wrong HTTP methods to avoid billable requests. The script does **not** test actual supplier availability or authenticated browser state.
+
+The script's mock-based security checks run in regular `npm test`; **that mock pass is not a protected-preview pass**. Run the authenticated command in a trusted workspace with access to Vercel. Do not commit `.env.local` or save tokens as workflow artifacts.
+
 ## Release decision
 
 Do **not** promote a preview solely because it built successfully; promotion changes production environment variables and can require a new build. For an approved launch, create a production-target staged build **without assigning public domains**, perform authorized smoke tests against that exact artifact, and then promote the verified production build with your team's release approvals. Preserve the last good deployment ID and its live alias before switching. Monitor response error rate and check critical navigation immediately afterward. Roll back to the recorded previous production deployment if a verified regression occurs; note that Vercel rollback can pause automatic alias assignment until promotion re-enables it.
