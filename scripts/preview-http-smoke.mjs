@@ -75,6 +75,15 @@ export async function previewSmoke({url,oidcToken,transport=fetch}){
     assert.equal(response.headers.get('allow'),'POST');
   }
 
+  // Build output is a browser-asset allowlist. Internal implementation,
+  // workflow configuration, docs and test scripts must not be static URLs.
+  for(const file of ['/server.mjs','/tests/security-static-output.test.mjs',
+    '/scripts/preview-http-smoke.mjs','/.github/workflows/checks.yml',
+    '/docs/release-security-preflight.md']){
+    const result=await get(file);
+    assertCode(result,404,'internal static file not published '+file);
+  }
+
   return {environment:'protected_preview',origin,checks,
     warning:'This does not check a signed-in browser journey, real paid providers, or production configuration.'};
 }
