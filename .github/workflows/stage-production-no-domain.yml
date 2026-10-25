@@ -1,0 +1,144 @@
+name: Stage Wayfarer production without domain changes
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: "Exact 40-character main SHA approved for a staging build"
+        required: true
+        type: string
+      confirmation:
+        description: "Type STAGE_WITHOUT_PROMOTION (never promotes)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wayfarer-production-staging
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    if: github.ref == 'refs/heads/main'
+    name: exact-main-sha-approval
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Reject incorrect branch, SHA or stage confirmation
+        env:
+          REQUESTED_SHA: ${{ inputs.expected_sha }}
+          ACTUAL_SHA: ${{ github.sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+          GIT_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          node --input-type=module -e '
+            import assert from "node:assert/strict";
+            const {REQUESTED_SHA,ACTUAL_SHA,CONFIRMATION,GIT_REF}=process.env;
+            assert.equal(GIT_REF,"refs/heads/main","Staging is restricted to reviewed main");
+            assert.match(REQUESTED_SHA||"",/^[0-9a-f]{40}$/,"Expected immutable full SHA");
+            assert.equal(REQUESTED_SHA,ACTUAL_SHA,"Main SHA moved; review before staging");
+            assert.equal(CONFIRMATION,"STAGE_WITHOUT_PROMOTION","Explicit staging-only confirmation required");
+            console.log("Verified exact main commit. Promotion remains prohibited.");
+          '
+
+  stage:
+    needs: preflight
+    name: manual-staged-production-no-domain-assignment
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: wayfarer-production-stage
+    env:
+      VERCEL_ORG_ID: team_l9Hkxp0VvUgcGjJmTaCdRW1a
+      VERCEL_PROJECT_ID: prj_7wNYs34jlDD6s4IrI1kWSDpbyn7b
+      VERCEL_CLI_VERSION: '65.1.0'
+      STAGING_ENABLED: ${{ vars.WAYFARER_PRODUCTION_STAGING_ENABLED }}
+    steps:
+      - name: Require explicitly configured protected staging environment
+        run: |
+          set -euo pipefail
+          if [ "${STAGING_ENABLED:-}" != "true" ]; then
+            echo "BLOCKED: staging environment flag is unset; configure protection and explicit approval."
+            exit 1
+          fi
+
+      - name: Check out only the immutable reviewed main SHA
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Use pinned Node 24
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+
+      - name: Recheck source, static output, and security tests before secrets
+        run: |
+          set -euo pipefail
+          npm run check
+          npm run build
+          npm test
+
+      - name: Install reviewed, fixed-version Vercel CLI
+        run: |
+          set -euo pipefail
+          npm install --global "vercel@${VERCEL_CLI_VERSION}"
+          vercel deploy --help | grep -q -- '--skip-domain'
+
+      - name: Verify neither existing public alias has moved
+        run: node scripts/check-staging-aliases.mjs
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Pull actual production configuration for staged build only
+        run: vercel pull --yes --environment=production --scope teldigi5-wq
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build using production environment but without a release
+        run: vercel build --prod --scope teldigi5-wq
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Create staged production build with NO domain assignment
+        id: deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          staged_url="$(vercel deploy --prebuilt --prod --skip-domain --yes --scope teldigi5-wq)"
+          STAGED_URL="$staged_url" node --input-type=module -e '
+            import assert from "node:assert/strict";
+            const raw=process.env.STAGED_URL||"";
+            const url=new URL(raw);
+            assert.equal(url.protocol,"https:","Expected secure immutable deployment");
+            assert.equal(url.origin,raw,"Expected deployment origin only");
+            assert.match(url.hostname,/^wayfarer-world-travel-[a-z0-9]+-teldigi5-wq\.vercel\.app$/);
+            console.log("Staged deployment URL validated; public domains NOT approved for assignment.");
+          '
+          printf 'url=%s\n' "$staged_url" >> "$GITHUB_OUTPUT"
+
+      - name: Prove public alias assignments did not change after staging
+        run: node scripts/check-staging-aliases.mjs
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Record only the staged URL and remaining release gate
+        if: success()
+        env:
+          STAGED_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          {
+            echo '### Wayfarer staging: READY FOR SEPARATE SECURITY REVIEW'
+            echo ''
+            echo "Staged production deployment (no domain assignment): $STAGED_URL"
+            echo ''
+            echo 'Both existing public aliases verified unchanged.'
+            echo 'NOT promoted. Before a separate manually approved promotion:'
+            echo '1. Independently verify exact deployment/project/production target and aliases.'
+            echo '2. Run authenticated real deployed static/API and browser security checks.'
+            echo '3. Verify provider locks, observability, and a safe rollback decision.'
+            echo '4. Promote ONLY the verified staging deployment after separate owner approval.'
+          } >> "$GITHUB_STEP_SUMMARY"
