@@ -6,6 +6,7 @@ const cfg=JSON.parse(readFileSync(new URL('../vercel.json',import.meta.url),'utf
 const csp=cfg.headers.find(rule=>rule.source==='/(.*)')
   .headers.find(header=>header.key==='Content-Security-Policy').value;
 const app=readFileSync(new URL('../premium-app.js',import.meta.url),'utf8');
+const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 
 test('CSP minimally allowlists only the actual free geocoding host for cross-origin connect',()=>{
   const connection=csp.split(';').map(s=>s.trim()).find(s=>s.startsWith('connect-src '));
@@ -18,4 +19,9 @@ test('worldwide search attempts geocoding when Wikipedia is valid but yields no 
   assert.match(app,/if\(!r\.ok\|\|!d\.ok\|\|!Array\.isArray\(d\.results\)\|\|d\.results\.length===0\)throw Error\(\)/);
   assert.match(app,/fetch\('https:\/\/geocoding-api\.open-meteo\.com\/v1\/search\?'\+params\)/);
   assert.match(app,/Number\.isFinite\(x\.latitude\)&&Number\.isFinite\(x\.longitude\)/);
+});
+
+test('worldwide search explains the public third-party lookup before submission',()=>{
+  assert.match(html,/class="world-search-disclosure"[^>]*>Destination searches may contact Wikipedia and Open-Meteo/);
+  assert.match(html,/Saved journeys stay on this device/);
 });
