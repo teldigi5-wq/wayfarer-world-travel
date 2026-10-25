@@ -125,7 +125,10 @@ jobs:
           '
           printf 'url=%s\n' "$staged_url" >> "$GITHUB_OUTPUT"
 
-      - name: Prove public alias assignments did not change after staging
+      - name: Prove public alias assignments did not change after staging attempt
+        # Also run if deploy fails after partially creating a deployment.
+        # Skip when staging was never attempted. No automatic rollback or promotion.
+        if: ${{ always() && steps.deploy.outcome != 'skipped' }}
         run: node scripts/check-staging-aliases.mjs
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
