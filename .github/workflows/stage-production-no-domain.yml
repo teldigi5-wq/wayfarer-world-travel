@@ -133,6 +133,13 @@ jobs:
           EXPECTED_SHA: ${{ github.sha }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
+      - name: Audit staged production HTTP source isolation and safe API guards
+        if: ${{ success() && steps.deploy.outcome == 'success' }}
+        run: node scripts/verify-staged-http.mjs
+        env:
+          STAGED_URL: ${{ steps.deploy.outputs.url }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+
       - name: Prove public alias assignments did not change after staging attempt
         # Also run if deploy fails after partially creating a deployment.
         # Skip when staging was never attempted. No automatic rollback or promotion.
@@ -151,7 +158,7 @@ jobs:
             echo ''
             echo "Staged production deployment (no domain assignment): $STAGED_URL"
             echo ''
-            echo 'Exact immutable production-targeted deployment metadata verified; browser/security checks still required.'
+            echo 'Exact staged deployment identity and bounded read-only HTTP security surface verified; browser, provider and rollback checks still required.'
             echo 'Both existing public aliases verified unchanged.'
             echo 'NOT promoted. Before a separate manually approved promotion:'
             echo '1. Independently verify exact deployment/project/production target and aliases.'
