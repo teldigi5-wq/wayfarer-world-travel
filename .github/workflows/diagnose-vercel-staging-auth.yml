@@ -1,0 +1,77 @@
+name: Diagnose Wayfarer Vercel staging credentials (read only)
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: "Exact reviewed main SHA (40 lowercase hexadecimal characters)"
+        required: true
+        type: string
+      confirmation:
+        description: "Type DIAGNOSE_AUTH_ONLY to authorize read-only credential checks"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wayfarer-auth-diagnostic
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: validate-exact-main-auth-only-approval
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check immutable main SHA and auth-only confirmation
+        env:
+          REQUESTED_SHA: ${{ inputs.expected_sha }}
+          ACTUAL_SHA: ${{ github.sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+          GIT_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          node --input-type=module -e '
+            import assert from "node:assert/strict";
+            const {REQUESTED_SHA,ACTUAL_SHA,CONFIRMATION,GIT_REF}=process.env;
+            assert.equal(GIT_REF,"refs/heads/main","Read-only diagnostic is restricted to main");
+            assert.match(REQUESTED_SHA||"",/^[0-9a-f]{40}$/,"Expected exact reviewed main SHA");
+            assert.equal(REQUESTED_SHA,ACTUAL_SHA,"Main moved; re-review SHA");
+            assert.equal(CONFIRMATION,"DIAGNOSE_AUTH_ONLY","Explicit approval text required");
+            console.log("Authorized READ-ONLY credential diagnosis on exact main SHA.");
+          '
+
+  diagnostic:
+    name: protected-read-only-vercel-identity-diagnostic
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: wayfarer-production-stage
+    env:
+      STAGING_ENABLED: ${{ vars.WAYFARER_PRODUCTION_STAGING_ENABLED }}
+    steps:
+      - name: Require protected staging environment configuration
+        run: |
+          set -euo pipefail
+          if [ "$STAGING_ENABLED" != "true" ]; then
+            echo "BLOCKED: protected staging environment flag is missing."
+            exit 1
+          fi
+
+      - name: Check out immutable reviewed source without stored Git credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Use pinned Node.js 24
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+
+      - name: Check Vercel project and identity endpoint access without deployment
+        run: node scripts/diagnose-vercel-auth.mjs
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
