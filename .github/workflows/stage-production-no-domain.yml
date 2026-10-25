@@ -113,7 +113,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           set -euo pipefail
-          staged_url="$(vercel deploy --prebuilt --prod --skip-domain --yes --scope teldigi5-wq)"
+          staged_url="$(vercel deploy --prebuilt --prod --skip-domain --yes --scope teldigi5-wq --meta "wayfarerApprovedSourceSha=${GITHUB_SHA}")"
           STAGED_URL="$staged_url" node --input-type=module -e '
             import assert from "node:assert/strict";
             const raw=process.env.STAGED_URL||"";
@@ -124,6 +124,14 @@ jobs:
             console.log("Staged deployment URL validated; public domains NOT approved for assignment.");
           '
           printf 'url=%s\n' "$staged_url" >> "$GITHUB_OUTPUT"
+
+      - name: Read-only verify exact staged production deployment identity
+        if: ${{ success() && steps.deploy.outcome == 'success' }}
+        run: node scripts/check-staged-deployment.mjs
+        env:
+          STAGED_URL: ${{ steps.deploy.outputs.url }}
+          EXPECTED_SHA: ${{ github.sha }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
       - name: Prove public alias assignments did not change after staging attempt
         # Also run if deploy fails after partially creating a deployment.
@@ -143,6 +151,7 @@ jobs:
             echo ''
             echo "Staged production deployment (no domain assignment): $STAGED_URL"
             echo ''
+            echo 'Exact immutable production-targeted deployment metadata verified; browser/security checks still required.'
             echo 'Both existing public aliases verified unchanged.'
             echo 'NOT promoted. Before a separate manually approved promotion:'
             echo '1. Independently verify exact deployment/project/production target and aliases.'
