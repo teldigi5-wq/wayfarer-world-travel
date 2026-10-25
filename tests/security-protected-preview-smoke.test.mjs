@@ -26,6 +26,10 @@ function mocked({deny=false}={}){
       400,{'Content-Type':'application/json','Cache-Control':'no-store'});
     if(['/api/ai-plan','/api/travel-offers','/api/travel-search'].includes(path))
       return response(JSON.stringify({ok:false}),405,{'Content-Type':'application/json','Allow':'POST'});
+    if(['/server.mjs','/tests/security-static-output.test.mjs',
+      '/scripts/preview-http-smoke.mjs','/.github/workflows/checks.yml',
+      '/docs/release-security-preflight.md'].includes(path))
+      return response('Not Found',404,{'Content-Type':'text/plain'});
     throw Error('Unexpected outbound request');
   }
   return {visited,fetcher};
@@ -46,8 +50,8 @@ test('short-lived authorization is never sent to untrusted origins or redirects'
 test('authenticated preview smoke checks headers, hero, validation and safe method rejections only',async()=>{
   const mock=mocked();
   const report=await previewSmoke({url:target,oidcToken:token,transport:mock.fetcher});
-  assert.equal(report.checks.length,9);
-  assert.equal(mock.visited.length,6);
+  assert.equal(report.checks.length,14);
+  assert.equal(mock.visited.length,11);
   assert.ok(mock.visited.every(v=>v.options.method==='GET'&&v.options.redirect==='error'));
   assert.ok(mock.visited.every(v=>v.url.startsWith(target+'/')));
   assert.ok(mock.visited.every(v=>v.options.headers['x-vercel-trusted-oidc-idp-token']===token));
