@@ -64,6 +64,8 @@ export async function previewSmoke({url,oidcToken,transport=fetch}){
 
   const invalidGeo=await get('/api/explore?mode=nearby&lat=%20&lon=0');
   assertCode(invalidGeo,400,'invalid geographic input rejected before provider use');
+  assert.equal(invalidGeo.headers.get('cache-control'),'no-store','Invalid geo must never be cached by the edge');
+  checks.push({check:'invalid geographic input is not cached',result:'pass'});
   assert.equal((await invalidGeo.json()).ok,false);
 
   // Wrong HTTP method cannot initiate billing, webhook calls, or authenticated search.

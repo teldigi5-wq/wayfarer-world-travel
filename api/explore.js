@@ -68,9 +68,16 @@ async function nearby(req){
 }
 
 export default async function handler(req,res){
-  res.setHeader('Cache-Control','public, s-maxage=900, stale-while-revalidate=3600');
+  // Never store malformed input, unsupported methods, rate limits or provider failures.
+  // Only valid, successful public discoveries can use the shared edge cache.
+  res.setHeader('Cache-Control','no-store');
   res.setHeader('X-Content-Type-Options','nosniff');
   if(req.method!=='GET')return res.status(405).json({ok:false,error:'Method not allowed'});
   if(tooMany(req)){res.setHeader('Retry-After','60');res.setHeader('Cache-Control','no-store');return res.status(429).json({ok:false,error:'Discovery request limit reached. Please retry shortly.'});}
-  try{const result=req.query.mode==='nearby'?await nearby(req):await search(req);return res.status(result.status).json(result.body)}catch{return res.status(502).json({ok:false,error:'Discovery provider unavailable. Please retry later.'})}
+  try{
+    const result=req.query.mode==='nearby'?await nearby(req):await search(req);
+    if(result.status===200&&result.body?.ok===true)
+      res.setHeader('Cache-Control','public, s-maxage=900, stale-while-revalidate=3600');
+    return res.status(result.status).json(result.body);
+  }catch{return res.status(502).json({ok:false,error:'Discovery provider unavailable. Please retry later.'})}
 }
