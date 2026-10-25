@@ -55,3 +55,16 @@ test('redirect, missing response or unexpected status cannot pass preflight',asy
   await assert.rejects(assertVercelCliIdentityAccess({token,transport:transportFor([302,200,200],visits)}),/cannot read the expected/);
   await assert.rejects(assertVercelCliIdentityAccess({token,transport:async()=>null}),/cannot read the expected/);
 });
+
+
+test('manual workflow performs read-only CLI identity check after alias guard but before pulling config',async()=>{
+  const {readFileSync}=await import('node:fs');
+  const workflow=readFileSync(new URL('../.github/workflows/stage-production-no-domain.yml',import.meta.url),'utf8');
+  const aliasPos=workflow.indexOf('run: node scripts/check-staging-aliases.mjs');
+  const preflightPos=workflow.indexOf('run: node scripts/check-vercel-cli-auth.mjs');
+  const pullPos=workflow.indexOf('run: vercel pull --yes --environment=production');
+  assert.ok(aliasPos>=0&&aliasPos<preflightPos&&preflightPos<pullPos);
+  assert.match(workflow,/workflow_dispatch:/);
+  assert.match(workflow,/vercel deploy --prebuilt --prod --skip-domain/);
+  assert.doesNotMatch(workflow,/^\s+push:\s*$/m);
+});
