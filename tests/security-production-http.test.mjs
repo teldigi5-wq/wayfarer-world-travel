@@ -2,20 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {PUBLIC_ASSETS} from '../static-asset-manifest.mjs';
+import {INTERNAL_SOURCE_PATHS} from '../internal-source-denylist.mjs';
 import {verifyProductionSurface} from '../scripts/verify-production-http.mjs';
 
 const config=JSON.parse(readFileSync(new URL('../vercel.json',import.meta.url),'utf8'));
 const security=Object.fromEntries(config.headers.find(x=>x.source==='/(.*)')
   .headers.map(x=>[x.key,x.value]));
-const sourcePaths=new Set([
-  '/server.mjs','/tests/security-static-output.test.mjs',
-  '/tests/security-explore-cache-policy.test.mjs',
-  '/scripts/preview-http-smoke.mjs','/scripts/stage-public-assets.mjs',
-  '/.github/workflows/checks.yml','/docs/release-security-preflight.md',
-  '/docs/static-output-release-gate.md','/package.json','/vercel.json',
-  '/.env','/.git/config','/static-asset-manifest.mjs',
-  '/provider-production-lock.mjs'
-]);
+const sourcePaths=new Set(INTERNAL_SOURCE_PATHS);
 const apiPaths=new Set(['/api/explore','/api/intelligence','/api/hotels',
   '/api/ai-plan','/api/travel-offers','/api/travel-search']);
 const publicPaths=new Set(['/',...PUBLIC_ASSETS.map(name=>'/'+name)]);
@@ -64,14 +57,14 @@ function simulated({exposed=null,missing=null,wrongMime=null,brokenApi=null,
   }
   return {transport,calls};
 }
-test('fixed canonical production surface verifies all 70 HEAD/GET requests without providers',async()=>{
+test('canonical production source denylist checks legacy paths without providers',async()=>{
   const mock=simulated(),result=await verifyProductionSurface({transport:mock.transport});
   assert.equal(result.status,'PRODUCTION_HTTP_SURFACE_PASS_ONLY');
-  assert.equal(result.requests,70);
+  assert.equal(result.requests,2*(18+INTERNAL_SOURCE_PATHS.length)+6);
   assert.equal(result.publicResources,18);
-  assert.equal(result.prohibitedInternalPaths,14);
+  assert.equal(result.prohibitedInternalPaths,INTERNAL_SOURCE_PATHS.length);
   assert.equal(result.apiGuards,6);
-  assert.equal(mock.calls.length,70);
+  assert.equal(mock.calls.length,2*(18+INTERNAL_SOURCE_PATHS.length)+6);
   assert.ok(mock.calls.every(x=>!x.url.includes('serpapi')&&!x.url.includes('groq')));
   assert.equal(result.deploymentCommitVerified,false);
   assert.equal(result.productionReleaseAuthorized,false);
@@ -109,4 +102,22 @@ test('no redirects are followed and network errors block rather than pass',async
   const mock=simulated({redirect:'/server.mjs'});
   await assert.rejects(verifyProductionSurface({transport:mock.transport}),
     /Request failed or redirected/);
+});
+
+test('legacy documentation and n8n workflow disclosure fails production release gate',async()=>{
+  for(const exposed of ['/n8n/wayfarer-groq-agents.json',
+    '/docs/premium/QA-RESULTS.md','/tests/ai.test.mjs',
+    '/.github/workflows/daily-airports.yml']){
+    const mock=simulated({exposed});
+    await assert.rejects(verifyProductionSurface({transport:mock.transport}),
+      /Internal file exposed: GET/);
+  }
+});
+test('historical denylist is distinct from public asset manifest and API routes',()=>{
+  assert.ok(INTERNAL_SOURCE_PATHS.length>=60);
+  assert.equal(new Set(INTERNAL_SOURCE_PATHS).size,INTERNAL_SOURCE_PATHS.length);
+  for(const path of INTERNAL_SOURCE_PATHS){
+    assert.ok(!PUBLIC_ASSETS.includes(path.slice(1)));
+    assert.ok(!path.startsWith('/api/'));
+  }
 });
