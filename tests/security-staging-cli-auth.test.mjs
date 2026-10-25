@@ -82,3 +82,20 @@ test('team identity uses the documented Vercel REST /v2/teams/{teamId} API',asyn
   }});
   assert.ok(seen.includes('/v2/teams/team_l9Hkxp0VvUgcGjJmTaCdRW1a'));
 });
+
+
+test('post-stage alias check runs after a failed deploy attempt but not an unattempted one',async()=>{
+  const {readFileSync}=await import('node:fs');
+  const workflow=readFileSync(new URL('../.github/workflows/stage-production-no-domain.yml',import.meta.url),'utf8');
+  const deployPos=workflow.indexOf('id: deploy');
+  const guardPos=workflow.indexOf('name: Prove public alias assignments did not change after staging attempt');
+  const summaryPos=workflow.indexOf('name: Record only the staged URL and remaining release gate');
+  assert.ok(deployPos>=0&&guardPos>deployPos&&summaryPos>guardPos);
+  const afterDeploy=workflow.slice(guardPos,summaryPos);
+  assert.match(afterDeploy,/if:\s*\$\{\{\s*always\(\)\s*&&\s*steps\.deploy\.outcome\s*!=\s*'skipped'\s*\}\}/);
+  assert.match(afterDeploy,/run: node scripts\/check-staging-aliases\.mjs/);
+  // A failure after deployment has been attempted must not bypass alias validation.
+  assert.doesNotMatch(afterDeploy,/if:\s*success\(\)/);
+  assert.match(workflow,/vercel deploy --prebuilt --prod --skip-domain/);
+  assert.doesNotMatch(workflow,/^\s+push:\s*$/m);
+});
