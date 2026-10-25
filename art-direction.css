@@ -258,12 +258,3 @@ button,a{transition:background-color .25s,border-color .25s,color .25s,box-shado
 .motion-off #discover .hero-media{animation:none!important;transform:none!important}
 .motion-off #discover .hero-copy>*{animation:none!important}
 .motion-off #reel>.destination>img{transition:none!important}
-
-/* Mobile hero performance: retain editorial framing and text entrances, but
-   avoid continuously recompositing a full-screen hero image on smaller GPUs. */
-@media (max-width:650px) {
-  #discover .hero-media {
-    animation: none;
-    transform: scale(1.025);
-  }
-}
