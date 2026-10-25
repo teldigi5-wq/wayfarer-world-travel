@@ -61,3 +61,22 @@ Additional authenticated Vercel URL inspections of the unchanged public Producti
 A central, reviewed `internal-source-denylist.mjs` now enumerates **64** forbidden historical/current paths. The authorized exact-commit Preview verifier sends read-only GET requests for this list; the opt-in public Production audit performs HEAD and Range GET for each. Neither script treats a Vercel authentication wall as successful source isolation. These protections augment — but do not replace — the stricter positive `public/` asset allowlist of only 17 browser resources.
 
 **Production remains NO-GO:** the old production alias still resolves to the source-disclosing deployment until an independently staged and fully tested secure build is explicitly promoted. The existing old production deployment is **not a clean security rollback**; reassigning it after remediation would re-expose the implementation.
+
+
+## Failed staging run #40171742223 — CLI identity-scope blocker
+
+On 25 October 2026, the first deliberately approved, manually dispatched stage-only workflow for reviewed main SHA 4fe26fc8aeecd7687547d1e39cc8c1b5dfe1470f stopped during the production-config pull. The immutable SHA gate, configured staging flag, local syntax/build/Node tests, pinned Vercel CLI 65.1.0 install, and preflight REST API verification that **both public aliases were unchanged** had all passed. The next command (vercel pull --yes --environment=production --scope teldigi5-wq) failed with "Not able to load user because of unexpected error: User not found. (404)". No staged deployment, public domain reassignment, provider activation or production promotion occurred in that run.
+
+This is **not** evidence of a GitHub minutes quota failure, test failure, secret leak, or invalid project ID. Team slug and project ID were independently checked. A project-scoped token can successfully retrieve project/alias information while Vercel CLI fails when requesting user/team identity, as described in upstream Vercel issue https://github.com/vercel/vercel/issues/17506. The protected token's actual scope was not disclosed, so **the exact underlying cause remains unproven**.
+
+The manual workflow now includes a read-only CLI identity preflight immediately before vercel pull. It checks exactly these authenticated GET endpoints under https://api.vercel.com, without following redirects or logging token values, headers, response bodies, personal identities or production environment variables:
+
+- GET /v9/projects/{reviewed-project-id}?teamId={reviewed-team-id}
+- GET /v2/user
+- GET /teams/{reviewed-team-id}
+
+Only three HTTP 200 results permit proceeding to vercel pull. A project-access success paired with user/team failure produces an actionable, non-secret diagnostic and deliberately blocks staging. The preflight **does not make a scoped token broader, fix the upstream Vercel CLI, verify deployment rights, or bypass later security checks**. A wider team token may work, but broadens the attack surface across projects. The owner must explicitly approve any credential-scope change in the existing protected GitHub environment; never paste tokens into chat, code, run logs, or PR comments.
+
+Alternatives to review separately if limited-scope Vercel CLI remains unavailable: (1) request an upstream CLI resolution, (2) use a short-lived, least-privilege team-scoped credential with bounded rotation and strict environment approval if accepted, or (3) design and fully test a project-scoped Build Output API pipeline without automatic domain assignment. Do **not** substitute an unreviewed direct production API deployment, unprotected token or generic target=production call for the --skip-domain safety boundary.
+
+After reviewing a compatible credential configuration, manually dispatch a **new** exact-SHA staging workflow. A passing preflight is only an authorization compatibility observation, not production release authorization. Verify immutable staged deployment, static paths, API routes, CSP, mobile/desktop journeys, provider controls, aliases, and rollback before seeking a separate owner-approved promotion. Until then the public alias remains on the older source-disclosing build and the release is still **NO-GO**.
