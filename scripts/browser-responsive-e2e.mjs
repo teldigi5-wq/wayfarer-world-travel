@@ -113,20 +113,9 @@ try {
       };
       await page.route('**/api/explore?*',primaryFixture);
       await page.route('https://geocoding-api.open-meteo.com/v1/search?*',geocodingFixture);
-      if(!(await page.locator('#world-query').isVisible())){
-        const details=await page.locator('#world-query').evaluate(element=>{
-          const parents=[];let current=element;
-          while(current&&parents.length<9){
-            const style=getComputedStyle(current),rect=current.getBoundingClientRect();
-            parents.push({tag:current.tagName,id:current.id,className:String(current.className).slice(0,120),
-              hidden:current.hidden,display:style.display,visibility:style.visibility,
-              width:rect.width,height:rect.height});
-            current=current.parentElement;
-          }
-          return parents;
-        });
-        throw Error('Worldwide search input hidden: '+JSON.stringify(details));
-      }
+      await page.locator('#wf-tab-explore').click();
+      await page.locator('#world-query').waitFor({state:'visible'});
+      assert.equal(await page.locator('#wf-tab-explore').getAttribute('aria-selected'),'true');
       await page.locator('#world-query').fill('WayfarerMockTown');
       await page.locator('#world-form button[type="submit"]').click();
       await page.locator('#world-results .world-result').first().waitFor({state:'visible'});
@@ -136,6 +125,8 @@ try {
       assert.equal(fallbackQueries,1,'Geocoding fallback should be attempted once');
       await page.unroute('**/api/explore?*',primaryFixture);
       await page.unroute('https://geocoding-api.open-meteo.com/v1/search?*',geocodingFixture);
+      await page.locator('#wf-tab-overview').click();
+      await page.locator('#itinerary .day').first().waitFor({state:'visible'});
 
       await page.locator('#save-trip').click();
       const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('wf-trips-v2')||'[]'));
