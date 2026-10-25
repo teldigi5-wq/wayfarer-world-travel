@@ -6,6 +6,7 @@ import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {PUBLIC_ASSETS} from '../static-asset-manifest.mjs';
+import {INTERNAL_SOURCE_PATHS} from '../internal-source-denylist.mjs';
 
 const config=JSON.parse(readFileSync(new URL('../vercel.json',import.meta.url),'utf8'));
 const expectedAssetTypes=Object.freeze({
@@ -15,15 +16,6 @@ const expectedAssetTypes=Object.freeze({
   jpg:/^image\/jpeg(?:;|$)/, txt:/^text\/plain(?:;|$)/,
   xml:/^(?:application|text)\/xml(?:;|$)/
 });
-const internalFiles=Object.freeze([
-  '/server.mjs','/tests/security-static-output.test.mjs',
-  '/tests/security-explore-cache-policy.test.mjs',
-  '/scripts/preview-http-smoke.mjs','/scripts/stage-public-assets.mjs',
-  '/.github/workflows/checks.yml','/docs/release-security-preflight.md',
-  '/docs/static-output-release-gate.md','/package.json','/vercel.json',
-  '/.env','/.git/config','/static-asset-manifest.mjs',
-  '/provider-production-lock.mjs'
-]);
 const sharedHeaders=Object.fromEntries(config.headers
   .find(rule=>rule.source==='/(.*)').headers
   .map(entry=>[entry.key.toLowerCase(),entry.value]));
@@ -122,7 +114,7 @@ export async function previewSmoke({url,oidcToken,transport=fetch}){
 
   // Build output is a browser-asset allowlist. Internal implementation,
   // workflow configuration, docs and test scripts must not be static URLs.
-  for(const file of internalFiles){
+  for(const file of INTERNAL_SOURCE_PATHS){
     const result=await get(file);
     assertCode(result,404,'internal static file not published '+file);
   }
