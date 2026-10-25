@@ -6,6 +6,7 @@ import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {PUBLIC_ASSETS} from '../static-asset-manifest.mjs';
+import {INTERNAL_SOURCE_PATHS} from '../internal-source-denylist.mjs';
 
 const PRODUCTION_ORIGIN='https://wayfarer-world-travel.vercel.app';
 const config=JSON.parse(readFileSync(new URL('../vercel.json',import.meta.url),'utf8'));
@@ -20,15 +21,6 @@ const contentTypes=Object.freeze({
   webp:/^image\/webp(?:;|$)/, jpg:/^image\/jpeg(?:;|$)/,
   txt:/^text\/plain(?:;|$)/, xml:/^(?:application|text)\/xml(?:;|$)/
 });
-const privatePaths=Object.freeze([
-  '/server.mjs','/tests/security-static-output.test.mjs',
-  '/tests/security-explore-cache-policy.test.mjs',
-  '/scripts/preview-http-smoke.mjs','/scripts/stage-public-assets.mjs',
-  '/.github/workflows/checks.yml','/docs/release-security-preflight.md',
-  '/docs/static-output-release-gate.md','/package.json','/vercel.json',
-  '/.env','/.git/config','/static-asset-manifest.mjs',
-  '/provider-production-lock.mjs'
-]);
 const invalidApiPaths=Object.freeze([
   {path:'/api/explore?mode=nearby&lat=%20&lon=0',status:400},
   {path:'/api/intelligence?destination=Unlisted&lat=invalid',status:400},
@@ -83,8 +75,17 @@ export async function verifyProductionSurface({transport=fetch}={}){
   assert.equal(new Set(PUBLIC_ASSETS).size,PUBLIC_ASSETS.length,
     'Public manifest contains duplicates');
   assert.ok(PUBLIC_ASSETS.length>=12,'Public manifest unexpectedly small');
+  assert.equal(new Set(INTERNAL_SOURCE_PATHS).size,INTERNAL_SOURCE_PATHS.length,
+    'Internal denylist contains duplicate paths');
+  assert.ok(INTERNAL_SOURCE_PATHS.length>=50,'Internal source-denylist unexpectedly small');
+  for(const path of INTERNAL_SOURCE_PATHS){
+    assert.ok(path.startsWith('/')&&!path.startsWith('/api/')&&
+      !path.includes('?')&&!path.includes('#'),'Invalid internal path: '+path);
+    assert.ok(!PUBLIC_ASSETS.includes(path.slice(1)),
+      'Internal file must never be a public asset: '+path);
+  }
   // Check internal source paths first: a single successful source response is a NO-GO.
-  for(const path of privatePaths){
+  for(const path of INTERNAL_SOURCE_PATHS){
     for(const method of ['HEAD','GET']){
       const response=await probe(transport,path,method);
       try{expectStatus(response,404,'Internal file exposed: '+method+' '+path);}
@@ -119,10 +120,10 @@ export async function verifyProductionSurface({transport=fetch}={}){
     status:'PRODUCTION_HTTP_SURFACE_PASS_ONLY',
     origin:PRODUCTION_ORIGIN,
     publicResources:1+PUBLIC_ASSETS.length,
-    prohibitedInternalPaths:privatePaths.length,
+    prohibitedInternalPaths:INTERNAL_SOURCE_PATHS.length,
     apiGuards:invalidApiPaths.length,
     methods:['HEAD','GET'],
-    requests:2*(1+PUBLIC_ASSETS.length+privatePaths.length)+invalidApiPaths.length,
+    requests:2*(1+PUBLIC_ASSETS.length+INTERNAL_SOURCE_PATHS.length)+invalidApiPaths.length,
     checksPassed:true,
     deploymentCommitVerified:false,
     productionBrowserJourneyVerified:false,

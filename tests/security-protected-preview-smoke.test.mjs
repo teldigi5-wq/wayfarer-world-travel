@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {previewSmoke,previewOrigin} from '../scripts/preview-http-smoke.mjs';
 import {PUBLIC_ASSETS} from '../static-asset-manifest.mjs';
+import {INTERNAL_SOURCE_PATHS} from '../internal-source-denylist.mjs';
 
 const config=JSON.parse(readFileSync(new URL('../vercel.json',import.meta.url),'utf8'));
 const headers=Object.fromEntries(config.headers.find(h=>h.source==='/(.*)').headers.map(h=>[h.key,h.value]));
@@ -41,13 +42,7 @@ function mocked({deny=false,missingPath=null,exposedPath=null,cacheOverridePath=
     if(['/api/ai-plan','/api/travel-offers','/api/travel-search'].includes(path))
       return response(JSON.stringify({ok:false}),405,{'Content-Type':'application/json',
         'Allow':'POST','Cache-Control':path===cacheOverridePath?'public':'no-store'});
-    if(['/server.mjs','/tests/security-static-output.test.mjs',
-      '/tests/security-explore-cache-policy.test.mjs',
-      '/scripts/preview-http-smoke.mjs','/scripts/stage-public-assets.mjs',
-      '/.github/workflows/checks.yml','/docs/release-security-preflight.md',
-      '/docs/static-output-release-gate.md','/package.json','/vercel.json',
-      '/.env','/.git/config','/static-asset-manifest.mjs',
-      '/provider-production-lock.mjs'].includes(path))
+    if(INTERNAL_SOURCE_PATHS.includes(path))
       return response('Not Found',404,{'Content-Type':'text/plain'});
     throw Error('Unexpected outbound request');
   }
@@ -69,8 +64,8 @@ test('short-lived authorization is never sent to untrusted origins or redirects'
 test('authenticated preview checks the full manifest, six API guards and internal paths',async()=>{
   const mock=mocked();
   const report=await previewSmoke({url:target,oidcToken:token,transport:mock.fetcher});
-  assert.equal(report.checks.length,41);
-  assert.equal(mock.visited.length,38);
+  assert.equal(report.checks.length,27+INTERNAL_SOURCE_PATHS.length);
+  assert.equal(mock.visited.length,24+INTERNAL_SOURCE_PATHS.length);
   assert.ok(mock.visited.every(v=>v.options.method==='GET'&&v.options.redirect==='error'));
   assert.ok(mock.visited.every(v=>v.url.startsWith(target+'/')));
   assert.ok(mock.visited.every(v=>v.options.headers['x-vercel-trusted-oidc-idp-token']===token));
@@ -118,6 +113,17 @@ test('rejected methods and invalid API inputs must not be cacheable',async()=>{
     await assert.rejects(
       previewSmoke({url:target,oidcToken:token,transport:mock.fetcher}),
       /must not be edge cached/
+    );
+  }
+});
+
+test('a legacy n8n workflow or historical private document blocks promotion',async()=>{
+  for(const exposedPath of ['/n8n/wayfarer-groq-agents.json',
+    '/docs/premium/QA-RESULTS.md','/tests/n8n.test.mjs']){
+    const mock=mocked({exposedPath});
+    await assert.rejects(
+      previewSmoke({url:target,oidcToken:token,transport:mock.fetcher}),
+      /internal static file not published/
     );
   }
 });
