@@ -47,12 +47,16 @@ async function discard(response){
   }
 }
 function expectStatus(response,status,label,allowPartial=false){
-  if(allowPartial){
-    assert.ok(response.status===status||response.status===206,
-      label+' expected HTTP '+status+' or 206, received '+response.status);
-  }else{
-    assert.equal(response.status,status,label+' wrong HTTP status');
-  }
+  // Fail closed, with status-only diagnostics. Never log the upstream response
+  // body, header values, secrets or a raw network error. 403/429 are NOT 404.
+  const observed=Number.isInteger(response?.status)&&
+    response.status>=100&&response.status<=599?response.status:'invalid';
+  if(observed===status||(allowPartial&&observed===206))return;
+  const category=observed===401||observed===403?' (possible access protection)':
+    observed===429?' (possible throttling)':observed===206&&status===404?
+      ' (partial source response; treat as exposure)':'';
+  throw Error(label+' expected HTTP '+status+
+    (allowPartial?' or 206':'')+'; received HTTP '+observed+category);
 }
 function expectSecurityHeaders(response,label){
   for(const [key,value] of Object.entries(securityHeaders)){
