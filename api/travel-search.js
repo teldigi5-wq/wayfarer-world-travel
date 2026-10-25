@@ -12,6 +12,37 @@ const dateRx = /^\d{4}-\d{2}-\d{2}$/;
 const numMoney = n => (typeof n==='number'||typeof n==='string') && Number.isFinite(Number(n)) && Number(n)>0 && Number(n)<1e9;
 const money = n => (Math.round(Number(n)*100)/100).toFixed(2);
 const airport = code => /^[A-Z]{3}$/.test(code ?? '');
+
+async function boundedProviderJson(response) {
+  const announced = response.headers?.get?.('content-length');
+  if (announced !== null && announced !== undefined && announced !== '') {
+    const bytes = Number(announced);
+    if (Number.isFinite(bytes) && bytes > MAX_PROVIDER_RESPONSE) throw Error('Provider response too large');
+  }
+  const reader = response.body?.getReader?.();
+  if (!reader) {
+    const body = await response.text();
+    if (Buffer.byteLength(body, 'utf8') > MAX_PROVIDER_RESPONSE) throw Error('Provider response too large');
+    return JSON.parse(body);
+  }
+  const chunks = [];
+  let bytes = 0;
+  let finished = false;
+  try {
+    while (true) {
+      const {value, done} = await reader.read();
+      if (done) { finished = true; break; }
+      bytes += value.byteLength;
+      if (bytes > MAX_PROVIDER_RESPONSE) throw Error('Provider response too large');
+      chunks.push(value);
+    }
+  } finally {
+    if (!finished) await reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
+  return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+}
+
 function secureEqual(a,b){const l=Buffer.from(String(a||''),'utf8'),r=Buffer.from(String(b||''),'utf8');return l.length>=24&&l.length===r.length&&timingSafeEqual(l,r)}
 function json(res,code,payload){res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');return res.status(code).json(payload)}
 function parseTrip(req){
@@ -41,12 +72,10 @@ async function search(provider,key,parameters){
   url.searchParams.set('engine',provider);
   for(const [name,value] of Object.entries(parameters))url.searchParams.set(name,String(value));
   url.searchParams.set('api_key',key);
-  const resp=await fetch(url,{signal:AbortSignal.timeout(PROVIDER_TIMEOUT)});
+  const resp=await fetch(url,{redirect:'error',signal:AbortSignal.timeout(PROVIDER_TIMEOUT)});
   if(resp.status===429){const e=Error('Search quota reached');e.quota=true;throw e}
   if(!resp.ok)throw Error('Travel search provider unavailable');
-  const raw=await resp.text();
-  if(raw.length>MAX_PROVIDER_RESPONSE)throw Error('Provider response too large');
-  let parsed;try{parsed=JSON.parse(raw)}catch{throw Error('Invalid travel search response')}
+  let parsed;try{parsed=await boundedProviderJson(resp)}catch(e){if(e.message==='Provider response too large')throw e;throw Error('Invalid travel search response')}
   if(parsed.error||parsed.search_metadata?.status==='Error'){
     const e=Error('Travel search was rejected');
     e.quota=/quota|limit|credit|searches/i.test(String(parsed.error||''));throw e;
