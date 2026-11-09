@@ -120,3 +120,10 @@ No account, analytics, server database or trackers. Saved trips live in this bro
 ## Maintenance
 
 Refresh data manually only when needed; preserve licenses, provenance and retrieval dates. Respect Wikimedia throttling and stop on 429. Do not silently introduce a geocoder or paid inference. Add destination sources and meaningful tests, create a PR, check the exact commit and browser behavior, then release. Real-time requirements, schedules, weather and availability always need external confirmation.
+
+
+---
+
+## AI/developer continuity — 9 November 2026
+
+For a reliable continuation, read [the source-pinned checkpoint and next milestones](docs/AI_HANDOFF_2026-11-09.md). Source at snapshot: `main` / `d37d76bd142a`. Reverify current GitHub and release status; this documentation branch is not a deployment or production authorization.
